@@ -18,15 +18,15 @@
 
   // ── Ports ─────────────────────────────────────────────────────────────────
   // All forwarded automatically + labeled so Daytona generates preview URLs
-  "forwardPorts": [3010, 4000, 8133, 4201, 4401, 5432, 6379],
+  "forwardPorts": [3010, 4000, 8133, 4203, 4403, 5433, 6381],
   "portsAttributes": {
     "3010": { "label": "Frontend (Next.js)",        "onAutoForward": "openPreview" },
     "4000": { "label": "BFF (Hono)",                "onAutoForward": "silent" },
     "8133": { "label": "Agent (LangGraph)",         "onAutoForward": "silent" },
-    "4201": { "label": "Intelligence API",          "onAutoForward": "silent" },
-    "4401": { "label": "Intelligence Realtime WS",  "onAutoForward": "silent" },
-    "5432": { "label": "PostgreSQL",                "onAutoForward": "silent" },
-    "6379": { "label": "Redis",                     "onAutoForward": "silent" }
+    "4203": { "label": "Intelligence API",          "onAutoForward": "silent" },
+    "4403": { "label": "Intelligence Realtime WS",  "onAutoForward": "silent" },
+    "5433": { "label": "PostgreSQL",                "onAutoForward": "silent" },
+    "6381": { "label": "Redis",                     "onAutoForward": "silent" }
   },
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────

@@ -16,17 +16,24 @@ fi
 echo "▶ Installing Node dependencies..."
 npm install
 
-# 3. Create .env from example if it doesn't exist yet
+# 3. Create .env files from example if they don't exist yet
 if [ ! -f .env ]; then
   echo "▶ Creating .env from .env.example..."
   cp .env.example .env
-  echo ""
-  echo "  ⚠️  Edit .env and add your API keys before running:"
-  echo "     GEMINI_API_KEY"
-  echo "     COPILOTKIT_LICENSE_TOKEN"
-  echo "     INTELLIGENCE_API_KEY"
-  echo ""
 fi
+
+# The Python agent reads its own .env from apps/agent/
+if [ ! -f apps/agent/.env ]; then
+  echo "▶ Copying .env to apps/agent/.env..."
+  cp .env apps/agent/.env
+fi
+
+echo ""
+echo "  ⚠️  Set these keys in .env (and apps/agent/.env) before running:"
+echo ""
+echo "     GEMINI_API_KEY        → https://aistudio.google.com"
+echo "     COPILOTKIT_LICENSE_TOKEN → run: npm run license"
+echo ""
 
 echo ""
 echo "✅ Setup complete. To start the project:"
