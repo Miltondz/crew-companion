@@ -10,7 +10,7 @@
 # Then start the app services on the host:
 #   npm run dev
 
-name: hackathon-intelligence-notion
+name: crew-companion
 
 services:
   # ---------------------------------------------------------------------------
