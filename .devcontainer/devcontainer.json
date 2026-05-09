@@ -1,0 +1,56 @@
+{
+  "name": "Crew Companion",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+
+  // ── Features ──────────────────────────────────────────────────────────────
+  "features": {
+    // Docker-in-Docker so docker compose up works inside the sandbox
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    // uv — fast Python package manager used by apps/agent
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installJupyterlab": false
+    }
+  },
+
+  // ── Ports ─────────────────────────────────────────────────────────────────
+  // All forwarded automatically + labeled so Daytona generates preview URLs
+  "forwardPorts": [3010, 4000, 8133, 4201, 4401, 5432, 6379],
+  "portsAttributes": {
+    "3010": { "label": "Frontend (Next.js)",        "onAutoForward": "openPreview" },
+    "4000": { "label": "BFF (Hono)",                "onAutoForward": "silent" },
+    "8133": { "label": "Agent (LangGraph)",         "onAutoForward": "silent" },
+    "4201": { "label": "Intelligence API",          "onAutoForward": "silent" },
+    "4401": { "label": "Intelligence Realtime WS",  "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL",                "onAutoForward": "silent" },
+    "6379": { "label": "Redis",                     "onAutoForward": "silent" }
+  },
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  // Runs once after the container is created
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // ── Editor settings ───────────────────────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "python.defaultInterpreterPath": "${workspaceFolder}/apps/agent/.venv/bin/python",
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  }
+}
