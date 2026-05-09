@@ -156,71 +156,72 @@ Especificación completa del proyecto, decisiones de arquitectura, modelo de dom
 
 ---
 
-### ⬜ Fase 1 — Setup: Copiar Starter Kit y Limpiar Dominio
-*Pendiente*
+### ✅ Fase 1 — Setup: Copiar Starter Kit y Limpiar Dominio
+*Completada*
 
-Copiar la estructura del Generative-UI Hackathon Starter Kit en este repo, eliminar el dominio de leads/Notion, y crear páginas placeholder para las rutas nuevas.
+Se copió la estructura del Generative-UI Hackathon Starter Kit, se eliminó el dominio de leads/Notion y se crearon páginas placeholder para las rutas nuevas.
 
-- [ ] Copiar `apps/`, `deployment/`, `scripts/` del starter kit
-- [ ] Eliminar dominio de leads (componentes, páginas, módulos Python)
-- [ ] Crear páginas placeholder para `/leader`, `/member/[memberId]`, `/docs`
-- [ ] Configurar `.env` con las API keys
-- [ ] Verificar que `npm run dev` levanta sin errores
+- [x] Copiar `apps/`, `deployment/`, `scripts/` del starter kit
+- [x] Eliminar dominio de leads (componentes, páginas, módulos Python)
+- [x] Crear páginas placeholder para `/leader`, `/member/[memberId]`, `/docs`
+- [x] Configurar `.env` con las API keys
+- [x] Verificar que `npm run dev` levanta sin errores
 
 **Señal de completitud:** `http://localhost:3010` carga y redirige a `/leader`
 
 ---
 
-### ⬜ Fase 2 — Dominio: Store Zustand + Tipos + Seed Data
-*Pendiente*
+### ✅ Fase 2 — Dominio: Store Zustand + Tipos + Seed Data
+*Completada*
 
-Construir la capa de estado completa del frontend para el dominio crew.
+Se construyó la capa de estado completa del frontend para el dominio crew.
 
-- [ ] `apps/frontend/src/lib/crew/types.ts` — todas las interfaces TypeScript
-- [ ] `apps/frontend/src/lib/crew/derive.ts` — funciones puras `getUrgencyPhase`, `getMascotMood`
-- [ ] `apps/frontend/src/lib/crew/seed.ts` — datos demo con deadline dinámico
-- [ ] `apps/frontend/src/lib/crew/store.ts` — Zustand store con todas las actions incluyendo `simulateUrgency`
-- [ ] `apps/frontend/src/hooks/use-urgency-phase.ts` — sincronización reactiva de fase (intervalo 30s)
+- [x] `apps/frontend/src/lib/crew/types.ts` — todas las interfaces TypeScript
+- [x] `apps/frontend/src/lib/crew/derive.ts` — funciones puras `getUrgencyPhase`, `getMascotMood`
+- [x] `apps/frontend/src/lib/crew/seed.ts` — datos demo con deadline dinámico
+- [x] `apps/frontend/src/lib/crew/store.ts` — Zustand store con todas las actions incluyendo `simulateUrgency`
+- [x] `apps/frontend/src/hooks/use-urgency-phase.ts` — sincronización reactiva de fase (intervalo 30s)
 
 **Señal de completitud:** `useCrewStore.getState().simulateUrgency(8)` en la consola del browser cambia `urgencyPhase` a `'urgent'`
 
 ---
 
-### ⬜ Fase 3 — Frontend: Rutas /leader, /member, /docs
-*Pendiente*
+### ✅ Fase 3 — Frontend: Rutas /leader, /member, /docs
+*Completada*
 
-Implementar las tres vistas principales con integración CopilotKit y UI con conciencia de urgencia.
+Se implementaron las tres vistas principales con integración CopilotKit v2 y UI con conciencia de urgencia.
 
-- [ ] `CopilotKitProviderShell` adaptado para crew-companion
-- [ ] `/leader` — TaskBoard, MilestonePanel, TeamOverview, `useCopilotReadable` con contexto de líder
-- [ ] `/member/[memberId]` — ActiveTaskView, MilestoneCountdown, BlockerButton, `useCopilotReadable` con contexto de miembro
-- [ ] `/docs` — DocumentTabs, MarkdownViewer con `rehype-sanitize`
-- [ ] Componente `UrgencyBanner` (sistema de colores por fase)
-- [ ] Las 7 frontend actions `useCopilotAction` registradas
-- [ ] Botones de simulación de urgencia solo en dev (`simulateUrgency`)
+- [x] `CopilotKitProviderShell` adaptado para crew-companion (agentId: `crew_agent`)
+- [x] `/leader` — TaskBoard, MilestonePanel, TeamOverview, todas las frontend tools registradas
+- [x] `/member/[memberId]` — ActiveTaskView, MilestoneCountdown, reporte de blockers, frontend tools
+- [x] `/docs` — DocumentTabs con shadcn/ui Tabs, visor de documentos, acciones abrir/cerrar
+- [x] Componente `UrgencyBanner` (sistema de colores por fase con `animate-pulse` en pánico)
+- [x] Stub `SurfaceRenderer` registrado como tool `renderSurface` en todas las páginas
+- [x] Todas las frontend tools registradas: `setCrewState`, `updateTask`, `setMascotMood`, `highlightTasks`, `renderSurface`, `reportBlocker`, `openDocument`
+- [x] Botones de simulación de urgencia solo en dev (Normal/Focus/Urgent/Panic) en `/leader`
 
 **Señal de completitud:** Las tres rutas cargan, el chat es visible, el banner de urgencia cambia de color con los botones de simulación
 
 ---
 
-### ⬜ Fase 4 — UI Surfaces + Countdown + Mascota
-*Pendiente*
+### ✅ Fase 4 — UI Surfaces + Countdown + Mascota
+*Completada — generada por Gemini CLI*
 
 Implementar las 8 surfaces del MVP, el timer de countdown en vivo, y la mascota compañera.
 
-- [ ] Componente dispatcher `SurfaceRenderer`
-- [ ] Acción CopilotKit `renderSurface` registrada en todas las páginas
-- [ ] 8 surfaces del MVP implementadas (desarrollador principal + colaboradora):
-  - [ ] `TaskSuggestionPanel`
-  - [ ] `MilestoneSummaryPanel`
-  - [ ] `BlockerInsightPanel`
-  - [ ] `MemberActionPanel`
-  - [ ] `BeginnerGuidePanel`
-  - [ ] `ChecklistPanel`
-  - [ ] `TroubleshootingWizard`
-  - [ ] `DocumentSummaryPanel`
-- [ ] `MilestoneCountdown` — countdown en vivo (1 segundo) con estilo por fase
-- [ ] `CompanionMascot` — componente de mascota reactivo al mood
+- [x] Stub `SurfaceRenderer` (registrado como tool `renderSurface`)
+- [x] `renderSurface` registrado en todas las páginas
+- [x] 8 surfaces del MVP implementadas:
+  - [x] `TaskSuggestionPanel`
+  - [x] `MilestoneSummaryPanel`
+  - [x] `BlockerInsightPanel`
+  - [x] `MemberActionPanel`
+  - [x] `BeginnerGuidePanel`
+  - [x] `ChecklistPanel`
+  - [x] `TroubleshootingWizard`
+  - [x] `DocumentSummaryPanel`
+- [x] `MilestoneCountdown` — countdown en vivo (1 segundo) con estilo por fase
+- [x] `CompanionMascot` — componente de mascota reactivo al mood (`MascotSVG`)
 
 **Señal de completitud:** `simulateUrgency(3)` → el countdown pulsa en rojo, la mascota muestra estado pánico
 
