@@ -1,7 +1,6 @@
 """Switchable runtime factory for the Crew Companion agent.
 
-Phase 1: lead_state removed. CrewStateMiddleware will be added in Phase 5.
-Middleware chain: TimingMiddleware → CopilotKitMiddleware.
+Middleware chain: TimingMiddleware → CrewStateMiddleware → CopilotKitMiddleware.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from copilotkit import CopilotKitMiddleware
 
+from .crew_state import CrewStateMiddleware
 from .timing import TimingMiddleware
 
 
@@ -69,8 +69,11 @@ def build_graph(
         runtime = "gemini-flash-deep"
 
     timing = TimingMiddleware()
-    copilotkit = CopilotKitMiddleware()
-    middleware = [timing, copilotkit]
+    crew_state = CrewStateMiddleware()
+    # expose_state=True injects all crew keys (tasks, milestones, etc.) into
+    # the LLM system message automatically on every turn.
+    copilotkit = CopilotKitMiddleware(expose_state=True)
+    middleware = [timing, crew_state, copilotkit]
 
     if runtime == "noop":
         return _build_noop(NOOP_FALLBACK_MESSAGE)

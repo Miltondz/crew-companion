@@ -227,17 +227,17 @@ Implement the 8 MVP surfaces, the live countdown timer, and the companion mascot
 
 ---
 
-### ⬜ Phase 5 — Python Agent: Prompts + Tools + State
-*Pending*
+### ✅ Phase 5 — Python Agent: Prompts + Tools + State
+*Completed*
 
 Adapt the LangGraph agent for the crew domain with the full surface decision system.
 
-- [ ] `apps/agent/src/crew_state.py` — `CrewCanvasState` TypedDict + `CrewStateMiddleware`
-- [ ] `apps/agent/src/tools.py` — `create_task`, `update_task_status`, `create_milestone`, `resolve_blocker`, `get_documents`
-- [ ] `apps/agent/src/prompts.py` — system prompt with role/technicalLevel/phase decision logic
-- [ ] `apps/agent/src/runtime.py` — adapted for crew state and tools (Gemini default, Claude optional)
-- [ ] `apps/agent/crew.seed.json` — seed data with dynamic deadline
-- [ ] TypeScript types ↔ Python TypedDicts verified as aligned
+- [x] `apps/agent/src/types.py` — Python TypedDicts aligned with TypeScript domain model
+- [x] `apps/agent/src/crew_state.py` — `CrewCanvasState` TypedDict + `CrewStateMiddleware` (seed hydration)
+- [x] `apps/agent/src/tools.py` — `create_task`, `update_task_status`, `create_milestone`, `resolve_blocker`, `get_documents` (with `InjectedState`)
+- [x] `apps/agent/src/prompts.py` — system prompt with role/technicalLevel/phase decision table
+- [x] `apps/agent/src/runtime.py` — middleware chain: `TimingMiddleware → CrewStateMiddleware → CopilotKitMiddleware(expose_state=True)`
+- [x] `apps/agent/crew.seed.json` — seed data (deadline set dynamically at agent startup)
 
 **Completion signal:** Agent renders `task_suggestion_panel` when leader asks "what tasks are missing" and `troubleshooting_wizard` when low-tech member reports a blocker
 

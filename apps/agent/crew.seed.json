@@ -1,0 +1,52 @@
+{
+  "members": [
+    { "id": "m1", "name": "Alex", "role": "leader", "technicalLevel": "high-tech" },
+    { "id": "m2", "name": "Sam",  "role": "member", "technicalLevel": "low-tech"  },
+    { "id": "m3", "name": "Jordan", "role": "member", "technicalLevel": "high-tech" }
+  ],
+  "currentMemberId": "m1",
+  "tasks": [
+    {
+      "id": "t1", "title": "Diseñar la landing page",
+      "description": "Crear mockup y componentes base",
+      "assignedTo": "m2", "status": "in-progress", "priority": "high",
+      "createdAt": "2026-05-09T00:00:00Z"
+    },
+    {
+      "id": "t2", "title": "Implementar API de usuarios",
+      "description": "Endpoints POST /users y GET /users/:id",
+      "assignedTo": "m3", "status": "todo", "priority": "high",
+      "milestoneId": "ms1", "createdAt": "2026-05-09T00:00:00Z"
+    },
+    {
+      "id": "t3", "title": "Preparar script de demo",
+      "description": "Guión de 2 minutos para la presentación",
+      "assignedTo": "m1", "status": "todo", "priority": "medium",
+      "milestoneId": "ms1", "createdAt": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "ms1", "title": "Demo final hackathon",
+      "deadline": "2099-01-01T00:00:00Z",
+      "taskIds": ["t1", "t2", "t3"],
+      "phase": "normal"
+    }
+  ],
+  "blockers": [],
+  "sharedDocuments": [
+    {
+      "id": "d1",
+      "title": "Stack técnico del proyecto",
+      "content": "# Stack Técnico\n\n## Frontend\n- Next.js 15\n- React 19\n- Tailwind CSS\n\n## Backend\n- Node.js + Hono\n- PostgreSQL\n\n## Instalación\n\n```bash\nnpm install\nnpm run dev\n```",
+      "sharedBy": "m1",
+      "sharedAt": "2026-05-09T00:00:00Z"
+    }
+  ],
+  "openDocumentIds": ["d1"],
+  "urgencyPhase": "normal",
+  "mascotMood": "calm",
+  "mascotMode": "idle",
+  "highlightedTaskIds": [],
+  "activeMilestoneId": "ms1"
+}
