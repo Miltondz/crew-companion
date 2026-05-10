@@ -34,7 +34,7 @@ import os
 # `agents: { default: agent }`). The other agent_ids in the dev seed
 # (`beamAgent`, `lambdaAgent`, `camlAgent`) belong to demo users and
 # must NOT be wiped.
-AGENT_ID = "default"
+AGENT_ID = "crew_agent"
 
 
 def _connection_string() -> str:
@@ -44,7 +44,7 @@ def _connection_string() -> str:
     read from env so it stays in sync with the compose port remap.
     """
     host = os.getenv("POSTGRES_HOST", "localhost")
-    port = os.getenv("POSTGRES_HOST_PORT", "5436")
+    port = os.getenv("POSTGRES_HOST_PORT", "5433")
     user = os.getenv("POSTGRES_USER", "intelligence")
     pwd = os.getenv("POSTGRES_PASSWORD", "intelligence")
     db = os.getenv("INTELLIGENCE_DATABASE", "intelligence_app")

@@ -46,6 +46,5 @@ crew.local.json
 *.swp
 *.swo
 
-# Internal project docs (not for public repo)
-project-docs/
+# Internal project docs
 base-docs/

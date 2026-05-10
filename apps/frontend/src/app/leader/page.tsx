@@ -1,23 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import {
+  CopilotChat,
   CopilotChatConfigurationProvider,
-  CopilotSidebar,
   useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
 } from '@copilotkit/react-core/v2'
-import { ThreadsDrawer } from '@/components/threads-drawer'
-import drawerStyles from '@/components/threads-drawer/threads-drawer.module.css'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
 import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
+import { TaskCard } from '@/components/shared/TaskCard'
+import { MilestonePanel } from '@/components/leader/MilestonePanel'
+import { TeamOverview } from '@/components/leader/TeamOverview'
+import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
-import type { CrewState, UrgencyPhase } from '@/lib/crew/types'
+import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
   const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
@@ -32,7 +35,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent()
+  const { agent } = useAgent("crew_agent")
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -40,11 +43,26 @@ function useCrewAgent() {
   return { agent, state, setState }
 }
 
+interface AddTaskForm {
+  title: string
+  description: string
+  assignedTo: string
+  priority: TaskPriority
+}
+
 function LeaderCanvas() {
+  const router = useRouter()
   const { state, setState } = useCrewAgent()
 
-  // Recalcula urgencyPhase cada 30 s basado en el deadline del milestone activo
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [taskForm, setTaskForm] = useState<AddTaskForm>({
+    title: '',
+    description: '',
+    assignedTo: state.members[0]?.id ?? '',
+    priority: 'medium',
+  })
+
   useEffect(() => {
     const sync = () => {
       const active = state.milestones.find(m => m.id === state.activeMilestoneId)
@@ -135,6 +153,47 @@ function LeaderCanvas() {
   const activeMilestone = state.milestones.find(m => m.id === state.activeMilestoneId)
   const activeBlockers = state.blockers.filter(b => !b.resolved)
 
+  const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
+    setState(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t)),
+    }))
+  }
+
+  const handleAddTask = () => {
+    if (!taskForm.title.trim()) return
+    const newTask = {
+      id: `t${Date.now()}`,
+      title: taskForm.title.trim(),
+      description: taskForm.description.trim(),
+      assignedTo: taskForm.assignedTo,
+      status: 'todo' as TaskStatus,
+      priority: taskForm.priority,
+      createdAt: new Date().toISOString(),
+      milestoneId: state.activeMilestoneId,
+    }
+    setState(prev => ({
+      ...prev,
+      tasks: [...prev.tasks, newTask],
+      milestones: prev.milestones.map(m =>
+        m.id === prev.activeMilestoneId
+          ? { ...m, taskIds: [...m.taskIds, newTask.id] }
+          : m
+      ),
+    }))
+    setTaskForm({ title: '', description: '', assignedTo: state.members[0]?.id ?? '', priority: 'medium' })
+    setShowAddTask(false)
+  }
+
+  const handleResolveBlocker = (blockerId: string) => {
+    setState(prev => ({
+      ...prev,
+      blockers: prev.blockers.map(b =>
+        b.id === blockerId ? { ...b, resolved: true, resolvedAt: new Date().toISOString() } : b
+      ),
+    }))
+  }
+
   const simulateUrgency = (minutesLeft: number) => {
     const newDeadline = new Date(Date.now() + minutesLeft * 60 * 1000).toISOString()
     setState(prev => ({
@@ -145,147 +204,265 @@ function LeaderCanvas() {
     }))
   }
 
+  const kanbanColumns: { status: TaskStatus; label: string; accent: string; countColor: string }[] = [
+    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   countColor: 'bg-slate-100 text-slate-600'   },
+    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    countColor: 'bg-blue-100 text-blue-700'     },
+    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500', countColor: 'bg-emerald-100 text-emerald-700'},
+  ]
+
   return (
-    <>
-      <main className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
+
+      {/* ── Main dashboard ──────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <UrgencyBanner phase={urgencyPhase} />
 
-        <div className="flex flex-1 flex-col gap-4 overflow-auto p-6">
-          {/* Header */}
+        {/* Header */}
+        <header className="shrink-0 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-600 px-6 py-4 shadow-lg">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground">Leader Dashboard</h1>
-              {activeMilestone && (
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  Milestone: {activeMilestone.title}
-                </p>
-              )}
-            </div>
-            {activeBlockers.length > 0 && (
-              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
-                {activeBlockers.length} blocker{activeBlockers.length > 1 ? 's' : ''} activo{activeBlockers.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-
-          {/* Canvas grid — Gemini components go aquí */}
-          <div className="grid flex-1 gap-4 md:grid-cols-3">
-            {/* TaskBoard — T09 TaskCard + columnas todo/in-progress/done */}
-            <div className="col-span-2 rounded-xl border border-dashed border-border bg-card/50 p-4">
-              <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                Task Board
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                {(['todo', 'in-progress', 'done'] as const).map(status => (
-                  <div key={status} className="rounded-lg bg-muted/50 p-2">
-                    <p className="mb-2 text-xs font-medium capitalize text-muted-foreground">
-                      {status}
-                    </p>
-                    {state.tasks
-                      .filter(t => t.status === status)
-                      .map(t => (
-                        <div
-                          key={t.id}
-                          className={`mb-2 rounded-md border bg-card p-2 text-xs ${
-                            state.highlightedTaskIds.includes(t.id)
-                              ? 'border-yellow-400 ring-1 ring-yellow-400'
-                              : 'border-border'
-                          }`}
-                        >
-                          <p className="font-medium text-foreground">{t.title}</p>
-                          <p className="mt-0.5 text-muted-foreground">
-                            {state.members.find(m => m.id === t.assignedTo)?.name ?? t.assignedTo}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right column: MilestonePanel + TeamOverview */}
-            <div className="flex flex-col gap-4">
-              {/* MilestonePanel — T10 */}
-              <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Milestone
-                </p>
-                {activeMilestone ? (
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">{activeMilestone.title}</p>
-                    <p className="mt-1 text-muted-foreground">
-                      {new Date(activeMilestone.deadline).toLocaleString()}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {state.tasks.filter(t => t.status === 'done' && activeMilestone.taskIds.includes(t.id)).length}
-                      /{activeMilestone.taskIds.length} tareas completadas
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Sin milestone activo</p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 text-xl shadow-inner">⚡</div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-white">Leader Dashboard</h1>
+                {activeMilestone && (
+                  <p className="text-xs text-indigo-200">{activeMilestone.title}</p>
                 )}
               </div>
+            </div>
 
-              {/* TeamOverview — T11 */}
-              <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Equipo
-                </p>
-                <div className="space-y-2">
-                  {state.members.map(m => {
-                    const blocker = state.blockers.find(b => b.memberId === m.id && !b.resolved)
-                    return (
-                      <div key={m.id} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground">{m.name}</span>
-                        {blocker ? (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
-                            blocker
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-muted-foreground capitalize">
-                            {m.technicalLevel}
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
+            {/* Nav links to members */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {state.members.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => router.push(`/member/${m.id}`)}
+                  className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
+                    {m.name[0]}
+                  </span>
+                  {m.name}
+                  {state.blockers.find(b => b.memberId === m.id && !b.resolved) && (
+                    <span className="text-red-300">⚠</span>
+                  )}
+                </button>
+              ))}
+              <button
+                onClick={() => router.push('/docs')}
+                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
+              >
+                📄 Docs
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {activeBlockers.length > 0 && (
+                <span className="flex items-center gap-1.5 rounded-full bg-red-500/30 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-red-400/50">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-300" />
+                  {activeBlockers.length} blocker{activeBlockers.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable content */}
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
+
+          {/* Milestone + Team */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              {activeMilestone ? (
+                <MilestonePanel
+                  milestone={activeMilestone}
+                  tasks={state.tasks}
+                  urgencyPhase={urgencyPhase}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white p-8">
+                  <p className="text-sm text-slate-400">Sin milestone activo</p>
                 </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-3">
+              <TeamOverview
+                members={state.members}
+                tasks={state.tasks}
+                blockers={state.blockers}
+              />
+              {/* Blockers — resolve button */}
+              {activeBlockers.length > 0 && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-orange-500">Blockers activos</p>
+                  <div className="space-y-2">
+                    {activeBlockers.map(b => {
+                      const member = state.members.find(m => m.id === b.memberId)
+                      return (
+                        <div key={b.id} className="rounded-lg bg-white p-2.5 ring-1 ring-orange-200">
+                          <p className="text-xs font-semibold text-slate-700">{member?.name}</p>
+                          <p className="mt-0.5 text-[11px] italic text-slate-500">"{b.description}"</p>
+                          <button
+                            onClick={() => handleResolveBlocker(b.id)}
+                            className="mt-1.5 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition"
+                          >
+                            ✓ Resolver
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Kanban board */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Task Board</h2>
+              <button
+                onClick={() => setShowAddTask(v => !v)}
+                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition"
+              >
+                {showAddTask ? '✕ Cancelar' : '＋ Nueva tarea'}
+              </button>
+            </div>
+
+            {/* Add Task form */}
+            {showAddTask && (
+              <div className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Título *</label>
+                    <input
+                      type="text"
+                      value={taskForm.title}
+                      onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))}
+                      placeholder="Ej: Implementar login"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Descripción</label>
+                    <input
+                      type="text"
+                      value={taskForm.description}
+                      onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))}
+                      placeholder="Detalles de la tarea"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asignar a</label>
+                    <select
+                      value={taskForm.assignedTo}
+                      onChange={e => setTaskForm(f => ({ ...f, assignedTo: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400"
+                    >
+                      {state.members.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prioridad</label>
+                    <select
+                      value={taskForm.priority}
+                      onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as TaskPriority }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400"
+                    >
+                      <option value="high">Alta</option>
+                      <option value="medium">Media</option>
+                      <option value="low">Baja</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={handleAddTask}
+                  disabled={!taskForm.title.trim()}
+                  className="mt-3 w-full rounded-lg bg-indigo-600 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40"
+                >
+                  Crear tarea
+                </button>
               </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              {kanbanColumns.map(({ status, label, accent, countColor }) => {
+                const tasks = state.tasks.filter(t => t.status === status)
+                return (
+                  <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white shadow-sm`}>
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countColor}`}>
+                        {tasks.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 px-3 pb-3">
+                      {tasks.map(t => (
+                        <TaskCard
+                          key={t.id}
+                          task={{
+                            ...t,
+                            assignedTo: state.members.find(m => m.id === t.assignedTo)?.name ?? t.assignedTo,
+                          }}
+                          isHighlighted={state.highlightedTaskIds.includes(t.id)}
+                          onStatusChange={handleTaskStatusChange}
+                        />
+                      ))}
+                      {tasks.length === 0 && (
+                        <div className="rounded-lg border-2 border-dashed border-slate-200 py-6 text-center">
+                          <p className="text-xs text-slate-400">Sin tareas</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
 
-        {/* Dev-only urgency simulator */}
+        {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="fixed bottom-4 left-4 flex gap-2 text-xs">
-            <button onClick={() => simulateUrgency(45)} className="rounded bg-green-200 px-2 py-1">Normal (45m)</button>
-            <button onClick={() => simulateUrgency(20)} className="rounded bg-yellow-200 px-2 py-1">Focus (20m)</button>
-            <button onClick={() => simulateUrgency(8)}  className="rounded bg-orange-200 px-2 py-1">Urgent (8m)</button>
-            <button onClick={() => simulateUrgency(3)}  className="rounded bg-red-200 px-2 py-1">Panic (3m)</button>
+          <div className="flex items-center gap-2 border-t border-slate-200 bg-white px-4 py-2 text-xs">
+            <span className="text-slate-400">Dev:</span>
+            <button onClick={() => simulateUrgency(45)} className="rounded bg-emerald-100 px-2 py-1 text-emerald-700 hover:bg-emerald-200">Normal</button>
+            <button onClick={() => simulateUrgency(20)} className="rounded bg-yellow-100 px-2 py-1 text-yellow-700 hover:bg-yellow-200">Focus</button>
+            <button onClick={() => simulateUrgency(8)}  className="rounded bg-orange-100 px-2 py-1 text-orange-700 hover:bg-orange-200">Urgent</button>
+            <button onClick={() => simulateUrgency(3)}  className="rounded bg-red-100 px-2 py-1 text-red-700 hover:bg-red-200">Panic</button>
           </div>
         )}
-      </main>
+      </div>
 
-      <CopilotSidebar
-        defaultOpen
-        width={420}
-        input={{ disclaimer: () => null, className: 'pb-6' }}
-      />
-    </>
+      {/* ── AI Chat panel ────────────────────────────────── */}
+      <div className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
+        <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
+          <div>
+            <p className="text-sm font-bold text-white">AI Leader Assistant</p>
+            <p className="text-[10px] text-indigo-200">Gestión de equipo inteligente</p>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <CopilotChat className="h-full" />
+        </div>
+      </div>
+
+      {/* Mascot */}
+      <div className="fixed bottom-6 right-[396px] z-50">
+        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
+      </div>
+    </div>
   )
 }
 
 function LeaderPage() {
-  const [threadId, setThreadId] = useState<string | undefined>()
   return (
-    <div className={drawerStyles.layout}>
-      <ThreadsDrawer agentId="crew_agent" threadId={threadId} onThreadChange={setThreadId} />
-      <div className={drawerStyles.mainPanel}>
-        <CopilotChatConfigurationProvider agentId="crew_agent" threadId={threadId}>
-          <LeaderCanvas />
-        </CopilotChatConfigurationProvider>
-      </div>
-    </div>
+    <CopilotChatConfigurationProvider agentId="crew_agent">
+      <LeaderCanvas />
+    </CopilotChatConfigurationProvider>
   )
 }
 

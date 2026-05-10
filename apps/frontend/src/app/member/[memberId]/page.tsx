@@ -2,20 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { use } from 'react'
+import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import {
+  CopilotChat,
   CopilotChatConfigurationProvider,
-  CopilotSidebar,
   useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
 } from '@copilotkit/react-core/v2'
-import { ThreadsDrawer } from '@/components/threads-drawer'
-import drawerStyles from '@/components/threads-drawer/threads-drawer.module.css'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
 import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
+import { ActiveTaskView } from '@/components/member/ActiveTaskView'
+import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
+import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import type { CrewState, UrgencyPhase } from '@/lib/crew/types'
@@ -33,7 +35,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent()
+  const { agent } = useAgent("crew_agent")
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -42,9 +44,12 @@ function useCrewAgent() {
 }
 
 function MemberCanvas({ memberId }: { memberId: string }) {
+  const router = useRouter()
   const { state, setState } = useCrewAgent()
 
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
+  const [blockerText, setBlockerText] = useState('')
+  const [showBlockerForm, setShowBlockerForm] = useState(false)
   useEffect(() => {
     const sync = () => {
       const active = state.milestones.find(m => m.id === state.activeMilestoneId)
@@ -150,120 +155,245 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     ),
   })
 
-  return (
-    <>
-      <main className="flex h-screen flex-col overflow-hidden bg-background">
-        <UrgencyBanner
-          phase={urgencyPhase}
-          milestoneTitle={activeMilestone?.title}
-        />
+  const handleMarkDone = (taskId: string) => {
+    setState(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'done' } : t)),
+    }))
+  }
 
-        <div className="flex flex-1 flex-col gap-4 overflow-auto p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                Hola, {currentMember?.name ?? memberId}
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground capitalize">
-                {currentMember?.technicalLevel} · {currentMember?.role}
-              </p>
+  const handleReportBlocker = () => {
+    if (!blockerText.trim()) return
+    setState(prev => ({
+      ...prev,
+      blockers: [
+        ...prev.blockers,
+        {
+          id: crypto.randomUUID(),
+          memberId,
+          description: blockerText.trim(),
+          reportedAt: new Date().toISOString(),
+          resolved: false,
+        },
+      ],
+    }))
+    setBlockerText('')
+    setShowBlockerForm(false)
+  }
+
+  const taskStatusDot: Record<string, string> = {
+    'todo':        'bg-slate-400',
+    'in-progress': 'bg-blue-500',
+    'done':        'bg-emerald-500',
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-slate-100">
+
+      {/* ── Member workspace ─────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <UrgencyBanner phase={urgencyPhase} milestoneTitle={activeMilestone?.title} />
+
+        {/* Emerald gradient header */}
+        <header className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 px-6 py-4 shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/leader')}
+                className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25 transition ring-1 ring-white/20"
+              >
+                ← Líder
+              </button>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 text-xl font-bold text-white shadow-inner">
+                {currentMember?.name?.[0] ?? '?'}
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-white">
+                  {currentMember?.name ?? memberId}
+                </h1>
+                <p className="text-xs capitalize text-emerald-200">
+                  {currentMember?.role} · {currentMember?.technicalLevel}
+                </p>
+              </div>
             </div>
+
+            {/* Switch member */}
+            <div className="flex items-center gap-2">
+              {state.members.filter(m => m.id !== memberId).map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => router.push(`/member/${m.id}`)}
+                  className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25 transition ring-1 ring-white/20"
+                >
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[9px]">{m.name[0]}</span>
+                  {m.name}
+                </button>
+              ))}
+              <button
+                onClick={() => router.push('/docs')}
+                className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25 transition ring-1 ring-white/20"
+              >
+                📄
+              </button>
+            </div>
+
             {myBlocker && (
-              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
+              <span className="shrink-0 flex items-center gap-1.5 rounded-full bg-red-500/30 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-red-400/50">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-300" />
                 Blocker activo
               </span>
             )}
           </div>
+        </header>
 
-          <div className="grid flex-1 gap-4 md:grid-cols-2">
-            {/* ActiveTaskView — T12 */}
-            <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                Tarea activa
-              </p>
-              {activeTask ? (
-                <div className="space-y-2">
-                  <p className="font-medium text-foreground">{activeTask.title}</p>
-                  <p className="text-sm text-muted-foreground">{activeTask.description}</p>
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                    activeTask.priority === 'high' ? 'bg-red-100 text-red-700' :
-                    activeTask.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {activeTask.priority}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sin tareas asignadas</p>
-              )}
+        {/* Scrollable content */}
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
+
+          {/* Active task + countdown row */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <ActiveTaskView
+                task={activeTask}
+                memberName={currentMember?.name ?? memberId}
+                onMarkDone={handleMarkDone}
+              />
             </div>
-
-            {/* MilestoneCountdown — T13 */}
-            <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                Countdown
-              </p>
-              {activeMilestone ? (
-                <div className="space-y-2">
-                  <p className="font-medium text-foreground">{activeMilestone.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Deadline: {new Date(activeMilestone.deadline).toLocaleString()}
-                  </p>
-                  <p className={`text-lg font-bold ${
-                    urgencyPhase === 'panic' || urgencyPhase === 'expired' ? 'text-red-600' :
-                    urgencyPhase === 'urgent' ? 'text-orange-600' :
-                    urgencyPhase === 'focus' ? 'text-yellow-600' : 'text-green-600'
-                  }`}>
-                    {urgencyPhase.toUpperCase()}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sin milestone activo</p>
-              )}
-            </div>
-
-            {/* BlockerButton */}
-            <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                Mis tareas
-              </p>
-              <div className="space-y-1">
-                {myTasks.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Sin tareas asignadas</p>
+            <div className="flex flex-col gap-3">
+              {/* Countdown card */}
+              <div className={`rounded-xl border-2 bg-white p-4 shadow-sm transition-colors duration-300 ${
+                urgencyPhase === 'panic'   ? 'border-red-400'    :
+                urgencyPhase === 'urgent'  ? 'border-orange-400' :
+                urgencyPhase === 'focus'   ? 'border-yellow-400' :
+                urgencyPhase === 'expired' ? 'border-red-700'    :
+                                             'border-slate-200'
+              }`}>
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Tiempo restante</p>
+                {activeMilestone ? (
+                  <MilestoneCountdown
+                    deadline={activeMilestone.deadline}
+                    milestoneTitle={activeMilestone.title}
+                    compact={false}
+                  />
+                ) : (
+                  <p className="text-sm text-slate-400">Sin deadline</p>
                 )}
-                {myTasks.map(t => (
-                  <div key={t.id} className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{t.title}</span>
-                    <span className="text-xs capitalize text-muted-foreground">{t.status}</span>
+              </div>
+
+              {/* Blocker panel */}
+              <div className={`rounded-xl border-2 bg-white p-4 shadow-sm ${myBlocker ? 'border-orange-300' : 'border-slate-200'}`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Blocker</p>
+                  {!myBlocker && (
+                    <button
+                      onClick={() => setShowBlockerForm(v => !v)}
+                      className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 hover:bg-orange-200 transition"
+                    >
+                      {showBlockerForm ? '✕' : '＋ Reportar'}
+                    </button>
+                  )}
+                </div>
+                {myBlocker ? (
+                  <div className="rounded-lg bg-orange-50 p-2.5 ring-1 ring-orange-200">
+                    <div className="mb-1 flex items-center gap-1.5">
+                      <span>⚠️</span>
+                      <span className="text-xs font-semibold text-orange-700">Activo</span>
+                    </div>
+                    <p className="text-xs italic text-orange-600">"{myBlocker.description}"</p>
                   </div>
-                ))}
+                ) : showBlockerForm ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={blockerText}
+                      onChange={e => setBlockerText(e.target.value)}
+                      placeholder="Describí tu problema..."
+                      rows={2}
+                      className="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-700 outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+                    />
+                    <button
+                      onClick={handleReportBlocker}
+                      disabled={!blockerText.trim()}
+                      className="w-full rounded-lg bg-orange-500 py-1.5 text-xs font-bold text-white hover:bg-orange-600 transition disabled:opacity-40"
+                    >
+                      Reportar blocker
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 py-2 text-center">
+                    <span className="text-xl">✅</span>
+                    <p className="text-xs font-medium text-emerald-600">Sin blockers</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      </main>
 
-      <CopilotSidebar
-        defaultOpen
-        width={420}
-        input={{ disclaimer: () => null, className: 'pb-6' }}
-      />
-    </>
+          {/* All my tasks */}
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+              Todas mis tareas ({myTasks.length})
+            </h2>
+            {myTasks.length === 0 ? (
+              <p className="text-sm text-slate-400">Sin tareas asignadas aún.</p>
+            ) : (
+              <div className="space-y-2">
+                {myTasks.map(t => (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100"
+                  >
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${taskStatusDot[t.status] ?? 'bg-slate-400'}`} />
+                    <p className={`flex-1 text-sm ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                      {t.title}
+                    </p>
+                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                      t.priority === 'high'   ? 'bg-red-100 text-red-700' :
+                      t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-green-100 text-green-700'
+                    }`}>
+                      {t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Media' : 'Baja'}
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                      t.status === 'done'        ? 'bg-emerald-100 text-emerald-700' :
+                      t.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                                   'bg-slate-100 text-slate-600'
+                    }`}>
+                      {t.status === 'done' ? 'Listo' : t.status === 'in-progress' ? 'En progreso' : 'Pendiente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── AI Chat panel ────────────────────────────────── */}
+      <div className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
+        <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
+          <div>
+            <p className="text-sm font-bold text-white">Asistente Personal</p>
+            <p className="text-[10px] text-emerald-200">Tu AI de equipo</p>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <CopilotChat className="h-full" />
+        </div>
+      </div>
+
+      {/* Mascot — bottom-right corner */}
+      <div className="fixed bottom-6 right-[396px] z-50">
+        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
+      </div>
+    </div>
   )
 }
 
 function MemberPage({ memberId }: { memberId: string }) {
-  const [threadId, setThreadId] = useState<string | undefined>()
   return (
-    <div className={drawerStyles.layout}>
-      <ThreadsDrawer agentId="crew_agent" threadId={threadId} onThreadChange={setThreadId} />
-      <div className={drawerStyles.mainPanel}>
-        <CopilotChatConfigurationProvider agentId="crew_agent" threadId={threadId}>
-          <MemberCanvas memberId={memberId} />
-        </CopilotChatConfigurationProvider>
-      </div>
-    </div>
+    <CopilotChatConfigurationProvider agentId="crew_agent">
+      <MemberCanvas memberId={memberId} />
+    </CopilotChatConfigurationProvider>
   )
 }
 

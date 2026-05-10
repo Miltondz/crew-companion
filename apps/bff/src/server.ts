@@ -31,7 +31,7 @@ const app = createCopilotEndpoint({
     intelligence,
     identifyUser: () => ({ id: "default", name: "Crew Companion User" }),
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-    agents: { default: agent },
+    agents: { default: agent, crew_agent: agent },
     openGenerativeUI: true,
     a2ui: { injectA2UITool: false },
     mcpApps: {

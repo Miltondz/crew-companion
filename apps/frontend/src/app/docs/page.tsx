@@ -1,22 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import {
+  CopilotChat,
   CopilotChatConfigurationProvider,
-  CopilotSidebar,
   useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
 } from '@copilotkit/react-core/v2'
-import { ThreadsDrawer } from '@/components/threads-drawer'
-import drawerStyles from '@/components/threads-drawer/threads-drawer.module.css'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { SEED_STATE } from '@/lib/crew/seed'
-import type { CrewState, SharedDocument } from '@/lib/crew/types'
+import type { CrewState } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
   const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
@@ -31,7 +30,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent()
+  const { agent } = useAgent("crew_agent")
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -41,18 +40,20 @@ function useCrewAgent() {
 
 function MarkdownContent({ content }: { content: string }) {
   return (
-    <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-foreground">
+    <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-slate-700">
       {content}
     </pre>
   )
 }
 
 function DocsCanvas() {
+  const router = useRouter()
   const { state, setState } = useCrewAgent()
-
-  const openDocuments: SharedDocument[] = state.sharedDocuments.filter(d =>
-    state.openDocumentIds.includes(d.id)
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(
+    state.openDocumentIds[0] ?? state.sharedDocuments[0]?.id ?? null
   )
+
+  const selectedDoc = state.sharedDocuments.find(d => d.id === selectedDocId)
 
   useConfigureSuggestions({
     available: 'before-first-message',
@@ -78,6 +79,7 @@ function DocsCanvas() {
     description: 'Abre un documento en el workspace',
     parameters: z.object({ documentId: z.string() }),
     handler: async ({ documentId }) => {
+      setSelectedDocId(documentId)
       setState(prev => ({
         ...prev,
         openDocumentIds: prev.openDocumentIds.includes(documentId)
@@ -107,99 +109,148 @@ function DocsCanvas() {
   })
 
   return (
-    <>
-      <main className="flex h-screen flex-col overflow-hidden bg-background">
-        <div className="flex flex-1 flex-col gap-4 overflow-auto p-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Document Workspace</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {state.sharedDocuments.length} documento{state.sharedDocuments.length !== 1 ? 's' : ''} compartido{state.sharedDocuments.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+    <div className="flex h-screen overflow-hidden bg-slate-100">
 
-          {openDocuments.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border bg-card/50 p-12 text-center">
-              <p className="max-w-md text-sm text-muted-foreground">
-                Pedile al asistente que abra un documento, o seleccioná uno de la lista.
-              </p>
+      {/* ── Doc list sidebar ─────────────────────────────── */}
+      <div className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
+        {/* Sidebar header */}
+        <div className="shrink-0 bg-gradient-to-b from-violet-700 to-violet-600 px-4 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-xl shadow-inner">📄</div>
+            <div>
+              <p className="text-sm font-bold text-white">Documentos</p>
+              <p className="text-[10px] text-violet-200">{state.sharedDocuments.length} compartido{state.sharedDocuments.length !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Archivos
+          </p>
+          {state.sharedDocuments.length === 0 ? (
+            <p className="px-2 py-4 text-xs text-slate-400">Sin documentos compartidos</p>
+          ) : (
+            <div className="space-y-1">
+              {state.sharedDocuments.map(doc => {
+                const isSelected = doc.id === selectedDocId
+                const sharer = state.members.find(m => m.id === doc.sharedBy)
+                return (
+                  <button
+                    key={doc.id}
+                    onClick={() => setSelectedDocId(doc.id)}
+                    className={`w-full rounded-lg px-3 py-2.5 text-left transition-all ${
+                      isSelected
+                        ? 'bg-violet-50 ring-1 ring-violet-200'
+                        : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-0.5 text-base ${isSelected ? 'text-violet-600' : 'text-slate-400'}`}>📋</span>
+                      <div className="min-w-0">
+                        <p className={`truncate text-xs font-semibold ${isSelected ? 'text-violet-700' : 'text-slate-700'}`}>
+                          {doc.title}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          por {sharer?.name ?? doc.sharedBy}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Document viewer ──────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+
+        {/* Violet gradient header */}
+        <header className="shrink-0 bg-gradient-to-r from-violet-700 via-violet-600 to-purple-600 px-6 py-4 shadow-lg">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/leader')}
+              className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25 transition ring-1 ring-white/20"
+            >
+              ← Líder
+            </button>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-2xl shadow-inner">
+              📋
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white">
+                {selectedDoc?.title ?? 'Document Workspace'}
+              </h1>
+              {selectedDoc ? (
+                <p className="mt-0.5 text-sm text-violet-200">
+                  Compartido por {state.members.find(m => m.id === selectedDoc.sharedBy)?.name ?? selectedDoc.sharedBy}
+                  {' · '}
+                  {new Date(selectedDoc.sharedAt).toLocaleDateString()}
+                </p>
+              ) : (
+                <p className="mt-0.5 text-sm text-violet-200">Seleccioná un documento de la lista</p>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Document content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {selectedDoc ? (
+            <div className="mx-auto max-w-3xl">
+              <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+                <h2 className="mb-2 text-2xl font-bold text-slate-800">{selectedDoc.title}</h2>
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
+                  <span className="text-xs text-slate-400">
+                    Compartido por <span className="font-medium text-slate-600">{state.members.find(m => m.id === selectedDoc.sharedBy)?.name}</span>
+                  </span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-xs text-slate-400">{new Date(selectedDoc.sharedAt).toLocaleDateString()}</span>
+                </div>
+                <MarkdownContent content={selectedDoc.content} />
+              </div>
             </div>
           ) : (
-            <Tabs defaultValue={openDocuments[0]?.id} className="flex flex-1 flex-col">
-              <TabsList className="w-fit">
-                {openDocuments.map(doc => (
-                  <TabsTrigger key={doc.id} value={doc.id} className="max-w-[180px] truncate">
-                    {doc.title}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {openDocuments.map(doc => (
-                <TabsContent
-                  key={doc.id}
-                  value={doc.id}
-                  className="flex-1 overflow-auto rounded-xl border border-border bg-card p-6"
-                >
-                  <h2 className="mb-4 text-lg font-semibold text-foreground">{doc.title}</h2>
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    Compartido por{' '}
-                    {state.members.find(m => m.id === doc.sharedBy)?.name ?? doc.sharedBy}
-                    {' · '}
-                    {new Date(doc.sharedAt).toLocaleDateString()}
-                  </p>
-                  <MarkdownContent content={doc.content} />
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
-
-          {/* Available docs list (not open) */}
-          {state.sharedDocuments.filter(d => !state.openDocumentIds.includes(d.id)).length > 0 && (
-            <div className="rounded-xl border border-border bg-card/50 p-4">
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-                Otros documentos disponibles
-              </p>
-              <div className="space-y-1">
-                {state.sharedDocuments
-                  .filter(d => !state.openDocumentIds.includes(d.id))
-                  .map(doc => (
-                    <button
-                      key={doc.id}
-                      onClick={() =>
-                        setState(prev => ({
-                          ...prev,
-                          openDocumentIds: [...prev.openDocumentIds, doc.id],
-                        }))
-                      }
-                      className="block text-left text-sm text-foreground underline-offset-2 hover:underline"
-                    >
-                      {doc.title}
-                    </button>
-                  ))}
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-violet-100 text-4xl mx-auto">📄</div>
+                <h3 className="text-lg font-semibold text-slate-700">Ningún documento seleccionado</h3>
+                <p className="mt-2 text-sm text-slate-400">Elegí uno de la lista o pedile al asistente que lo abra</p>
               </div>
             </div>
           )}
         </div>
-      </main>
+      </div>
 
-      <CopilotSidebar
-        defaultOpen
-        width={420}
-        input={{ disclaimer: () => null, className: 'pb-6' }}
-      />
-    </>
+      {/* ── AI Chat panel ────────────────────────────────── */}
+      <div className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
+        <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
+          <div>
+            <p className="text-sm font-bold text-white">AI Doc Assistant</p>
+            <p className="text-[10px] text-violet-200">Preguntá sobre los documentos</p>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <CopilotChat className="h-full" />
+        </div>
+      </div>
+
+      {/* Mascot — bottom-right corner */}
+      <div className="fixed bottom-6 right-[396px] z-50">
+        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
+      </div>
+    </div>
   )
 }
 
 function DocsPage() {
-  const [threadId, setThreadId] = useState<string | undefined>()
   return (
-    <div className={drawerStyles.layout}>
-      <ThreadsDrawer agentId="crew_agent" threadId={threadId} onThreadChange={setThreadId} />
-      <div className={drawerStyles.mainPanel}>
-        <CopilotChatConfigurationProvider agentId="crew_agent" threadId={threadId}>
-          <DocsCanvas />
-        </CopilotChatConfigurationProvider>
-      </div>
-    </div>
+    <CopilotChatConfigurationProvider agentId="crew_agent">
+      <DocsCanvas />
+    </CopilotChatConfigurationProvider>
   )
 }
 
