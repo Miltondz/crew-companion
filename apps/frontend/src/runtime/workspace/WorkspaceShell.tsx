@@ -31,9 +31,11 @@ export function WorkspaceShell({ phase, agentRail, children }: Props) {
       <CommandSurfaceRegion mounts={layout['command-surface'].mounts} />
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-y-auto p-4 gap-3 min-w-0">
+          <div className="flex flex-1 flex-col overflow-hidden min-w-0">
             <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
-            {children}
+            <div className="flex flex-1 overflow-hidden">
+              {children}
+            </div>
           </div>
           <ContextRailRegion mounts={layout['context-rail'].mounts} />
         </div>

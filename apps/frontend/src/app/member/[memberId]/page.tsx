@@ -23,6 +23,8 @@ import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registr
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
+import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
@@ -186,7 +188,16 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      const result = layoutEngine.mount(fullEnvelope)
+      if (!result.ok) {
+        return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      }
+      return (
+        <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200">
+          <span>🧩</span>
+          <span>Superficie montada en workspace</span>
+        </div>
+      )
     },
   })
 
@@ -232,14 +243,13 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden transition-colors duration-1000 phase-bg-${urgencyPhase}`}>
+    <>
+      <WorkspaceShell phase={urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          <UrgencyBanner phase={urgencyPhase} milestoneTitle={activeMilestone?.title} />
 
-      {/* ── Member workspace ─────────────────────────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <UrgencyBanner phase={urgencyPhase} milestoneTitle={activeMilestone?.title} />
-
-        {/* Emerald gradient header */}
-        <header className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 px-6 py-4 shadow-lg">
+          {/* Emerald gradient header — keep as-is */}
+          <header className="shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 px-6 py-4 shadow-lg">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
@@ -410,30 +420,15 @@ function MemberCanvas({ memberId }: { memberId: string }) {
             )}
           </div>
         </motion.div>
-      </div>
-
-      {/* ── AI Chat panel — desktop only ─────────────────── */}
-      <div className="hidden md:flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
-        <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
-          <div>
-            <p className="text-sm font-bold text-white">Asistente Personal</p>
-            <p className="text-[10px] text-emerald-200">Tu AI de equipo</p>
-          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <CopilotChat className="h-full" />
-        </div>
-      </div>
+      </WorkspaceShell>
 
-      {/* Mascot — bottom-right corner */}
-      <div className="fixed bottom-6 right-6 md:right-[396px] z-50">
+      <div className="fixed bottom-6 right-6 z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
 
-      {/* Mobile chat drawer */}
       <MobileChatDrawer accentClass="from-emerald-600 to-teal-600" label="Asistente Personal" />
-    </div>
+    </>
   )
 }
 

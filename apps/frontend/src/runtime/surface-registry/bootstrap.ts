@@ -12,6 +12,11 @@ import { manifest as documentSummary } from '@/components/surfaces/DocumentSumma
 import { manifest as memberAction } from '@/components/surfaces/MemberActionPanel/manifest'
 import { manifest as milestoneSummary } from '@/components/surfaces/MilestoneSummaryPanel/manifest'
 import { manifest as troubleshooting } from '@/components/surfaces/TroubleshootingWizard/manifest'
+import { manifest as forceGraph } from '@/components/surfaces/ForceGraph/manifest'
+import { manifest as countdownCritical } from '@/components/surfaces/CountdownCritical/manifest'
+import { manifest as ideaMatrix } from '@/components/surfaces/IdeaMatrix/manifest'
+import { manifest as triageWarRoom } from '@/components/surfaces/TriageWarRoom/manifest'
+import { manifest as ambientOverlayWidget } from '@/components/surfaces/AmbientOverlayWidget/manifest'
 
 let bootstrapped = false
 
@@ -28,5 +33,10 @@ export function bootstrapRegistry(): void {
     memberAction,
     milestoneSummary,
     troubleshooting,
+    forceGraph,
+    countdownCritical,
+    ideaMatrix,
+    triageWarRoom,
+    ambientOverlayWidget,
   ].forEach(m => surfaceRegistry.register(m))
 }

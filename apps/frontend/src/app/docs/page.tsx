@@ -21,6 +21,8 @@ import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { SEED_STATE } from '@/lib/crew/seed'
+import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import type { CrewState } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
@@ -137,7 +139,16 @@ function DocsCanvas() {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      const result = layoutEngine.mount(fullEnvelope)
+      if (!result.ok) {
+        return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      }
+      return (
+        <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200">
+          <span>🧩</span>
+          <span>Superficie montada en workspace</span>
+        </div>
+      )
     },
   })
 
@@ -148,10 +159,12 @@ function DocsCanvas() {
   })
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <>
+      <WorkspaceShell phase={state.urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+        <div className="flex flex-1 overflow-hidden bg-slate-100">
 
-      {/* ── Doc list sidebar ─────────────────────────────── */}
-      <div className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
+          {/* Doc list sidebar — keep as-is */}
+          <div className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
         {/* Sidebar header */}
         <div className="shrink-0 bg-gradient-to-b from-violet-700 to-violet-600 px-4 py-5">
           <div className="flex items-center gap-3">
@@ -203,11 +216,9 @@ function DocsCanvas() {
         </div>
       </div>
 
-      {/* ── Document viewer ──────────────────────────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-
-        {/* Violet gradient header */}
-        <header className="shrink-0 bg-gradient-to-r from-violet-700 via-violet-600 to-purple-600 px-6 py-4 shadow-lg">
+          {/* Document viewer — keep as-is */}
+          <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+            <header className="shrink-0 bg-gradient-to-r from-violet-700 via-violet-600 to-purple-600 px-6 py-4 shadow-lg">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/leader')}
@@ -235,13 +246,12 @@ function DocsCanvas() {
           </div>
         </header>
 
-        {/* Document content */}
-        <motion.div
-          className="flex-1 overflow-y-auto p-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
+            <motion.div
+              className="flex-1 overflow-y-auto p-6"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+            >
           {selectedDoc ? (
             <div className="mx-auto max-w-3xl">
               <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -265,31 +275,18 @@ function DocsCanvas() {
               />
             </div>
           )}
-        </motion.div>
-      </div>
-
-      {/* ── AI Chat panel — desktop only ─────────────────── */}
-      <div className="hidden md:flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
-        <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
-          <div>
-            <p className="text-sm font-bold text-white">AI Doc Assistant</p>
-            <p className="text-[10px] text-violet-200">Preguntá sobre los documentos</p>
+            </motion.div>
           </div>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          <CopilotChat className="h-full" />
-        </div>
-      </div>
 
-      {/* Mascot — bottom-right corner */}
-      <div className="fixed bottom-6 right-6 md:right-[396px] z-50">
+        </div>
+      </WorkspaceShell>
+
+      <div className="fixed bottom-6 right-6 z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
 
-      {/* Mobile chat drawer */}
       <MobileChatDrawer accentClass="from-violet-600 to-purple-600" label="AI Doc Assistant" />
-    </div>
+    </>
   )
 }
 

@@ -32,6 +32,7 @@ import { ActivityStream } from '@/components/shared/ActivityStream'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
+import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
@@ -190,10 +191,17 @@ function LeaderCanvas() {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      // Mount in LayoutEngine for spatial grammar zones (non-blocking)
-      layoutEngine.mount(fullEnvelope)
+      const result = layoutEngine.mount(fullEnvelope)
       pushActivity('task_created', `Superficie "${fullEnvelope.surfaceId}" renderizada`, '🧩')
-      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      if (!result.ok) {
+        return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+      }
+      return (
+        <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200">
+          <span>🧩</span>
+          <span>Superficie montada en workspace</span>
+        </div>
+      )
     },
   })
 
@@ -289,14 +297,13 @@ function LeaderCanvas() {
   ]
 
   return (
-    <div className={`flex h-screen overflow-hidden transition-colors duration-1000 phase-bg-${urgencyPhase}`}>
+    <>
+      <WorkspaceShell phase={urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          <UrgencyBanner phase={urgencyPhase} />
 
-      {/* ── Main dashboard ──────────────────────────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <UrgencyBanner phase={urgencyPhase} />
-
-        {/* Header */}
-        <header className="shrink-0 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-600 px-6 py-4 shadow-lg">
+          {/* Header */}
+          <header className="shrink-0 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-600 px-6 py-4 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 text-xl shadow-inner">⚡</div>
@@ -554,32 +561,16 @@ function LeaderCanvas() {
             <button onClick={() => simulateUrgency(3)}  className="rounded bg-red-100 px-2 py-1 text-red-700 hover:bg-red-200">Panic</button>
           </div>
         )}
-      </div>
-
-      {/* ── AI Chat panel — desktop only ─────────────────── */}
-      <div className="hidden md:flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
-        <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
-          <div>
-            <p className="text-sm font-bold text-white">AI Leader Assistant</p>
-            <p className="text-[10px] text-indigo-200">Gestión de equipo inteligente</p>
-          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <CopilotChat className="h-full" />
-        </div>
-      </div>
+      </WorkspaceShell>
 
-      {/* Mascot */}
-      <div className="fixed bottom-6 right-6 md:right-[396px] z-50">
+      <div className="fixed bottom-6 right-6 z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
 
-      {/* Mobile chat drawer */}
       <MobileChatDrawer accentClass="from-indigo-600 to-violet-600" label="AI Leader Assistant" />
-
       <CommandPalette state={state} />
-    </div>
+    </>
   )
 }
 
