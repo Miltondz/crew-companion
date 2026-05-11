@@ -36,9 +36,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${splineMono.variable}`}>
       <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
-        <SessionProvider>
-          <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
-        </SessionProvider>
+        <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
+          <span>🧪</span>
+          <span>Demo — datos simulados. Equipo real y despliegue completo: próximamente.</span>
+        </div>
+        <div className="pt-6">
+          <SessionProvider>
+            <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
+          </SessionProvider>
+        </div>
         <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
