@@ -28,6 +28,10 @@ import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { DarkModeToggle } from '@/components/shared/DarkModeToggle'
+import { ActivityStream } from '@/components/shared/ActivityStream'
+import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { useActivityStream } from '@/lib/useActivityStream'
+import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
@@ -64,6 +68,8 @@ function LeaderCanvas() {
 
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [showAddTask, setShowAddTask] = useState(false)
+  const [showActivity, setShowActivity] = useState(false)
+  const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
     description: '',
@@ -109,10 +115,14 @@ function LeaderCanvas() {
       updates: z.record(z.unknown()),
     }),
     handler: async ({ taskId, updates }) => {
-      setState(prev => ({
-        ...prev,
-        tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, ...updates } : t)),
-      }))
+      setState(prev => {
+        const task = prev.tasks.find(t => t.id === taskId)
+        const member = prev.members.find(m => m.id === task?.assignedTo)
+        if ((updates as { status?: string }).status === 'done') {
+          pushActivity('task_done', `${member?.name ?? 'Asistente'} completó "${task?.title}"`, '✅')
+        }
+        return { ...prev, tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, ...updates } : t)) }
+      })
       toast.success('Tarea actualizada por el asistente')
       return `tarea ${taskId} actualizada`
     },
@@ -180,6 +190,9 @@ function LeaderCanvas() {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+      // Mount in LayoutEngine for spatial grammar zones (non-blocking)
+      layoutEngine.mount(fullEnvelope)
+      pushActivity('task_created', `Superficie "${fullEnvelope.surfaceId}" renderizada`, '🧩')
       return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
     },
   })
@@ -195,6 +208,8 @@ function LeaderCanvas() {
 
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setState(prev => {
+      const task = prev.tasks.find(t => t.id === taskId)
+      const member = prev.members.find(m => m.id === task?.assignedTo)
       const updatedTasks = prev.tasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
       if (newStatus === 'done') {
         const milestone = prev.milestones.find(m => m.id === prev.activeMilestoneId)
@@ -203,10 +218,14 @@ function LeaderCanvas() {
         if (allDone) {
           toast.success('¡Milestone completado! 🏆', { description: milestone?.title, duration: 5000 })
           fireMilestoneConfetti()
+          pushActivity('milestone_complete', `Milestone "${milestone?.title}" completado`, '🏆')
         } else {
           toast.success('Tarea completada')
           fireCelebration()
+          pushActivity('task_done', `${member?.name ?? 'Alguien'} completó "${task?.title}"`, '✅')
         }
+      } else if (newStatus === 'in-progress') {
+        pushActivity('task_started', `${member?.name ?? 'Alguien'} empezó "${task?.title}"`, '🔄')
       }
       return { ...prev, tasks: updatedTasks }
     })
@@ -224,6 +243,7 @@ function LeaderCanvas() {
       createdAt: new Date().toISOString(),
       milestoneId: state.activeMilestoneId,
     }
+    const assignee = state.members.find(m => m.id === newTask.assignedTo)
     setState(prev => ({
       ...prev,
       tasks: [...prev.tasks, newTask],
@@ -234,11 +254,14 @@ function LeaderCanvas() {
       ),
     }))
     toast.success('Tarea creada', { description: newTask.title })
+    pushActivity('task_created', `Nueva tarea "${newTask.title}" → ${assignee?.name ?? 'sin asignar'}`, '📋')
     setTaskForm({ title: '', description: '', assignedTo: state.members[0]?.id ?? '', priority: 'medium' })
     setShowAddTask(false)
   }
 
   const handleResolveBlocker = (blockerId: string) => {
+    const blocker = state.blockers.find(b => b.id === blockerId)
+    const member = state.members.find(m => m.id === blocker?.memberId)
     setState(prev => ({
       ...prev,
       blockers: prev.blockers.map(b =>
@@ -246,6 +269,7 @@ function LeaderCanvas() {
       ),
     }))
     toast.success('Blocker resuelto ✓')
+    pushActivity('blocker_resolved', `Blocker de ${member?.name ?? 'miembro'} resuelto`, '🔓')
   }
 
   const simulateUrgency = (minutesLeft: number) => {
@@ -497,6 +521,29 @@ function LeaderCanvas() {
           </div>
         </motion.div>
 
+          {/* Activity Stream */}
+          <div className="rounded-xl bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
+            <button
+              onClick={() => setShowActivity(v => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 hover:bg-slate-50 transition"
+            >
+              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span>📡</span> Actividad reciente
+                {activityEvents.length > 0 && (
+                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                    {activityEvents.length}
+                  </span>
+                )}
+              </span>
+              <span className="text-slate-400 text-xs">{showActivity ? '▲' : '▼'}</span>
+            </button>
+            {showActivity && (
+              <div className="max-h-56 overflow-y-auto border-t border-slate-100 px-1 py-1">
+                <ActivityStream events={activityEvents} />
+              </div>
+            )}
+          </div>
+
         {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (
           <div className="flex items-center gap-2 border-t border-slate-200 bg-white/80 px-4 py-2 text-xs">
@@ -509,8 +556,8 @@ function LeaderCanvas() {
         )}
       </div>
 
-      {/* ── AI Chat panel ────────────────────────────────── */}
-      <div className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
+      {/* ── AI Chat panel — desktop only ─────────────────── */}
+      <div className="hidden md:flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
         <div className="flex shrink-0 items-center gap-3 bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
           <div>
@@ -524,9 +571,12 @@ function LeaderCanvas() {
       </div>
 
       {/* Mascot */}
-      <div className="fixed bottom-6 right-[396px] z-50">
+      <div className="fixed bottom-6 right-6 md:right-[396px] z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
+
+      {/* Mobile chat drawer */}
+      <MobileChatDrawer accentClass="from-indigo-600 to-violet-600" label="AI Leader Assistant" />
 
       <CommandPalette state={state} />
     </div>

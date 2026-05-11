@@ -16,6 +16,7 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
+import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
@@ -267,8 +268,8 @@ function DocsCanvas() {
         </motion.div>
       </div>
 
-      {/* ── AI Chat panel ────────────────────────────────── */}
-      <div className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
+      {/* ── AI Chat panel — desktop only ─────────────────── */}
+      <div className="hidden md:flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
         <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/25 text-base shadow-inner">✦</div>
           <div>
@@ -282,9 +283,12 @@ function DocsCanvas() {
       </div>
 
       {/* Mascot — bottom-right corner */}
-      <div className="fixed bottom-6 right-[396px] z-50">
+      <div className="fixed bottom-6 right-6 md:right-[396px] z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
+
+      {/* Mobile chat drawer */}
+      <MobileChatDrawer accentClass="from-violet-600 to-purple-600" label="AI Doc Assistant" />
     </div>
   )
 }
