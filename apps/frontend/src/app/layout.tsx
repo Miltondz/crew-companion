@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 import { Plus_Jakarta_Sans, Spline_Sans_Mono } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
+import { Toaster } from "sonner";
 import "./globals.css";
 // v2 owns its own stylesheet. Do NOT import @copilotkit/react-ui/styles.css —
 // v1's .copilotKitButton / .copilotKitSidebar / .copilotKitWindow rules
@@ -22,9 +24,8 @@ const splineMono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AG-UI Canvas | CopilotKit Hackathon Starter",
-  description:
-    "Hackathon starter kit: CopilotKit canvas + threads drawer + Deep Agents + Gemini + Notion MCP",
+  title: "Crew Companion — AI Team Dashboard",
+  description: "Intelligent crew management: tasks, milestones, blockers, and AI assistance for every team member.",
 };
 
 export default function RootLayout({
@@ -35,7 +36,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${splineMono.variable}`}>
       <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
-        <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
+        <SessionProvider>
+          <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
+        </SessionProvider>
+        <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
   );

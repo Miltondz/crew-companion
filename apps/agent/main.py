@@ -13,7 +13,7 @@ wipe_orphan_threads()
 _AGENT_RUNTIME = os.getenv("AGENT_RUNTIME", "gemini-flash-deep")
 print(f"[runtime] AGENT_RUNTIME={_AGENT_RUNTIME}", flush=True)
 
-from src.runtime import build_graph
+from src.runtime_factory import build_graph
 from src.tools import CREW_TOOLS
 from src.prompts import SYSTEM_PROMPT
 

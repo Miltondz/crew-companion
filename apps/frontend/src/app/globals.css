@@ -225,3 +225,15 @@ html {
   animation: lead-card-just-synced 800ms ease-out 1;
 }
 
+/* Phase background gradients (3.2 Spatial Grammar) */
+.phase-bg-normal   { background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%); }
+.phase-bg-focus    { background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); }
+.phase-bg-urgent   { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); }
+.phase-bg-panic    { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); animation: panic-pulse 2s ease-in-out infinite; }
+.phase-bg-expired  { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); color: #fef2f2; }
+
+@keyframes panic-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(0.92); }
+}
+

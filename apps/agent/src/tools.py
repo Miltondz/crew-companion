@@ -6,14 +6,18 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
 
-from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
+from .runtime.capabilities import Capability, RiskLevel
+from .runtime.tool_decorator import guarded_tool, assert_all_tools_registered
 from .types import TaskPriority, TaskStatus
 
 
-@tool
+@guarded_tool(
+    capabilities=[Capability.TASKS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
 def create_task(
     title: str,
     description: str,
@@ -36,7 +40,10 @@ def create_task(
     return Command(update={"tasks": [*state.get("tasks", []), task]})
 
 
-@tool
+@guarded_tool(
+    capabilities=[Capability.TASKS_WRITE, Capability.TASKS_READ, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
 def update_task_status(
     task_id: str,
     new_status: TaskStatus,
@@ -50,7 +57,10 @@ def update_task_status(
     return Command(update={"tasks": tasks})
 
 
-@tool
+@guarded_tool(
+    capabilities=[Capability.MILESTONES_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
 def create_milestone(
     title: str,
     deadline_iso: str,
@@ -69,7 +79,10 @@ def create_milestone(
     return Command(update={"milestones": milestones, "activeMilestoneId": milestone["id"]})
 
 
-@tool
+@guarded_tool(
+    capabilities=[Capability.BLOCKERS_RESOLVE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
 def resolve_blocker(
     blocker_id: str,
     state: Annotated[dict, InjectedState],
@@ -84,10 +97,16 @@ def resolve_blocker(
     return Command(update={"blockers": blockers})
 
 
-@tool
+@guarded_tool(
+    capabilities=[Capability.DOCS_READ],
+    risk_level=RiskLevel.LOW,
+)
 def get_documents(state: Annotated[dict, InjectedState]) -> list:
     """Return all shared documents available to the team."""
     return state.get("sharedDocuments", [])
 
 
 CREW_TOOLS = [create_task, update_task_status, create_milestone, resolve_blocker, get_documents]
+
+# Boot-time assertion: every tool must have a registered capability declaration.
+assert_all_tools_registered(CREW_TOOLS)

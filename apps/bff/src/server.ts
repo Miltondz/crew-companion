@@ -5,6 +5,7 @@ import {
   createCopilotEndpoint,
 } from "@copilotkit/runtime/v2";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+import { FullEnvelopeSchema } from "./envelope-schema";
 
 const intelligence = new CopilotKitIntelligence({
   apiKey:
@@ -18,8 +19,6 @@ const agent = new LangGraphAgent({
     process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123",
   graphId: "default",
   langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
-  // 60 (vs LangGraph default 25) leaves headroom for the deepagents planner
-  // loop on multi-step turns like "draft email + queue".
   assistantConfig: {
     recursion_limit: Number(process.env.LANGGRAPH_RECURSION_LIMIT ?? 60),
   },
@@ -29,7 +28,13 @@ const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
     intelligence,
-    identifyUser: () => ({ id: "default", name: "Crew Companion User" }),
+    identifyUser: (ctx) => {
+      // Middleware injects x-workspace-id from the NextAuth session.
+      // Falls back to 'default' during local dev without auth.
+      const workspaceId =
+        (ctx as unknown as Request).headers?.get("x-workspace-id") ?? "default";
+      return { id: workspaceId, name: `workspace:${workspaceId}` };
+    },
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
     agents: { default: agent, crew_agent: agent },
     openGenerativeUI: true,
@@ -46,10 +51,51 @@ const app = createCopilotEndpoint({
   }),
 });
 
-// Rewrite known 5xx error bodies into structured `{ error, hint, command }`
-// payloads the UI can render as actionable toasts. Conservative matching —
-// we only remap when we can identify the failure from the body, so unknown
-// 5xx errors fall through unchanged.
+// Envelope correlation logging — validate on /api/copilotkit, never block.
+app.use("/api/copilotkit/*", async (c, next) => {
+  const ctype = c.req.header("content-type") ?? "";
+  if (ctype.includes("application/json")) {
+    try {
+      const cloned = c.req.raw.clone();
+      const body = (await cloned.json()) as Record<string, unknown>;
+      const messages = Array.isArray(body["messages"])
+        ? (body["messages"] as Record<string, unknown>[])
+        : [];
+      const toolCalls = messages.flatMap((m) =>
+        Array.isArray(m["tool_calls"])
+          ? (m["tool_calls"] as Record<string, unknown>[])
+          : []
+      );
+      for (const call of toolCalls) {
+        const fn = call["function"] as Record<string, unknown> | undefined;
+        const rawArgs =
+          fn && typeof fn["arguments"] === "string"
+            ? (JSON.parse(fn["arguments"]) as Record<string, unknown>)
+            : (call["args"] as Record<string, unknown> | undefined);
+        const envelope = rawArgs?.["envelope"];
+        if (envelope) {
+          const result = FullEnvelopeSchema.safeParse(envelope);
+          if (result.success) {
+            const { envelopeId, agentId, intent, surfaceId } = result.data;
+            console.log(
+              `[envelope] ${envelopeId} agent=${agentId} intent=${intent} surfaceId=${surfaceId}`
+            );
+          } else {
+            console.warn(
+              "[envelope] validation failed — passing through for legacy adapter",
+              result.error.issues
+            );
+          }
+        }
+      }
+    } catch {
+      // Body parse failure — not a JSON tool call body, skip
+    }
+  }
+  await next();
+});
+
+// Rewrite known 5xx error bodies into structured { error, hint, command } payloads.
 app.use("*", async (c, next) => {
   await next();
   const status = c.res.status;
@@ -80,9 +126,6 @@ app.use("*", async (c, next) => {
     return;
   }
 
-  // AgentThreadLockedError: a prior run errored mid-stream and the LangGraph
-  // SDK's per-thread lock didn't release. The thread is unrecoverable; the
-  // hint tells the user to start a new conversation.
   const isThreadLocked =
     body.includes("AgentThreadLockedError") ||
     /Thread\s+[0-9a-f-]{36}\s+is locked/i.test(body);
@@ -100,6 +143,21 @@ app.use("*", async (c, next) => {
     });
     return;
   }
+});
+
+// Approval stubs — replace body with graph.invoke(Command(resume={...})) on thread_id post-auth.
+app.post("/api/approvals/:envelopeId/approve", async (c) => {
+  const { envelopeId } = c.req.param();
+  const body = await c.req.json().catch(() => ({}));
+  console.log(`[approvals] approve envelopeId=${envelopeId} token=${body.approval_token ?? "?"}`);
+  return c.json({ ok: true, envelopeId, decision: "approved" });
+});
+
+app.post("/api/approvals/:envelopeId/reject", async (c) => {
+  const { envelopeId } = c.req.param();
+  const body = await c.req.json().catch(() => ({}));
+  console.log(`[approvals] reject envelopeId=${envelopeId}`, body);
+  return c.json({ ok: true, envelopeId, decision: "rejected" });
 });
 
 const port = Number(process.env.PORT) || 4000;

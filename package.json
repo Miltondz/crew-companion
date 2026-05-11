@@ -25,7 +25,8 @@
     "license": "npx copilotkit license -n hackathon-kit",
     "build": "npm run build --workspace frontend",
     "start": "npm run start --workspace frontend",
-    "lint": "npm run lint --workspace frontend"
+    "lint": "npm run lint --workspace frontend",
+    "sync:capabilities": "tsx scripts/sync-capabilities.ts"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

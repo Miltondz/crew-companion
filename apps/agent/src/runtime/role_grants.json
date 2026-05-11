@@ -1,0 +1,28 @@
+{
+  "leader": [
+    "state.read", "state.write",
+    "tasks.read", "tasks.write", "tasks.delete",
+    "blockers.read", "blockers.write", "blockers.resolve",
+    "milestones.read", "milestones.write",
+    "members.read", "members.invite",
+    "docs.read", "docs.write",
+    "ui.render_surface", "ui.set_mascot", "ui.highlight"
+  ],
+  "member": [
+    "state.read", "state.write",
+    "tasks.read", "tasks.write",
+    "blockers.read", "blockers.write", "blockers.resolve",
+    "milestones.read",
+    "members.read",
+    "docs.read", "docs.write",
+    "ui.render_surface", "ui.set_mascot", "ui.highlight"
+  ],
+  "viewer": [
+    "state.read",
+    "tasks.read",
+    "blockers.read",
+    "milestones.read",
+    "members.read",
+    "docs.read"
+  ]
+}

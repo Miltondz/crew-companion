@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
+import { motion } from 'motion/react'
+import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -14,12 +16,16 @@ import {
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
-import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ActiveTaskView } from '@/components/member/ActiveTaskView'
+import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
+import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
+import { fireCelebration } from '@/lib/confetti'
 import type { CrewState, UrgencyPhase } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
@@ -35,7 +41,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent("crew_agent")
+  const { agent } = useAgent({ agentId: "crew_agent" })
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -98,6 +104,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         ...prev,
         tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, ...updates } : t)),
       }))
+      toast.success('Tarea actualizada')
       return `tarea ${taskId} actualizada`
     },
   })
@@ -120,6 +127,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
           },
         ],
       }))
+      toast.warning('Blocker reportado al líder', { description })
       return 'blocker registrado'
     },
   })
@@ -137,16 +145,48 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     },
   })
 
+  const runtimeContext = useRuntimeContext({
+    role: 'member',
+    techLevel: currentMember?.technicalLevel,
+    phase: urgencyPhase,
+    hasActiveBlocker: !!myBlocker,
+  })
+
+  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
+  const FullEnvelopeSchema = z.object({
+    envelopeId: z.string(),
+    agentId: z.string(),
+    emittedAt: z.number(),
+    intent: z.string(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']),
+    surfaceId: z.string(),
+    payload: z.record(z.unknown()),
+    context: z.object({
+      role: z.string(),
+      techLevel: z.string().optional(),
+      phase: z.string(),
+      hasActiveBlocker: z.boolean(),
+      workspaceId: z.string(),
+    }),
+    requiredCapabilities: z.array(z.string()),
+    hibernatable: z.boolean(),
+    pinnable: z.boolean(),
+    ephemeral: z.number().optional(),
+  })
+
   useFrontendTool({
     name: 'renderSurface',
     description: 'Renderiza un componente UI tipado en el chat',
     parameters: z.object({
-      envelope: z.object({
-        type: z.string(),
-        payload: z.record(z.unknown()),
-      }),
+      envelope: z.union([LegacyEnvelopeSchema, FullEnvelopeSchema]),
     }),
-    render: ({ args }) => <SurfaceRenderer envelope={args.envelope} />,
+    render: ({ args }) => {
+      if (!args.envelope) return null
+      const fullEnvelope = isLegacyEnvelope(args.envelope)
+        ? adaptLegacyEnvelope(args.envelope, runtimeContext)
+        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+    },
   })
 
   useDefaultRenderTool({
@@ -160,6 +200,8 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       ...prev,
       tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'done' } : t)),
     }))
+    toast.success('¡Tarea completada! 🎉')
+    fireCelebration()
   }
 
   const handleReportBlocker = () => {
@@ -177,6 +219,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         },
       ],
     }))
+    toast.warning('Blocker reportado al líder')
     setBlockerText('')
     setShowBlockerForm(false)
   }
@@ -188,7 +231,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <div className={`flex h-screen overflow-hidden transition-colors duration-1000 phase-bg-${urgencyPhase}`}>
 
       {/* ── Member workspace ─────────────────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
@@ -247,8 +290,12 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
-
+        <motion.div
+          className="flex flex-1 flex-col gap-5 overflow-y-auto p-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
           {/* Active task + countdown row */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
@@ -260,7 +307,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
             </div>
             <div className="flex flex-col gap-3">
               {/* Countdown card */}
-              <div className={`rounded-xl border-2 bg-white p-4 shadow-sm transition-colors duration-300 ${
+              <div className={`rounded-xl border-2 bg-white/90 p-4 shadow-sm backdrop-blur-sm transition-colors duration-300 ${
                 urgencyPhase === 'panic'   ? 'border-red-400'    :
                 urgencyPhase === 'urgent'  ? 'border-orange-400' :
                 urgencyPhase === 'focus'   ? 'border-yellow-400' :
@@ -280,7 +327,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
               </div>
 
               {/* Blocker panel */}
-              <div className={`rounded-xl border-2 bg-white p-4 shadow-sm ${myBlocker ? 'border-orange-300' : 'border-slate-200'}`}>
+              <div className={`rounded-xl border-2 bg-white/90 p-4 shadow-sm backdrop-blur-sm ${myBlocker ? 'border-orange-300' : 'border-slate-200'}`}>
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Blocker</p>
                   {!myBlocker && (
@@ -318,22 +365,19 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-1 py-2 text-center">
-                    <span className="text-xl">✅</span>
-                    <p className="text-xs font-medium text-emerald-600">Sin blockers</p>
-                  </div>
+                  <EmptyState icon="✅" title="Sin blockers" />
                 )}
               </div>
             </div>
           </div>
 
           {/* All my tasks */}
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white/90 p-5 shadow-sm backdrop-blur-sm">
             <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">
               Todas mis tareas ({myTasks.length})
             </h2>
             {myTasks.length === 0 ? (
-              <p className="text-sm text-slate-400">Sin tareas asignadas aún.</p>
+              <EmptyState icon="📋" title="Sin tareas asignadas" description="El líder te asignará tareas pronto" />
             ) : (
               <div className="space-y-2">
                 {myTasks.map(t => (
@@ -364,7 +408,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* ── AI Chat panel ────────────────────────────────── */}

@@ -51,20 +51,66 @@ def load_crew_seed() -> dict:
     return seed
 
 
+def hydrate_workspace_state(workspace_id: str) -> dict:
+    """Load workspace state from DB; fall back to seed when row missing or DB down.
+
+    Sync (psycopg) — middleware runs in both sync/async paths. Postgres call
+    must not raise: missing DB during dev is normal until 4.1 lands auth.
+    """
+    if workspace_id == "default" or not workspace_id:
+        return load_crew_seed()
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
+        return load_crew_seed()
+    try:
+        import psycopg  # type: ignore[import-not-found]
+        with psycopg.connect(dsn, connect_timeout=2) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT state_json FROM workspace_state WHERE workspace_id = %s",
+                    (workspace_id,),
+                )
+                row = cur.fetchone()
+                if row:
+                    return row[0] if isinstance(row[0], dict) else json.loads(row[0])
+                seed = load_crew_seed()
+                cur.execute(
+                    "INSERT INTO workspace_state (workspace_id, state_json, thread_id) "
+                    "VALUES (%s, %s::jsonb, %s) ON CONFLICT DO NOTHING",
+                    (workspace_id, json.dumps(seed), f"thread-{workspace_id}"),
+                )
+            conn.commit()
+            return seed
+    except Exception as e:  # noqa: BLE001
+        print(
+            f"[crew_state] WARN hydrate fallback to seed: {type(e).__name__}: {e}",
+            flush=True,
+        )
+        return load_crew_seed()
+
+
 class CrewStateMiddleware(AgentMiddleware):
-    """Hydrates crew state from seed on new threads."""
+    """Hydrates crew state from DB (or seed fallback) on new threads."""
 
     @property
     def name(self) -> str:
         return "CrewStateMiddleware"
 
+    def _resolve_workspace_id(self, state: CrewCanvasState, runtime: Runtime[Any]) -> str:
+        # Auth lands in 4.1; until then everything is the default workspace.
+        ctx = getattr(runtime, "context", None) or {}
+        if isinstance(ctx, dict):
+            return ctx.get("workspaceId") or "default"
+        return "default"
+
     def before_agent(
         self, state: CrewCanvasState, runtime: Runtime[Any]
     ) -> dict[str, Any] | None:
         if state.get("members"):
-            return None  # already hydrated
-        seed = load_crew_seed()
-        return {**state, **seed}
+            return None
+        workspace_id = self._resolve_workspace_id(state, runtime)
+        hydrated = hydrate_workspace_state(workspace_id)
+        return {**state, **hydrated}
 
     async def abefore_agent(
         self, state: CrewCanvasState, runtime: Runtime[Any]

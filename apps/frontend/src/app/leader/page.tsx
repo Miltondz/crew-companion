@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
+import { motion } from 'motion/react'
+import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -13,13 +15,19 @@ import {
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
-import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
 import { TaskCard } from '@/components/shared/TaskCard'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
+import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestonePanel } from '@/components/leader/MilestonePanel'
 import { TeamOverview } from '@/components/leader/TeamOverview'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
+import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
+import { CommandPalette } from '@/components/shared/CommandPalette'
+import { DarkModeToggle } from '@/components/shared/DarkModeToggle'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
@@ -35,7 +43,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent("crew_agent")
+  const { agent } = useAgent({ agentId: "crew_agent" })
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -105,6 +113,7 @@ function LeaderCanvas() {
         ...prev,
         tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, ...updates } : t)),
       }))
+      toast.success('Tarea actualizada por el asistente')
       return `tarea ${taskId} actualizada`
     },
   })
@@ -132,16 +141,47 @@ function LeaderCanvas() {
     },
   })
 
+  const runtimeContext = useRuntimeContext({
+    role: 'leader',
+    phase: urgencyPhase,
+    hasActiveBlocker: state.blockers.some(b => !b.resolved),
+  })
+
+  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
+  const FullEnvelopeSchema = z.object({
+    envelopeId: z.string(),
+    agentId: z.string(),
+    emittedAt: z.number(),
+    intent: z.string(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']),
+    surfaceId: z.string(),
+    payload: z.record(z.unknown()),
+    context: z.object({
+      role: z.string(),
+      techLevel: z.string().optional(),
+      phase: z.string(),
+      hasActiveBlocker: z.boolean(),
+      workspaceId: z.string(),
+    }),
+    requiredCapabilities: z.array(z.string()),
+    hibernatable: z.boolean(),
+    pinnable: z.boolean(),
+    ephemeral: z.number().optional(),
+  })
+
   useFrontendTool({
     name: 'renderSurface',
     description: 'Renderiza un componente UI tipado en el chat',
     parameters: z.object({
-      envelope: z.object({
-        type: z.string(),
-        payload: z.record(z.unknown()),
-      }),
+      envelope: z.union([LegacyEnvelopeSchema, FullEnvelopeSchema]),
     }),
-    render: ({ args }) => <SurfaceRenderer envelope={args.envelope} />,
+    render: ({ args }) => {
+      if (!args.envelope) return null
+      const fullEnvelope = isLegacyEnvelope(args.envelope)
+        ? adaptLegacyEnvelope(args.envelope, runtimeContext)
+        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+    },
   })
 
   useDefaultRenderTool({
@@ -154,10 +194,22 @@ function LeaderCanvas() {
   const activeBlockers = state.blockers.filter(b => !b.resolved)
 
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t)),
-    }))
+    setState(prev => {
+      const updatedTasks = prev.tasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
+      if (newStatus === 'done') {
+        const milestone = prev.milestones.find(m => m.id === prev.activeMilestoneId)
+        const milestoneTasks = milestone ? updatedTasks.filter(t => milestone.taskIds.includes(t.id)) : []
+        const allDone = milestoneTasks.length > 0 && milestoneTasks.every(t => t.status === 'done')
+        if (allDone) {
+          toast.success('¡Milestone completado! 🏆', { description: milestone?.title, duration: 5000 })
+          fireMilestoneConfetti()
+        } else {
+          toast.success('Tarea completada')
+          fireCelebration()
+        }
+      }
+      return { ...prev, tasks: updatedTasks }
+    })
   }
 
   const handleAddTask = () => {
@@ -181,6 +233,7 @@ function LeaderCanvas() {
           : m
       ),
     }))
+    toast.success('Tarea creada', { description: newTask.title })
     setTaskForm({ title: '', description: '', assignedTo: state.members[0]?.id ?? '', priority: 'medium' })
     setShowAddTask(false)
   }
@@ -192,6 +245,7 @@ function LeaderCanvas() {
         b.id === blockerId ? { ...b, resolved: true, resolvedAt: new Date().toISOString() } : b
       ),
     }))
+    toast.success('Blocker resuelto ✓')
   }
 
   const simulateUrgency = (minutesLeft: number) => {
@@ -211,7 +265,7 @@ function LeaderCanvas() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <div className={`flex h-screen overflow-hidden transition-colors duration-1000 phase-bg-${urgencyPhase}`}>
 
       {/* ── Main dashboard ──────────────────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
@@ -262,13 +316,28 @@ function LeaderCanvas() {
                   {activeBlockers.length} blocker{activeBlockers.length > 1 ? 's' : ''}
                 </span>
               )}
+              <DarkModeToggle />
+              <button
+                onClick={() => {
+                  const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
+                  window.dispatchEvent(event)
+                }}
+                className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
+                title="Abrir paleta de comandos (Ctrl+K)"
+              >
+                ⌘K
+              </button>
             </div>
           </div>
         </header>
 
         {/* Scrollable content */}
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
-
+        <motion.div
+          className="flex flex-1 flex-col gap-4 overflow-y-auto p-5"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
           {/* Milestone + Team */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
@@ -279,8 +348,8 @@ function LeaderCanvas() {
                   urgencyPhase={urgencyPhase}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white p-8">
-                  <p className="text-sm text-slate-400">Sin milestone activo</p>
+                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/80 p-8">
+                  <EmptyState icon="🏁" title="Sin milestone activo" description="Pedile al asistente que cree uno" />
                 </div>
               )}
             </div>
@@ -330,7 +399,13 @@ function LeaderCanvas() {
 
             {/* Add Task form */}
             {showAddTask && (
-              <div className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm">
+              <motion.div
+                className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
                 <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
@@ -385,14 +460,14 @@ function LeaderCanvas() {
                 >
                   Crear tarea
                 </button>
-              </div>
+              </motion.div>
             )}
 
             <div className="grid grid-cols-3 gap-4">
               {kanbanColumns.map(({ status, label, accent, countColor }) => {
                 const tasks = state.tasks.filter(t => t.status === status)
                 return (
-                  <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white shadow-sm`}>
+                  <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white/90 shadow-sm backdrop-blur-sm`}>
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</span>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countColor}`}>
@@ -412,9 +487,7 @@ function LeaderCanvas() {
                         />
                       ))}
                       {tasks.length === 0 && (
-                        <div className="rounded-lg border-2 border-dashed border-slate-200 py-6 text-center">
-                          <p className="text-xs text-slate-400">Sin tareas</p>
-                        </div>
+                        <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
                       )}
                     </div>
                   </div>
@@ -422,11 +495,11 @@ function LeaderCanvas() {
               })}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="flex items-center gap-2 border-t border-slate-200 bg-white px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 border-t border-slate-200 bg-white/80 px-4 py-2 text-xs">
             <span className="text-slate-400">Dev:</span>
             <button onClick={() => simulateUrgency(45)} className="rounded bg-emerald-100 px-2 py-1 text-emerald-700 hover:bg-emerald-200">Normal</button>
             <button onClick={() => simulateUrgency(20)} className="rounded bg-yellow-100 px-2 py-1 text-yellow-700 hover:bg-yellow-200">Focus</button>
@@ -454,6 +527,8 @@ function LeaderCanvas() {
       <div className="fixed bottom-6 right-[396px] z-50">
         <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
       </div>
+
+      <CommandPalette state={state} />
     </div>
   )
 }

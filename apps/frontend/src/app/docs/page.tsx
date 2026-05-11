@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
+import { motion } from 'motion/react'
+import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -12,8 +14,11 @@ import {
   useFrontendTool,
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
-import { SurfaceRenderer } from '@/components/shared/SurfaceRenderer'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
+import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
+import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { SEED_STATE } from '@/lib/crew/seed'
 import type { CrewState } from '@/lib/crew/types'
 
@@ -30,7 +35,7 @@ function mergeCrewState(raw: unknown): CrewState {
 }
 
 function useCrewAgent() {
-  const { agent } = useAgent("crew_agent")
+  const { agent } = useAgent({ agentId: "crew_agent" })
   const state = mergeCrewState(agent?.state)
   const setState = (updater: (prev: CrewState) => CrewState) => {
     agent?.setState(updater(mergeCrewState(agent?.state)))
@@ -86,20 +91,53 @@ function DocsCanvas() {
           ? prev.openDocumentIds
           : [...prev.openDocumentIds, documentId],
       }))
+      const doc = state.sharedDocuments.find(d => d.id === documentId)
+      toast.info('Documento abierto', { description: doc?.title })
       return `documento ${documentId} abierto`
     },
+  })
+
+  const runtimeContext = useRuntimeContext({
+    role: 'leader',
+    phase: state.urgencyPhase,
+    hasActiveBlocker: state.blockers.some(b => !b.resolved),
+  })
+
+  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
+  const FullEnvelopeSchema = z.object({
+    envelopeId: z.string(),
+    agentId: z.string(),
+    emittedAt: z.number(),
+    intent: z.string(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']),
+    surfaceId: z.string(),
+    payload: z.record(z.unknown()),
+    context: z.object({
+      role: z.string(),
+      techLevel: z.string().optional(),
+      phase: z.string(),
+      hasActiveBlocker: z.boolean(),
+      workspaceId: z.string(),
+    }),
+    requiredCapabilities: z.array(z.string()),
+    hibernatable: z.boolean(),
+    pinnable: z.boolean(),
+    ephemeral: z.number().optional(),
   })
 
   useFrontendTool({
     name: 'renderSurface',
     description: 'Renderiza un componente UI tipado en el chat',
     parameters: z.object({
-      envelope: z.object({
-        type: z.string(),
-        payload: z.record(z.unknown()),
-      }),
+      envelope: z.union([LegacyEnvelopeSchema, FullEnvelopeSchema]),
     }),
-    render: ({ args }) => <SurfaceRenderer envelope={args.envelope} />,
+    render: ({ args }) => {
+      if (!args.envelope) return null
+      const fullEnvelope = isLegacyEnvelope(args.envelope)
+        ? adaptLegacyEnvelope(args.envelope, runtimeContext)
+        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+      return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
+    },
   })
 
   useDefaultRenderTool({
@@ -129,7 +167,7 @@ function DocsCanvas() {
             Archivos
           </p>
           {state.sharedDocuments.length === 0 ? (
-            <p className="px-2 py-4 text-xs text-slate-400">Sin documentos compartidos</p>
+            <EmptyState icon="📂" title="Sin documentos" description="Compartí uno desde el chat" />
           ) : (
             <div className="space-y-1">
               {state.sharedDocuments.map(doc => {
@@ -197,7 +235,12 @@ function DocsCanvas() {
         </header>
 
         {/* Document content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <motion.div
+          className="flex-1 overflow-y-auto p-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
           {selectedDoc ? (
             <div className="mx-auto max-w-3xl">
               <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -214,14 +257,14 @@ function DocsCanvas() {
             </div>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-violet-100 text-4xl mx-auto">📄</div>
-                <h3 className="text-lg font-semibold text-slate-700">Ningún documento seleccionado</h3>
-                <p className="mt-2 text-sm text-slate-400">Elegí uno de la lista o pedile al asistente que lo abra</p>
-              </div>
+              <EmptyState
+                icon="📄"
+                title="Ningún documento seleccionado"
+                description="Elegí uno de la lista o pedile al asistente que lo abra"
+              />
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* ── AI Chat panel ────────────────────────────────── */}
