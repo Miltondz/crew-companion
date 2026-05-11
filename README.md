@@ -275,21 +275,23 @@ npm run dev:infra    # Base de datos + cache
 - ✅ Persistencia (bases de datos, estado que sobrevive reinicios)
 - ✅ Gramática espacial (6 zonas de layout que se reorganizan)
 
-### ✅ **Fase B — Autenticación + Mejoras (EN PROGRESO)**
+### ✅ **Fase B — Autenticación + Mejoras (COMPLETADO)**
 - ✅ Autenticación mágica (sin passwords)
 - ✅ Notificaciones (toasts en acciones)
 - ✅ Confeti en celebraciones
 - ✅ Cargadores (skeleton screens)
 - ✅ Modo oscuro
 - ✅ Bordes de error y reintentos
-- 🔄 Flujo de actividad en tiempo real
-- 🔄 Chat mobile (en pantallas pequeñas)
+- ✅ Flujo de actividad en tiempo real (8 tipos de eventos con animaciones)
+- ✅ Chat mobile (drawer en pantallas <768px en las 3 vistas)
+- ✅ WorkspaceShell activado — superficies se montan en zonas espaciales correctas
+- ✅ Catálogo de superficies expandido — 13 superficies registradas (ForceGraph, CountdownCritical, IdeaMatrix, TriageWarRoom, AmbientOverlay + 8 anteriores)
 
 ### ⏳ **Fase C — Producción (PRÓXIMO)**
 - Despliegue gratis en Vercel + Render + Neon
 - Multi-agente (especialistas: Planificador, Coach, Orquestador)
 - Mascota animada (Rive state machine)
-- 12 superficies más avanzadas
+- Superficies adicionales (CausalChain, NarrativeTimeline, CommandSurface…)
 
 ---
 
