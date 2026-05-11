@@ -1,0 +1,37 @@
+services:
+  # ── BFF — Hono/Node CopilotRuntime ────────────────────────────────────────
+  - type: web
+    name: crew-companion-bff
+    runtime: node
+    rootDir: apps/bff
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set these in Render dashboard:
+      # DATABASE_URL        — Neon connection string
+      # COPILOTKIT_LICENSE_TOKEN
+      # INTELLIGENCE_API_URL
+      # INTELLIGENCE_GATEWAY_WS_URL
+      # INTELLIGENCE_API_KEY
+      # LANGGRAPH_DEPLOYMENT_URL  — URL of crew-companion-agent service below
+
+  # ── Agent — Python LangGraph ───────────────────────────────────────────────
+  - type: web
+    name: crew-companion-agent
+    runtime: python
+    rootDir: apps/agent
+    buildCommand: pip install uv && uv sync --no-dev
+    startCommand: uv run langgraph dev --port $PORT --host 0.0.0.0 --no-browser
+    plan: free
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Set these in Render dashboard:
+      # GEMINI_API_KEY
+      # DATABASE_URL        — same Neon connection string
+      # INTELLIGENCE_API_KEY
+      # AGENT_RUNTIME       — gemini-flash-deep (default)
+      # REDIS_URL           — Upstash Redis URL (optional)

@@ -5,7 +5,7 @@ import {
   createCopilotEndpoint,
 } from "@copilotkit/runtime/v2";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
-import { FullEnvelopeSchema } from "./envelope-schema";
+import { FullEnvelopeSchema } from "./envelope-schema.js";
 
 const intelligence = new CopilotKitIntelligence({
   apiKey:
