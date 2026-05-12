@@ -106,7 +106,72 @@ def get_documents(state: Annotated[dict, InjectedState]) -> list:
     return state.get("sharedDocuments", [])
 
 
-CREW_TOOLS = [create_task, update_task_status, create_milestone, resolve_blocker, get_documents]
+@guarded_tool(
+    capabilities=[Capability.BLOCKERS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def create_blocker(
+    member_id: str,
+    description: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Report a new blocker for a team member."""
+    blocker = {
+        "id": str(uuid4()),
+        "memberId": member_id,
+        "description": description,
+        "reportedAt": datetime.now(timezone.utc).isoformat(),
+        "resolved": False,
+        "resolvedAt": None,
+    }
+    return Command(update={"blockers": [*state.get("blockers", []), blocker]})
+
+
+@guarded_tool(
+    capabilities=[Capability.MEMBERS_INVITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def add_member(
+    name: str,
+    role: str,
+    state: Annotated[dict, InjectedState],
+    technical_level: str = "low-tech",
+) -> Command:
+    """Add a new team member to the workspace."""
+    member = {
+        "id": str(uuid4()),
+        "name": name,
+        "role": role,
+        "technicalLevel": technical_level,
+        "activeBlockerId": None,
+    }
+    return Command(update={"members": [*state.get("members", []), member]})
+
+
+@guarded_tool(
+    capabilities=[Capability.TASKS_DELETE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+)
+def reset_workspace(
+    confirm: bool,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Clear ALL workspace data (tasks, members, milestones, blockers, documents). Requires confirm=True."""
+    if not confirm:
+        return Command(update={})
+    return Command(update={
+        "tasks": [],
+        "members": [],
+        "milestones": [],
+        "blockers": [],
+        "sharedDocuments": [],
+        "openDocumentIds": [],
+        "highlightedTaskIds": [],
+        "activeMilestoneId": None,
+    })
+
+
+CREW_TOOLS = [create_task, update_task_status, create_milestone, resolve_blocker, get_documents, create_blocker, add_member, reset_workspace]
 
 # Boot-time assertion: every tool must have a registered capability declaration.
 assert_all_tools_registered(CREW_TOOLS)
