@@ -17,24 +17,9 @@ from .timing import TimingMiddleware
 
 
 def _build_checkpointer():
-    """Return PostgresSaver when DATABASE_URL set, else MemorySaver."""
-    dsn = os.getenv("DATABASE_URL")
-    if dsn:
-        try:
-            import psycopg
-            from langgraph.checkpoint.postgres import PostgresSaver
-            conn = psycopg.connect(dsn, autocommit=True)
-            saver = PostgresSaver(conn)
-            saver.setup()
-            return saver
-        except Exception as e:  # noqa: BLE001
-            print(
-                f"[runtime] WARN: PostgresSaver unavailable ({type(e).__name__}); "
-                f"falling back to MemorySaver",
-                flush=True,
-            )
-    from langgraph.checkpoint.memory import MemorySaver
-    return MemorySaver()
+    # LangGraph API manages checkpointing internally via POSTGRES_URI env var.
+    # Custom savers are rejected at startup when running under langgraph dev/serve.
+    return None
 
 
 RuntimeName = Literal[
