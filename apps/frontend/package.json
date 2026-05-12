@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3010",
+    "dev": "node --env-file=../../.env node_modules/.bin/next dev --turbopack -p 3010",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
