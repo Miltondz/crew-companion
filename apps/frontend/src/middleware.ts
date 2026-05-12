@@ -7,10 +7,11 @@ const { auth } = NextAuth(authConfig)
 export default auth((req) => {
   const { pathname } = req.nextUrl
 
-  // Inject workspace-id header for BFF proxy — allows thread isolation per user
   if (pathname.startsWith('/api/copilotkit') && req.auth?.user?.id) {
     const headers = new Headers(req.headers)
-    headers.set('x-workspace-id', req.auth.user.id)
+    // Use active project cookie if set, otherwise fall back to user.id (legacy)
+    const activeProject = req.cookies.get('crew_project_id')?.value
+    headers.set('x-workspace-id', activeProject ?? req.auth.user.id)
     return NextResponse.next({ request: { headers } })
   }
 
@@ -22,6 +23,7 @@ export const config = {
     '/leader',
     '/member/:path*',
     '/docs',
+    '/dashboard',
     '/api/copilotkit/:path*',
   ],
 }
