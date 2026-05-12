@@ -7,24 +7,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-### Added
-- Landing page (`/`) — visual marketing page with hero, features, use cases, CTA; logged-in users redirect to workspace
-- Onboarding wizard v2 — multi-step (project type → details → context → team); project type selector (hackathon, sprint, remote-team, launch, consulting), context upload via URL or text paste, auto-detects `isDevProject` from type
-- `projectConfig` + initial `sharedDocuments` saved to workspace state from onboarding context
-- CountdownCritical `variant: 'compact' | 'full'` — two visual modes (21st.dev-inspired)
-- CountdownCritical `orientation: 'vertical' | 'horizontal'` — layout direction control
-- CountdownCritical `showBlockers` / `showFeatures` flags — timer-only mode now valid
-- Animated flip digits (rotateX, compact) and slide digits (y-translate, full) via framer-motion
-- Circular SVG viability ring with animated stroke and drop-shadow glow (full variant)
-- Pulsing red warning border + overlay when `minsLeft < 10`
-- Collapsible blocker/feature sections (full variant)
-- `/dev` preview route — all CountdownCritical variants for visual QA
-- `animate-gradient` keyframe in globals.css
+### Added — Companion Habitat Phase 1
+- `CompanionEventBus` — typed pub/sub singleton; any component emits/subscribes to `CompanionEvent` union
+- `companionMachine` (xstate) — 6-state machine (idle/alert/celebrating/thinking/sleeping/guiding), anti-spam 5-min cooldown on proactive bubbles
+- `HabitatPropRegistry` — extensible registry; `useSyncExternalStore`-compatible; 4 built-in props: `blocker_rock`, `milestone_trophy`, `deadline_clock`, `panic_flame`
+- `CreatureSprite` — SVG creature with 8 moods × full expression set (eyes/mouth/accessories/arms); CSS animation per mood
+- `SpeechBubble` — framer-motion spring pop-in, CTA button, auto-dismiss (8s), dismiss button
+- `HabitatBackground` — 5 weather states (sunny/cloudy/rain/stormy/night) with CSS gradients, rain drops, lightning flash, clouds, stars, ground
+- `HabitatProps` — renders active props from registry, `AnimatePresence` enter/exit per prop type
+- `CompanionPanel` — slide-in framer-motion panel (spring), quick status 2×2 grid, Planner suggestions slot, intent picker
+- `TechnicalStepper` — step navigator with progress bar, copy-command button, `expectedOutput` display, rescue-mode branching via `errorOptions`
+- `Habitat` — container wiring all layers + xstate + EventBus + panel; derives `minutesLeft` from milestone deadline; click → open panel
+- `@xstate/react` + `xstate` added to frontend dependencies
+- `@keyframes fall` + `@keyframes lightning` in `globals.css` for weather effects
+- Leader page: `MascotSVG` replaced by `Habitat` with live-derived props (pendingTasks, activeBlockers, minutesLeft, progress)
+- Leader page: `companionBus.emit` on blocker resolved + milestone complete
 
-### Changed
-- `page.tsx` — server component; shows landing to logged-out users, redirects logged-in users to workspace
-- README — full rewrite: concise, technical, SaaS format with invariants + phase status table
-- `onboarding/route.ts` — accepts `projectType`, `isDevProject`, `contextUrl`, `contextText`
+### Added — Multi-agent topology
+- Three LangGraph graphs: `default` (Orchestrator), `planner`, `coach` registered in `langgraph.json`
+- `apps/agent/src/agents/` package — `prompts.py` (3 focused system prompts), `tools.py` (per-agent tool subsets), `graph.py` (3 graph builders)
+- `apps/agent/main.py` exports `graph`, `planner_graph`, `coach_graph`
+- BFF `makeAgent()` helper — 4 agent instances registered (default, crew_agent, planner, coach)
+- `apps/agent/src/prompts.py` backward-compat re-export of `ORCHESTRATOR_PROMPT as SYSTEM_PROMPT`
+
+### Added — Token caps + usage tracking
+- `chat_usage` table (migration `011_chat_usage.sql`) — `(workspace_id TEXT, date DATE, count INT)` primary key
+- `/api/usage` route — GET returns `{count, limit:200, remaining, limitReached, warningThreshold}`, POST increments via upsert
+- `UsageBanner` component — amber warning at limit-20, red at hard limit, dismissable unless at hard limit
+- `UsageBanner` wired above `UrgencyBanner` in leader page
+
+### Added — Observer config UI
+- `/api/workspace/observer-config` PATCH — `jsonb_set(state_json, '{observerConfig}', $2::jsonb)`
+- Observer config panel per ProjectCard in dashboard — toggles for showTasks/showTeamNames/showBlockerCount, customMessage input (max 120 chars)
+- Settings gear button with AnimatePresence collapse/expand
+
+### Fixed
+- Post-onboarding redirect: `router.push('/leader')` → `router.push('/dashboard')`
+- `/dev` route: `notFound()` guard in production
+- Workspace ID resolution: `_resolve_workspace_id` now checks `ctx.get("id")` fallback (CopilotKit `identifyUser` returns `{id, name}`)
+
+### Added — Previous session (landing + onboarding v2)
+- Landing page (`/`) — hero, features, use cases, CTA; logged-in redirect to workspace
+- Onboarding wizard v2 — project type selector, context URL/text upload, auto `isDevProject`
+- CountdownCritical variants: `compact`/`full`, `vertical`/`horizontal`, section visibility flags
+- `/dev` preview route — all CountdownCritical variants for visual QA
 
 ---
 
@@ -75,15 +101,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - CopilotKit v2 integration, Gemini Flash default LLM
 - Domain types: `TeamMember`, `Task`, `Milestone`, `Blocker`, `SharedDocument` (TS + Python sync)
 - Docker Compose local infra (Postgres 5433, Redis 6381)
-
----
-
-## [Unreleased]
-
-### In Progress
-- Activity stream real events
-- Mobile chat drawer (<768px)
-- Wire renderSurface to LayoutEngine zones
 
 ---
 

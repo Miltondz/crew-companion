@@ -1,0 +1,6 @@
+export { companionBus } from './EventBus'
+export type { CompanionEvent } from './EventBus'
+export { companionMachine } from './machine'
+export type { CreatureMood, CreatureMode, HabitatWeather, MachineContext } from './machine'
+export { habitatPropRegistry } from './HabitatPropRegistry'
+export type { HabitatPropDefinition, HabitatPropProps, ActiveProp, PropPosition } from './HabitatPropRegistry'

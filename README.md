@@ -79,7 +79,7 @@ CountdownCritical supports `variant: 'compact' | 'full'` and `orientation: 'vert
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, framer-motion |
+| Frontend | Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, framer-motion, xstate |
 | BFF | Hono on Node 20 + CopilotKit Runtime v2 |
 | Agent | Python 3.11, LangGraph, Pydantic, Gemini Flash |
 | Auth | NextAuth v5 + Resend magic-link |
@@ -182,15 +182,46 @@ scripts/             migrate.sh, seed.ts
 
 ---
 
+## Multi-agent topology
+
+Three LangGraph graphs registered in `langgraph.json` and bridged via Hono BFF:
+
+| Agent | Role | Key tools |
+|---|---|---|
+| **Orchestrator** | General routing, workspace resets | all tools |
+| **Planner** | Tasks, milestones, blockers, deadline triage | create_task, create_milestone, resolve_blocker |
+| **Coach** | Technical guidance, troubleshooting, docs | get_documents, step-by-step flows |
+
+The Coach agent powers the **TechnicalStepper** in the Companion Panel — adaptive rescue flows for low-tech members.
+
+---
+
+## Companion Habitat
+
+Tamagotchi-style mini habitat (240×180px) in the workspace corner. Not a status widget — an embodied agent presence.
+
+- **5 weather states** driven by urgency phase (sunny → cloudy → rain → stormy → night)
+- **8 creature moods** (calm / focused / worried / panicking / celebrating / sleeping / thinking / guiding)
+- **Dynamic props** via `HabitatPropRegistry` — rocks for active blockers, trophies for milestones, flames in panic phase
+- **Proactive speech bubbles** with CTA, anti-spam 5-min cooldown, auto-dismiss
+- **xstate machine** — 6 states (idle / alert / celebrating / thinking / sleeping / guiding)
+- **`CompanionEventBus`** — any component emits `BLOCKER_CREATED`, `MILESTONE_COMPLETE`, etc.
+- **Companion Panel** — quick status grid + intent picker + TechnicalStepper (rescue mode branching)
+- **Phase 2** (pending Rive assets): CSS/SVG sprites will be replaced by `.riv` animations
+
+---
+
 ## Phase status
 
 | Phase | Status | What |
 |---|---|---|
 | A — Kernel | ✅ Complete | Surface Registry, Layout Engine, Capability Engine, Persistence, Envelope Protocol |
-| B — Product | ✅ Complete | Auth, WorkspaceShell, 13 surfaces, onboarding wizard, multi-project design |
-| C — Deploy | ✅ Running | Vercel + Render + Neon + Upstash — deployed and functional |
+| B — Product | ✅ Complete | Auth, WorkspaceShell, 13 surfaces, onboarding wizard, multi-project dashboard |
+| Multi-agent | ✅ Complete | Orchestrator + Planner + Coach LangGraph topology |
+| Companion Habitat | ✅ Phase 1 complete | xstate runtime, EventBus, PropRegistry, SVG creature, panel, stepper |
+| C — Deploy | ⬜ Pending | Full deploy smoke tests on Vercel + Render + Neon + Upstash |
 
-**Next:** Multi-agent topology (Orchestrator + Planner + Coach), Rive animated mascot, landing polish.
+**Next:** Companion Habitat Phase 2 (Rive art), `/project/[id]` route migration, deploy tests.
 
 ---
 

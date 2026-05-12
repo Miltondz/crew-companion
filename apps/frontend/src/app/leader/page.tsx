@@ -23,7 +23,8 @@ import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registr
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestonePanel } from '@/components/leader/MilestonePanel'
 import { TeamOverview } from '@/components/leader/TeamOverview'
-import { MascotSVG } from '@/components/mascot/MascotSVG'
+import { Habitat } from '@/components/companion/Habitat'
+import { companionBus } from '@/runtime/companion/EventBus'
 import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
@@ -227,6 +228,7 @@ function LeaderCanvas() {
         if (allDone) {
           toast.success('¡Milestone completado! 🏆', { description: milestone?.title, duration: 5000 })
           fireMilestoneConfetti()
+          companionBus.emit({ type: 'MILESTONE_COMPLETE', milestoneId: milestone?.id ?? '', title: milestone?.title ?? 'Milestone' })
           pushActivity('milestone_complete', `Milestone "${milestone?.title}" completado`, '🏆')
         } else {
           toast.success('Tarea completada')
@@ -277,6 +279,7 @@ function LeaderCanvas() {
         b.id === blockerId ? { ...b, resolved: true, resolvedAt: new Date().toISOString() } : b
       ),
     }))
+    companionBus.emit({ type: 'BLOCKER_RESOLVED', blockerId })
     toast.success('Blocker resuelto ✓')
     pushActivity('blocker_resolved', `Blocker de ${member?.name ?? 'miembro'} resuelto`, '🔓')
   }
@@ -567,7 +570,13 @@ function LeaderCanvas() {
       </WorkspaceShell>
 
       <div className="fixed bottom-6 right-6 z-50">
-        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
+        <Habitat
+          phase={urgencyPhase}
+          pendingTasks={activeMilestone ? state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
+          activeBlockers={activeBlockers.length}
+          minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+          progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+        />
       </div>
 
       <MobileChatDrawer accentClass="from-indigo-600 to-violet-600" label="AI Leader Assistant" />
