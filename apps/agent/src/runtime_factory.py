@@ -17,15 +17,19 @@ from .timing import TimingMiddleware
 
 
 def _build_checkpointer():
-    """Return AsyncPostgresSaver when DATABASE_URL set, else MemorySaver."""
+    """Return PostgresSaver when DATABASE_URL set, else MemorySaver."""
     dsn = os.getenv("DATABASE_URL")
     if dsn:
         try:
-            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-            return AsyncPostgresSaver.from_conn_string(dsn)
+            import psycopg
+            from langgraph.checkpoint.postgres import PostgresSaver
+            conn = psycopg.connect(dsn, autocommit=True)
+            saver = PostgresSaver(conn)
+            saver.setup()
+            return saver
         except Exception as e:  # noqa: BLE001
             print(
-                f"[runtime] WARN: AsyncPostgresSaver unavailable ({type(e).__name__}); "
+                f"[runtime] WARN: PostgresSaver unavailable ({type(e).__name__}); "
                 f"falling back to MemorySaver",
                 flush=True,
             )
