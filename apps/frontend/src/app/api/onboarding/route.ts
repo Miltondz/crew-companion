@@ -29,10 +29,14 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { projectName, deadline, members } = await req.json() as {
+  const { projectName, deadline, members, projectType, isDevProject, contextUrl, contextText } = await req.json() as {
     projectName: string
     deadline: string
     members: MemberInput[]
+    projectType?: string
+    isDevProject?: boolean
+    contextUrl?: string
+    contextText?: string
   }
 
   const workspaceId = session.user.id
@@ -57,8 +61,24 @@ export async function POST(req: Request) {
     currentMemberId: leaderId,
     tasks: [],
     milestones: [{ id: milestoneId, title: projectName, deadline, taskIds: [], phase: 'normal' }],
+    projectConfig: {
+      type: projectType ?? 'other',
+      isDevProject: isDevProject ?? false,
+      contextUrl: contextUrl ?? null,
+      contextText: contextText ?? null,
+    },
     blockers: [],
-    sharedDocuments: [],
+    sharedDocuments: contextText ? [{
+      id: crypto.randomUUID(),
+      title: 'Contexto inicial del proyecto',
+      content: contextText,
+      createdAt: new Date().toISOString(),
+    }] : contextUrl ? [{
+      id: crypto.randomUUID(),
+      title: 'Referencia del proyecto',
+      content: contextUrl,
+      createdAt: new Date().toISOString(),
+    }] : [],
     openDocumentIds: [],
     urgencyPhase: 'normal',
     mascotMood: 'calm',

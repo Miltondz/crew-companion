@@ -15,6 +15,10 @@ export const CountdownCriticalEnvelopeSchema = z.object({
     name: z.string(),
     timeSavedMinutes: z.number(),
   })).optional(),
+  variant: z.enum(['compact', 'full']).optional().default('compact'),
+  orientation: z.enum(['vertical', 'horizontal']).optional().default('vertical'),
+  showBlockers: z.boolean().optional(),
+  showFeatures: z.boolean().optional(),
 })
 
 export type CountdownCriticalPayload = z.infer<typeof CountdownCriticalEnvelopeSchema>

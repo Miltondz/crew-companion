@@ -1,7 +1,80 @@
 # Changelog
 
-All notable changes to Crew Companion are documented here.
+All notable changes to Crew Companion are documented here.  
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+
+---
+
+## [Unreleased]
+
+### Added
+- Landing page (`/`) — visual marketing page with hero, features, use cases, CTA; logged-in users redirect to workspace
+- Onboarding wizard v2 — multi-step (project type → details → context → team); project type selector (hackathon, sprint, remote-team, launch, consulting), context upload via URL or text paste, auto-detects `isDevProject` from type
+- `projectConfig` + initial `sharedDocuments` saved to workspace state from onboarding context
+- CountdownCritical `variant: 'compact' | 'full'` — two visual modes (21st.dev-inspired)
+- CountdownCritical `orientation: 'vertical' | 'horizontal'` — layout direction control
+- CountdownCritical `showBlockers` / `showFeatures` flags — timer-only mode now valid
+- Animated flip digits (rotateX, compact) and slide digits (y-translate, full) via framer-motion
+- Circular SVG viability ring with animated stroke and drop-shadow glow (full variant)
+- Pulsing red warning border + overlay when `minsLeft < 10`
+- Collapsible blocker/feature sections (full variant)
+- `/dev` preview route — all CountdownCritical variants for visual QA
+- `animate-gradient` keyframe in globals.css
+
+### Changed
+- `page.tsx` — server component; shows landing to logged-out users, redirects logged-in users to workspace
+- README — full rewrite: concise, technical, SaaS format with invariants + phase status table
+- `onboarding/route.ts` — accepts `projectType`, `isDevProject`, `contextUrl`, `contextText`
+
+---
+
+## [0.5.0] — 2026-05-11
+
+### Added
+- WorkspaceShell migration — all 3 pages wrapped; surfaces mount into spatial regions
+- ForceGraph, CountdownCritical, IdeaMatrix, TriageWarRoom, AmbientOverlayWidget surfaces
+- Surface Registry at 13 total registered surfaces
+- Demo banner across all pages
+- Onboarding wizard v1 (project name, deadline, team members, persisted to Postgres)
+
+---
+
+## [0.4.0] — 2026-05-10
+
+### Added
+- Envelope protocol (block 3.5) — typed envelopes agent→BFF→frontend with Zod validation
+- Spatial Grammar (block 3.2) — LayoutEngine + 6 regions + localStorage pinning
+- Capability Engine (block 3.3) — `@guarded_tool`, PolicyEngine, audit log
+- AsyncPostgresSaver (block 3.4) — Postgres checkpointer with workspace state persistence
+
+---
+
+## [0.3.0] — 2026-05-09
+
+### Added
+- Activity stream (8 event types with framer-motion animations)
+- Mobile chat drawer on all 3 views
+- NextAuth v5 + Resend magic-link auth + database sessions
+
+---
+
+## [0.2.0] — 2026-05-08
+
+### Added
+- Surface Registry — 8 surfaces with Zod manifest schemas
+- `SurfaceManifest` type: capabilities, envelope schema, density, preferredZone, lifecycle flags
+
+---
+
+## [0.1.0] — 2026-05-06
+
+### Added
+- Next.js 15 + Hono BFF + Python LangGraph agent architecture
+- Urgency phase engine: `getUrgencyPhase(deadline)` → `normal | focus | urgent | panic | expired`
+- Role-based views: `/leader`, `/member/[memberId]`, `/docs`
+- CopilotKit v2 integration, Gemini Flash default LLM
+- Domain types: `TeamMember`, `Task`, `Milestone`, `Blocker`, `SharedDocument` (TS + Python sync)
+- Docker Compose local infra (Postgres 5433, Redis 6381)
 
 ---
 
