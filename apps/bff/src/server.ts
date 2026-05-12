@@ -30,7 +30,7 @@ const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
     ...(intelligence ? { intelligence } : {}),
-    identifyUser: (ctx) => {
+    identifyUser: (ctx: unknown) => {
       // Middleware injects x-workspace-id from the NextAuth session.
       // Falls back to 'default' during local dev without auth.
       const workspaceId =
