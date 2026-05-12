@@ -61,8 +61,11 @@ const INTENT_LABELS: Record<string, string> = {
 }
 
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Skip auth in dev when AUTH_SECRET is not configured
+  if (process.env.AUTH_SECRET) {
+    const session = await auth()
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   if (!GEMINI_API_KEY) {
     return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 503 })
