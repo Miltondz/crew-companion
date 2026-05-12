@@ -572,6 +572,7 @@ function LeaderCanvas() {
       <div className="fixed bottom-6 right-6 z-50">
         <Habitat
           phase={urgencyPhase}
+          techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
           pendingTasks={activeMilestone ? state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
           activeBlockers={activeBlockers.length}
           minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}

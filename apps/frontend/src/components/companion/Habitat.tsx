@@ -18,6 +18,7 @@ interface Props {
   activeBlockers?: number
   minutesLeft?: number | null
   progress?: number
+  techLevel?: 'low-tech' | 'high-tech'
 }
 
 export function Habitat({
@@ -26,6 +27,7 @@ export function Habitat({
   activeBlockers = 0,
   minutesLeft = null,
   progress = 0,
+  techLevel = 'low-tech',
 }: Props) {
   const [state, send] = useMachine(companionMachine)
   const ctx = state.context
@@ -149,6 +151,7 @@ export function Habitat({
       <CompanionPanel
         open={ctx.panelOpen}
         onClose={() => send({ type: 'CLOSE_PANEL' })}
+        techLevel={techLevel}
         status={{
           pendingTasks,
           activeBlockers,
