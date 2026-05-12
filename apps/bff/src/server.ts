@@ -7,12 +7,14 @@ import {
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 import { FullEnvelopeSchema } from "./envelope-schema.js";
 
-const intelligence = new CopilotKitIntelligence({
-  apiKey:
-    process.env.INTELLIGENCE_API_KEY ?? "cpk_sPRVSEED_seed0privat0longtoken00",
-  apiUrl: process.env.INTELLIGENCE_API_URL ?? "http://localhost:4203",
-  wsUrl: process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4403",
-});
+const intelligence =
+  process.env.INTELLIGENCE_API_URL && process.env.INTELLIGENCE_API_KEY
+    ? new CopilotKitIntelligence({
+        apiKey: process.env.INTELLIGENCE_API_KEY,
+        apiUrl: process.env.INTELLIGENCE_API_URL,
+        wsUrl: process.env.INTELLIGENCE_GATEWAY_WS_URL ?? "ws://localhost:4403",
+      })
+    : undefined;
 
 const agent = new LangGraphAgent({
   deploymentUrl:
@@ -27,7 +29,7 @@ const agent = new LangGraphAgent({
 const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
-    intelligence,
+    ...(intelligence ? { intelligence } : {}),
     identifyUser: (ctx) => {
       // Middleware injects x-workspace-id from the NextAuth session.
       // Falls back to 'default' during local dev without auth.

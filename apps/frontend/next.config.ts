@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  webpack: (config) => {
+    config.resolve.alias['pg-native'] = false
+    return config
+  },
 };
 
 export default nextConfig;

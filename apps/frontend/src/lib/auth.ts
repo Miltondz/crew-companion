@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import Resend from 'next-auth/providers/resend'
 import PostgresAdapter from '@auth/pg-adapter'
 import { Pool } from 'pg'
+import { authConfig } from './auth.config'
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -16,6 +17,7 @@ const pool = new Pool({
 const adapter = PostgresAdapter(pool)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter,
   providers: [
     Resend({
@@ -23,16 +25,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: process.env.AUTH_EMAIL_FROM ?? 'Crew Companion <noreply@crew-companion.app>',
     }),
   ],
-  pages: {
-    signIn: '/auth/signin',
-    verifyRequest: '/auth/verify-request',
-    error: '/auth/signin',
-  },
-  callbacks: {
-    session({ session, user }) {
-      if (user?.id) session.user.id = user.id
-      return session
-    },
-  },
   session: { strategy: 'database' },
 })
