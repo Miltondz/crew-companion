@@ -16,15 +16,20 @@ const intelligence =
       })
     : undefined;
 
-const agent = new LangGraphAgent({
-  deploymentUrl:
-    process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123",
-  graphId: "default",
-  langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
-  assistantConfig: {
-    recursion_limit: Number(process.env.LANGGRAPH_RECURSION_LIMIT ?? 60),
-  },
-});
+function makeAgent(graphId: string): LangGraphAgent {
+  return new LangGraphAgent({
+    deploymentUrl: process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123",
+    graphId,
+    langsmithApiKey: process.env.LANGSMITH_API_KEY ?? "",
+    assistantConfig: {
+      recursion_limit: Number(process.env.LANGGRAPH_RECURSION_LIMIT ?? 60),
+    },
+  });
+}
+
+const agent         = makeAgent("default");   // orchestrator
+const plannerAgent  = makeAgent("planner");
+const coachAgent    = makeAgent("coach");
 
 const app = createCopilotEndpoint({
   basePath: "/api/copilotkit",
@@ -38,7 +43,12 @@ const app = createCopilotEndpoint({
       return { id: workspaceId, name: `workspace:${workspaceId}` };
     },
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
-    agents: { default: agent, crew_agent: agent },
+    agents: {
+      default:    agent,
+      crew_agent: agent,       // legacy alias kept for existing threads
+      planner:    plannerAgent,
+      coach:      coachAgent,
+    },
     openGenerativeUI: true,
     a2ui: { injectA2UITool: false },
     mcpApps: {

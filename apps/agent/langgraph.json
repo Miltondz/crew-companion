@@ -2,6 +2,10 @@
   "python_version": "3.11",
   "dependencies": ["."],
   "package_manager": "uv",
-  "graphs": { "default": "./main.py:graph" },
+  "graphs": {
+    "default": "./main.py:graph",
+    "planner": "./main.py:planner_graph",
+    "coach":   "./main.py:coach_graph"
+  },
   "env": ".env"
 }
