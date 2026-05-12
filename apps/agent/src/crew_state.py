@@ -97,10 +97,10 @@ class CrewStateMiddleware(AgentMiddleware):
         return "CrewStateMiddleware"
 
     def _resolve_workspace_id(self, state: CrewCanvasState, runtime: Runtime[Any]) -> str:
-        # Auth lands in 4.1; until then everything is the default workspace.
         ctx = getattr(runtime, "context", None) or {}
         if isinstance(ctx, dict):
-            return ctx.get("workspaceId") or "default"
+            # CopilotKit identifyUser returns { id, name } — check both keys
+            return ctx.get("workspaceId") or ctx.get("id") or "default"
         return "default"
 
     def before_agent(

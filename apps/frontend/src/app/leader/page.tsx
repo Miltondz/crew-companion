@@ -15,6 +15,7 @@ import {
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
+import { UsageBanner } from '@/components/shared/UsageBanner'
 import { TaskCard } from '@/components/shared/TaskCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
@@ -300,6 +301,7 @@ function LeaderCanvas() {
     <>
       <WorkspaceShell phase={urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          <UsageBanner />
           <UrgencyBanner phase={urgencyPhase} />
 
           {/* Header */}

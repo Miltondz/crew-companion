@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Plus, ExternalLink, Link2, Eye, Users, Clock, CheckSquare, Sparkles, LogOut } from 'lucide-react'
+import { Plus, ExternalLink, Link2, Eye, Users, Clock, CheckSquare, Sparkles, LogOut, Settings, X } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -59,11 +60,16 @@ function copyToClipboard(text: string, label: string) {
   })
 }
 
+interface ObserverConfig {
+  showTasks: boolean
+  showTeamNames: boolean
+  showBlockerCount: boolean
+  customMessage: string
+}
+
 function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void }) {
   const s = project.state_json
-  const milestone = s.milestones?.find(m => s.activeMilestoneId
-    ? s.milestones?.indexOf(m) === 0
-    : true) ?? s.milestones?.[0]
+  const milestone = s.milestones?.[0]
   const totalTasks = milestone?.taskIds?.length ?? 0
   const doneTasks = s.tasks?.filter(t => t.status === 'done').length ?? 0
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
@@ -74,9 +80,39 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
   const projectType = s.projectConfig?.type ?? 'other'
   const projectName = milestone?.title ?? 'Proyecto sin nombre'
 
+  const [showConfig, setShowConfig] = useState(false)
+  const [config, setConfig] = useState<ObserverConfig>({
+    showTasks: true, showTeamNames: true, showBlockerCount: true, customMessage: '',
+    ...((s as Record<string, unknown>).observerConfig as Partial<ObserverConfig> ?? {}),
+  })
+  const [saving, setSaving] = useState(false)
+
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = `${baseUrl}/share/${project.observer_token}`
   const inviteUrl = `${baseUrl}/invite/${project.invite_code}`
+
+  const saveConfig = async () => {
+    setSaving(true)
+    await fetch('/api/workspace/observer-config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    })
+    setSaving(false)
+    setShowConfig(false)
+  }
+
+  const Toggle = ({ label, field }: { label: string; field: keyof Omit<ObserverConfig, 'customMessage'> }) => (
+    <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+      <span>{label}</span>
+      <div
+        onClick={() => setConfig(c => ({ ...c, [field]: !c[field] }))}
+        className={cn('w-8 h-4 rounded-full transition-colors cursor-pointer relative', config[field] ? 'bg-indigo-500' : 'bg-zinc-700')}
+      >
+        <div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all', config[field] ? 'left-4.5' : 'left-0.5')} />
+      </div>
+    </label>
+  )
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -95,8 +131,7 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
         {totalTasks > 0 && (
           <div>
             <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>Progreso</span>
-              <span>{doneTasks}/{totalTasks} tareas</span>
+              <span>Progreso</span><span>{doneTasks}/{totalTasks} tareas</span>
             </div>
             <div className="w-full bg-zinc-800 rounded-full h-1.5">
               <div className="h-1.5 rounded-full bg-indigo-500 transition-all" style={{ width: `${progress}%` }} />
@@ -110,16 +145,55 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
           <span className="flex items-center gap-1"><CheckSquare className="w-3 h-3" />{progress}%</span>
         </div>
 
+        {/* Observer config panel */}
+        <AnimatePresence>
+          {showConfig && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="bg-zinc-800/60 rounded-xl p-4 flex flex-col gap-3 border border-zinc-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-zinc-300">Vista espectador — configurar</p>
+                  <button onClick={() => setShowConfig(false)}><X className="w-3.5 h-3.5 text-zinc-500" /></button>
+                </div>
+                <Toggle label="Mostrar tareas" field="showTasks" />
+                <Toggle label="Mostrar nombres del equipo" field="showTeamNames" />
+                <Toggle label="Mostrar conteo de bloqueadores" field="showBlockerCount" />
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Mensaje personalizado (opcional)</label>
+                  <input
+                    type="text" value={config.customMessage} maxLength={120}
+                    onChange={e => setConfig(c => ({ ...c, customMessage: e.target.value }))}
+                    placeholder="Ej: ¡Estamos en vivo! Miranos construir."
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <button onClick={saveConfig} disabled={saving}
+                  className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors">
+                  {saving ? 'Guardando...' : 'Guardar configuración'}
+                </button>
+                <button onClick={() => copyToClipboard(shareUrl, 'Link público')}
+                  className="w-full py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white text-xs transition-colors">
+                  Copiar link público de la vista
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex gap-2 pt-1">
           <button onClick={onOpen}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors">
             <ExternalLink className="w-3.5 h-3.5" /> Abrir workspace
           </button>
-          <button onClick={() => copyToClipboard(inviteUrl, 'Link de invitación')} title="Copiar link de invitación"
+          <button onClick={() => copyToClipboard(inviteUrl, 'Link de invitación')} title="Invitar miembro"
             className="p-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
             <Link2 className="w-4 h-4" />
           </button>
-          <button onClick={() => copyToClipboard(shareUrl, 'Link de vista espectador')} title="Compartir vista pública"
+          <button onClick={() => setShowConfig(s => !s)} title="Configurar vista pública"
+            className={cn('p-2 rounded-lg border transition-colors', showConfig ? 'border-indigo-500 text-indigo-400' : 'border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white')}>
+            <Settings className="w-4 h-4" />
+          </button>
+          <button onClick={() => copyToClipboard(shareUrl, 'Link de vista espectador')} title="Copiar link público"
             className="p-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
             <Eye className="w-4 h-4" />
           </button>

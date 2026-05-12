@@ -389,7 +389,7 @@ export default function OnboardingPage() {
         }),
       })
       if (!res.ok) throw new Error('Error al guardar')
-      router.push('/leader')
+      router.push('/dashboard')
     } catch {
       setError('Error al guardar. Intentá de nuevo.')
       setLoading(false)
