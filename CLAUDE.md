@@ -98,6 +98,31 @@ If a requested change would violate any invariant, refuse and ask for confirmati
 
 ---
 
+## Agent-usability gap check (MANDATORY on every component/tool/prompt change)
+
+After creating or modifying any surface component, frontend tool, Python tool, or agent prompt, run this 4-axis check before marking the task done:
+
+1. **Surface emittable?** — Is the manifest registered in `bootstrap.ts`? Is the surface ID in the agent prompt's routing table?
+2. **Full CRUD?** — For every entity the agent manages (tasks, milestones, blockers, members), does the Python toolset have create + update + delete? Are all three exposed in the relevant agent's tool list?
+3. **Frontend tools complete?** — Do both `leader/page.tsx` and `member/[memberId]/page.tsx` expose all relevant `useFrontendTool` handlers (`logActivity`, `highlightTasks`, `reportBlocker`, `renderSurface`, etc.)?
+4. **Prompts aware?** — Do ORCHESTRATOR_PROMPT, PLANNER_PROMPT, COACH_PROMPT list the new surface/tool in their routing tables and AVAILABLE FRONTEND TOOLS sections?
+
+If any axis fails, fix it in the same change before moving on.
+
+---
+
+## Visual design rules (components)
+
+- Use 21st.dev MCP for deep component redesigns — not shallow dark: variant patches.
+- Prefer opacity tokens (`bg-*/10 text-*-400`) — work natively in both light and dark without dark: variants.
+- For semantic colored states (urgency, risk, status), provide explicit `dark:bg-*-950 dark:border-*-800 dark:text-*-200` variants.
+- GlowCard spotlight: global `pointermove` sets `--x`/`--y`; `background-attachment: fixed` + `::before/::after` create border glow. Inject `<style>` inside component.
+- StatusBadge / PriorityBadge: always include lucide icon + label; use opacity tokens; add border for definition.
+- Every redesigned component must be verified in both light and dark mode before marking done.
+- 21st.dev MCP pinned to `@21st-dev/magic@0.0.47`. If free limit hit, adapt the last received design manually.
+
+---
+
 ## Style rules (apply everywhere)
 
 - Code comments: write none by default. Only when WHY is non-obvious (hidden constraint, workaround for specific bug, surprising behavior).

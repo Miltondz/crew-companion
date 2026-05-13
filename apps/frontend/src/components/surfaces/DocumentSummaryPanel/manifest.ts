@@ -3,6 +3,7 @@ import type { SurfaceManifest } from '@/runtime/surface-registry/types'
 
 export const DocumentSummaryEnvelopeSchema = z.object({
   documentTitle: z.string().min(1),
+  documentFormat: z.string().optional(),
   summary: z.string(),
   keyPoints: z.array(z.string()).min(1),
   relevantSection: z.string().optional(),

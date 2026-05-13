@@ -17,6 +17,7 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { TaskCard } from '@/components/shared/TaskCard'
 import { ActiveTaskView } from '@/components/member/ActiveTaskView'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
@@ -29,7 +30,7 @@ import { SEED_STATE } from '@/lib/crew/seed'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
-import type { CrewState, UrgencyPhase } from '@/lib/crew/types'
+import type { CrewState, UrgencyPhase, TaskStatus } from '@/lib/crew/types'
 
 function mergeCrewState(raw: unknown): CrewState {
   const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
@@ -148,6 +149,30 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     },
   })
 
+  useFrontendTool({
+    name: 'highlightTasks',
+    description: 'Resalta tareas específicas en el listado del miembro',
+    parameters: z.object({ taskIds: z.array(z.string()) }),
+    handler: async ({ taskIds }) => {
+      setState(prev => ({ ...prev, highlightedTaskIds: taskIds }))
+      return `resaltadas ${taskIds.length} tareas`
+    },
+  })
+
+  useFrontendTool({
+    name: 'logActivity',
+    description: 'Muestra un toast informativo al miembro',
+    parameters: z.object({
+      type: z.enum(['task_created', 'task_done', 'task_started', 'blocker_reported', 'blocker_resolved', 'milestone_complete', 'phase_change', 'doc_opened']),
+      message: z.string(),
+      icon: z.string().optional(),
+    }),
+    handler: async ({ message }) => {
+      toast.info(message, { duration: 3000 })
+      return 'notified'
+    },
+  })
+
   const runtimeContext = useRuntimeContext({
     role: 'member',
     techLevel: currentMember?.technicalLevel,
@@ -207,13 +232,31 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     ),
   })
 
+  const handleMarkInProgress = (taskId: string) => {
+    setState(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'in-progress' as TaskStatus } : t)),
+    }))
+    toast.success('¡Tarea iniciada! 🚀')
+  }
+
   const handleMarkDone = (taskId: string) => {
     setState(prev => ({
       ...prev,
-      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'done' } : t)),
+      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'done' as TaskStatus } : t)),
     }))
     toast.success('¡Tarea completada! 🎉')
     fireCelebration()
+  }
+
+  const handleDismissBlocker = (blockerId: string) => {
+    setState(prev => ({
+      ...prev,
+      blockers: prev.blockers.map(b =>
+        b.id === blockerId ? { ...b, resolved: true, resolvedAt: new Date().toISOString() } : b
+      ),
+    }))
+    toast.success('Blocker resuelto ✓')
   }
 
   const handleReportBlocker = () => {
@@ -234,12 +277,6 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     toast.warning('Blocker reportado al líder')
     setBlockerText('')
     setShowBlockerForm(false)
-  }
-
-  const taskStatusDot: Record<string, string> = {
-    'todo':        'bg-slate-400',
-    'in-progress': 'bg-blue-500',
-    'done':        'bg-emerald-500',
   }
 
   return (
@@ -314,6 +351,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                 task={activeTask}
                 memberName={currentMember?.name ?? memberId}
                 onMarkDone={handleMarkDone}
+                onMarkInProgress={handleMarkInProgress}
               />
             </div>
             <div className="flex flex-col gap-3">
@@ -352,9 +390,17 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                 </div>
                 {myBlocker ? (
                   <div className="rounded-lg bg-orange-50 p-2.5 ring-1 ring-orange-200">
-                    <div className="mb-1 flex items-center gap-1.5">
-                      <span>⚠️</span>
-                      <span className="text-xs font-semibold text-orange-700">Activo</span>
+                    <div className="mb-1 flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span>⚠️</span>
+                        <span className="text-xs font-semibold text-orange-700">Activo</span>
+                      </div>
+                      <button
+                        onClick={() => handleDismissBlocker(myBlocker.id)}
+                        className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition"
+                      >
+                        ✓ Resolver
+                      </button>
                     </div>
                     <p className="text-xs italic text-orange-600">"{myBlocker.description}"</p>
                   </div>
@@ -390,31 +436,20 @@ function MemberCanvas({ memberId }: { memberId: string }) {
             {myTasks.length === 0 ? (
               <EmptyState icon="📋" title="Sin tareas asignadas" description="El líder te asignará tareas pronto" />
             ) : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {myTasks.map(t => (
-                  <div
+                  <TaskCard
                     key={t.id}
-                    className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100"
-                  >
-                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${taskStatusDot[t.status] ?? 'bg-slate-400'}`} />
-                    <p className={`flex-1 text-sm ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
-                      {t.title}
-                    </p>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                      t.priority === 'high'   ? 'bg-red-100 text-red-700' :
-                      t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-green-100 text-green-700'
-                    }`}>
-                      {t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Media' : 'Baja'}
-                    </span>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                      t.status === 'done'        ? 'bg-emerald-100 text-emerald-700' :
-                      t.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                                                   'bg-slate-100 text-slate-600'
-                    }`}>
-                      {t.status === 'done' ? 'Listo' : t.status === 'in-progress' ? 'En progreso' : 'Pendiente'}
-                    </span>
-                  </div>
+                    task={{
+                      ...t,
+                      assignedTo: currentMember?.name ?? t.assignedTo,
+                    }}
+                    isHighlighted={state.highlightedTaskIds.includes(t.id)}
+                    onStatusChange={(taskId, newStatus) => {
+                      if (newStatus === 'in-progress') handleMarkInProgress(taskId)
+                      else if (newStatus === 'done') handleMarkDone(taskId)
+                    }}
+                  />
                 ))}
               </div>
             )}

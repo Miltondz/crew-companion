@@ -149,6 +149,75 @@ def add_member(
 
 
 @guarded_tool(
+    capabilities=[Capability.TASKS_WRITE, Capability.TASKS_READ, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def update_task(
+    task_id: str,
+    state: Annotated[dict, InjectedState],
+    title: str = "",
+    description: str = "",
+    assigned_to: str = "",
+    priority: str = "",
+) -> Command:
+    """Update a task's title, description, assignee, or priority. Pass only fields to change."""
+    def patch(t: dict) -> dict:
+        if t["id"] != task_id:
+            return t
+        updates: dict = {}
+        if title:
+            updates["title"] = title
+        if description:
+            updates["description"] = description
+        if assigned_to:
+            updates["assignedTo"] = assigned_to
+        if priority:
+            updates["priority"] = priority
+        return {**t, **updates}
+    return Command(update={"tasks": [patch(t) for t in state.get("tasks", [])]})
+
+
+@guarded_tool(
+    capabilities=[Capability.MILESTONES_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def update_milestone(
+    milestone_id: str,
+    state: Annotated[dict, InjectedState],
+    title: str = "",
+    deadline_iso: str = "",
+) -> Command:
+    """Update a milestone's title or deadline ISO string. Pass only fields to change."""
+    def patch(m: dict) -> dict:
+        if m["id"] != milestone_id:
+            return m
+        updates: dict = {}
+        if title:
+            updates["title"] = title
+        if deadline_iso:
+            updates["deadline"] = deadline_iso
+        return {**m, **updates}
+    return Command(update={"milestones": [patch(m) for m in state.get("milestones", [])]})
+
+
+@guarded_tool(
+    capabilities=[Capability.TASKS_DELETE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+)
+def delete_task(
+    task_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Permanently remove a task. Also removes its ID from any milestone's taskIds."""
+    tasks = [t for t in state.get("tasks", []) if t["id"] != task_id]
+    milestones = [
+        {**m, "taskIds": [tid for tid in m.get("taskIds", []) if tid != task_id]}
+        for m in state.get("milestones", [])
+    ]
+    return Command(update={"tasks": tasks, "milestones": milestones})
+
+
+@guarded_tool(
     capabilities=[Capability.TASKS_DELETE, Capability.STATE_WRITE],
     risk_level=RiskLevel.HIGH,
 )
@@ -171,7 +240,7 @@ def reset_workspace(
     })
 
 
-CREW_TOOLS = [create_task, update_task_status, create_milestone, resolve_blocker, get_documents, create_blocker, add_member, reset_workspace]
+CREW_TOOLS = [create_task, update_task, update_task_status, delete_task, create_milestone, update_milestone, resolve_blocker, get_documents, create_blocker, add_member, reset_workspace]
 
 # Boot-time assertion: every tool must have a registered capability declaration.
 assert_all_tools_registered(CREW_TOOLS)

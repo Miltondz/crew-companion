@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence, useAnimate } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 type UrgencyPhase = 'normal' | 'focus' | 'urgent' | 'panic' | 'expired'
@@ -11,83 +12,186 @@ interface MilestoneCountdownProps {
   compact?: boolean
 }
 
-export function MilestoneCountdown({ deadline, milestoneTitle, compact = false }: MilestoneCountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<number>(0)
+function computeCountdown(deadline: string): string {
+  const diff = new Date(deadline).getTime() - Date.now()
+  if (diff <= 0) return '00:00:00'
+  const totalSec = Math.floor(diff / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':')
+}
+
+function getPhase(deadline: string): UrgencyPhase {
+  const mins = (new Date(deadline).getTime() - Date.now()) / 60000
+  if (mins <= 0) return 'expired'
+  if (mins <= 5) return 'panic'
+  if (mins <= 15) return 'urgent'
+  if (mins <= 30) return 'focus'
+  return 'normal'
+}
+
+const phaseGlow: Record<UrgencyPhase, string> = {
+  normal:  'border-zinc-700',
+  focus:   'border-yellow-500/60 shadow-[0_0_16px_rgba(234,179,8,0.2)]',
+  urgent:  'border-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.25)]',
+  panic:   'border-red-500    shadow-[0_0_30px_rgba(239,68,68,0.35)]',
+  expired: 'border-zinc-600',
+}
+
+const phaseDigitColor: Record<UrgencyPhase, string> = {
+  normal:  'bg-zinc-800 text-white  border-zinc-600',
+  focus:   'bg-yellow-500/10 text-yellow-300 border-yellow-500/60',
+  urgent:  'bg-orange-500/10 text-orange-300 border-orange-500/60',
+  panic:   'bg-red-500/20    text-red-300    border-red-500',
+  expired: 'bg-zinc-900      text-zinc-500   border-zinc-700',
+}
+
+// ─── FlipDigit (compact) ──────────────────────────────────────────────────────
+
+function FlipDigit({ digit, phase }: { digit: string; phase: UrgencyPhase }) {
+  return (
+    <div className="relative w-9 h-11 overflow-hidden" style={{ perspective: '400px' }}>
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={digit}
+          initial={{ rotateX: -90, opacity: 0 }}
+          animate={{ rotateX: 0, opacity: 1 }}
+          exit={{ rotateX: 90, opacity: 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className={cn(
+            'absolute inset-0 flex items-center justify-center rounded font-mono font-bold text-xl border',
+            phaseDigitColor[phase]
+          )}
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {digit}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ─── SlideDigit (full) ────────────────────────────────────────────────────────
+
+function SlideDigit({ value, phase }: { value: string; phase: UrgencyPhase }) {
+  const [ref, animate] = useAnimate()
+  const prev = useRef(value)
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = new Date(deadline).getTime() - Date.now()
-      setTimeLeft(Math.max(0, difference))
+    if (value !== prev.current) {
+      const run = async () => {
+        await animate(ref.current, { y: ['0%', '-50%'], opacity: [1, 0] }, { duration: 0.22 })
+        prev.current = value
+        await animate(ref.current, { y: ['50%', '0%'], opacity: [0, 1] }, { duration: 0.22 })
+      }
+      run()
     }
+  }, [value, animate])
 
-    calculateTimeLeft()
-    const timer = setInterval(calculateTimeLeft, 1000)
+  return (
+    <div className={cn(
+      'relative w-14 h-[4.5rem] overflow-hidden rounded-lg shadow-xl border',
+      'bg-gradient-to-b from-zinc-800 to-zinc-900',
+      phaseDigitColor[phase].split(' ').filter(c => c.startsWith('border')).join(' ')
+    )}>
+      <div ref={ref} className={cn(
+        'absolute inset-0 flex items-center justify-center text-4xl font-bold font-mono',
+        phase === 'expired' ? 'text-zinc-500' : phase === 'panic' ? 'text-red-300' : phase === 'urgent' ? 'text-orange-300' : phase === 'focus' ? 'text-yellow-300' : 'text-white'
+      )}>
+        {value}
+      </div>
+    </div>
+  )
+}
 
-    return () => clearInterval(timer)
+// ─── main export ──────────────────────────────────────────────────────────────
+
+export function MilestoneCountdown({ deadline, milestoneTitle, compact = false }: MilestoneCountdownProps) {
+  const [countdown, setCountdown] = useState(() => computeCountdown(deadline))
+  const [phase, setPhase] = useState<UrgencyPhase>(() => getPhase(deadline))
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCountdown(computeCountdown(deadline))
+      setPhase(getPhase(deadline))
+    }, 1000)
+    return () => clearInterval(id)
   }, [deadline])
 
-  const minutesLeft = timeLeft / 60000
-  
-  const getPhase = (minutes: number): UrgencyPhase => {
-    if (minutes > 30) return 'normal'
-    if (minutes > 15) return 'focus'
-    if (minutes > 5) return 'urgent'
-    if (minutes > 0) return 'panic'
-    return 'expired'
-  }
-
-  const phase = getPhase(minutesLeft)
-
-  const formatTime = (ms: number) => {
-    if (ms <= 0) return '¡Tiempo agotado!'
-    
-    const totalSeconds = Math.floor(ms / 1000)
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const seconds = totalSeconds % 60
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`
-    }
-    
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  const phaseStyles = {
-    normal: 'text-green-600',
-    focus: 'text-yellow-600',
-    urgent: 'text-orange-600',
-    panic: 'text-red-600 animate-pulse',
-    expired: 'text-red-800',
-  }
+  const digits = countdown.replace(/:/g, '').split('')
+  const [h0, h1, m0, m1, s0, s1] = digits
+  const isPanic = phase === 'panic'
+  const isExpired = phase === 'expired'
 
   if (compact) {
     return (
-      <div className={cn('flex items-center gap-1 font-mono text-sm', phaseStyles[phase])}>
-        <span>⏱</span>
-        <span>{formatTime(timeLeft)}</span>
+      <div className={cn(
+        'inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-zinc-900',
+        phaseGlow[phase],
+        isPanic && 'animate-pulse'
+      )}>
+        {milestoneTitle && (
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wide shrink-0">{milestoneTitle}</span>
+        )}
+        {isExpired ? (
+          <span className="text-xs font-mono text-zinc-500">¡Tiempo agotado!</span>
+        ) : (
+          <div className="flex items-center gap-1">
+            <FlipDigit digit={h0} phase={phase} />
+            <FlipDigit digit={h1} phase={phase} />
+            <span className="text-zinc-400 font-bold text-lg mx-0.5">:</span>
+            <FlipDigit digit={m0} phase={phase} />
+            <FlipDigit digit={m1} phase={phase} />
+            <span className="text-zinc-400 font-bold text-lg mx-0.5">:</span>
+            <FlipDigit digit={s0} phase={phase} />
+            <FlipDigit digit={s1} phase={phase} />
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 text-center">
-      {milestoneTitle && (
-        <span className="text-xs text-slate-500 uppercase tracking-wide mb-1">
-          {milestoneTitle}
-        </span>
+    <div className={cn(
+      'relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 bg-zinc-900 overflow-hidden',
+      phaseGlow[phase]
+    )}>
+      {isPanic && (
+        <motion.div
+          className="absolute inset-0 bg-red-500/10 rounded-2xl pointer-events-none"
+          animate={{ opacity: [0.2, 0.6, 0.2] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
       )}
-      <div className={cn(
-        'font-bold leading-none',
-        phase === 'expired' ? 'text-lg' : 'text-3xl',
-        phaseStyles[phase]
-      )}>
-        {formatTime(timeLeft)}
-      </div>
-      {phase !== 'expired' && (
-        <span className="text-[10px] text-slate-400 mt-1 uppercase">
-          minutos restantes
-        </span>
+
+      {milestoneTitle && (
+        <p className="text-xs text-zinc-400 uppercase tracking-wide z-10">{milestoneTitle}</p>
+      )}
+
+      {isExpired ? (
+        <p className="text-lg font-bold text-zinc-500 z-10">¡Tiempo agotado!</p>
+      ) : (
+        <div className="flex items-center gap-1 z-10">
+          <SlideDigit value={h0} phase={phase} />
+          <SlideDigit value={h1} phase={phase} />
+          <span className="text-white font-bold text-2xl mx-1">:</span>
+          <SlideDigit value={m0} phase={phase} />
+          <SlideDigit value={m1} phase={phase} />
+          <span className="text-white font-bold text-2xl mx-1">:</span>
+          <SlideDigit value={s0} phase={phase} />
+          <SlideDigit value={s1} phase={phase} />
+        </div>
+      )}
+
+      {isPanic && !isExpired && (
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-red-400 text-xs font-semibold z-10"
+        >
+          CRÍTICO — menos de 5 minutos
+        </motion.p>
       )}
     </div>
   )

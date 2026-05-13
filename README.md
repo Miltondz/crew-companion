@@ -60,18 +60,21 @@ The agent emits typed envelopes. The Surface Registry maps them to components, v
 | CountdownCritical | ambient-overlay | Live deadline counter + viability ring + blockers |
 | MilestoneSummaryPanel | context-rail | Sprint progress by urgency phase |
 | TaskSuggestionPanel | primary-workzone | AI-ranked task queue |
+| FocusedTaskPanel | primary-workzone | Single task spotlight — planner highlights, coach adds note |
 | BlockerInsightPanel | context-rail | Blocker analysis + resolution paths |
 | TriageWarRoom | primary-workzone | Full war-room dashboard for panic phase |
 | ForceGraph | primary-workzone | Task dependency visualization |
 | IdeaMatrix | primary-workzone | 2x2 impact/effort grid |
 | ChecklistPanel | primary-workzone | Interactive checklist |
 | TroubleshootingWizard | primary-workzone | Decision tree for technical blockers |
-| DocumentSummaryPanel | context-rail | AI-summarized shared document |
+| DocumentSummaryPanel | context-rail | AI-summarized shared document with file type thumbnail |
 | BeginnerGuidePanel | context-rail | Step-by-step for low-tech members |
 | MemberActionPanel | context-rail | Member-specific action list |
 | AmbientOverlayWidget | ambient-overlay | Ambient urgency signal |
 
 CountdownCritical supports `variant: 'compact' | 'full'` and `orientation: 'vertical' | 'horizontal'` with optional section visibility.
+
+`FocusedTaskPanel` is routed by both Planner (task spotlight, no coachNote) and Coach (task help, with coachNote). `DocumentSummaryPanel` includes a `FileCard` thumbnail that infers file type from extension or `documentFormat` field.
 
 ---
 
@@ -79,7 +82,7 @@ CountdownCritical supports `variant: 'compact' | 'full'` and `orientation: 'vert
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, framer-motion, xstate |
+| Frontend | Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, framer-motion, xstate, **three.js** |
 | BFF | Hono on Node 20 + CopilotKit Runtime v2 |
 | Agent | Python 3.11, LangGraph, Pydantic, Gemini Flash |
 | Auth | NextAuth v5 + Resend magic-link |
@@ -189,8 +192,12 @@ Three LangGraph graphs registered in `langgraph.json` and bridged via Hono BFF:
 | Agent | Role | Key tools |
 |---|---|---|
 | **Orchestrator** | General routing, workspace resets | all tools |
-| **Planner** | Tasks, milestones, blockers, deadline triage | create_task, create_milestone, resolve_blocker |
-| **Coach** | Technical guidance, troubleshooting, docs | get_documents, step-by-step flows |
+| **Planner** | Tasks, milestones, blockers, deadline triage | create_task, **update_task**, update_task_status, **delete_task**, create_milestone, **update_milestone**, resolve_blocker |
+| **Coach** | Technical guidance, troubleshooting, docs | get_documents, create_blocker, update_task_status |
+
+Full task CRUD: `create_task`, `update_task` (rename/reassign/reprioritize), `update_task_status`, `delete_task`.  
+Full milestone CRUD: `create_milestone`, `update_milestone` (deadline/title).  
+Frontend tools available to all agents: `renderSurface`, `setMascotMood`, `logActivity`, `reportBlocker`, `highlightTasks`, `updateTask`, `setCrewState`.
 
 The Coach agent powers the **TechnicalStepper** in the Companion Panel — adaptive rescue flows for low-tech members.
 
@@ -222,6 +229,14 @@ Tamagotchi-style mini habitat (240×180px) in the workspace corner. Not a status
 | C — Deploy | ⬜ Pending | Full deploy smoke tests on Vercel + Render + Neon + Upstash |
 
 **Next:** Companion Habitat Phase 2 (Rive art), `/project/[id]` route migration, deploy tests.
+
+### Agent-usability gap check (mandatory)
+
+Every surface, frontend tool, Python tool, and agent prompt change must pass a 4-axis check before merge:
+1. **Surface emittable** — manifest registered, agent routing table updated
+2. **Full CRUD** — create + update + delete for every entity the agent manages
+3. **Frontend tools complete** — both pages expose `logActivity`, `highlightTasks`, `reportBlocker`, `renderSurface`
+4. **Prompts aware** — routing tables and AVAILABLE FRONTEND TOOLS sections reflect all new tools/surfaces
 
 ---
 

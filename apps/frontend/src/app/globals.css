@@ -246,6 +246,58 @@ html {
   background-size: 200% auto;
 }
 
+/* GlowCard shared spotlight primitives */
+/* data-glow-card = full card with hue-shift border glow */
+/* data-glow-item = list item with static spotlight, no hue shift */
+[data-glow-card]::before,
+[data-glow-card]::after,
+[data-glow-item]::before,
+[data-glow-item]::after {
+  pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  background-attachment: fixed;
+  background-size: calc(100% + 2px) calc(100% + 2px);
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
+  mask-clip: padding-box, border-box;
+  mask-composite: intersect;
+}
+[data-glow-card]::before {
+  background-image: radial-gradient(
+    150px 150px at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
+    hsl(calc(var(--base, 230) + var(--xp, 0) * var(--spread, 80)) 80% 50% / 0.9),
+    transparent 100%
+  );
+  filter: brightness(2);
+}
+[data-glow-card]::after {
+  background-image: radial-gradient(
+    100px 100px at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
+    hsl(0 100% 100% / 0.5),
+    transparent 100%
+  );
+}
+[data-glow-item]::before {
+  background-image: radial-gradient(
+    90px 90px at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
+    hsl(230 70% 55% / 0.55),
+    transparent 100%
+  );
+  filter: brightness(1.8);
+}
+[data-glow-item]::after {
+  background-image: radial-gradient(
+    60px 60px at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px),
+    hsl(0 100% 100% / 0.35),
+    transparent 100%
+  );
+}
+
 /* Companion Habitat animations */
 @keyframes fall {
   from { transform: translateY(-10px); opacity: 0.7; }

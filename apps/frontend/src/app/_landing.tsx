@@ -6,13 +6,12 @@ import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { DottedSurface } from '@/components/ui/dotted-surface'
 import {
   ArrowRight, Sparkles, Zap, Users, GitBranch,
   CheckCircle2, LayoutDashboard, BrainCircuit, AlertTriangle, Layers, Clock, MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-// ─── animated gradient headline ──────────────────────────────────────────────
 
 function GradientText({ children }: { children: React.ReactNode }) {
   return (
@@ -21,8 +20,6 @@ function GradientText({ children }: { children: React.ReactNode }) {
     </span>
   )
 }
-
-// ─── floating UI preview (simulates real surfaces) ────────────────────────────
 
 const PREVIEW_STATES = [
   {
@@ -75,7 +72,7 @@ function FloatingPreview() {
     >
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 blur-3xl rounded-3xl" />
       <div className={cn(
-        'relative bg-zinc-900/70 backdrop-blur-xl border rounded-2xl p-6 shadow-2xl transition-colors duration-700',
+        'relative bg-zinc-900/80 backdrop-blur-xl border rounded-2xl p-6 shadow-2xl transition-colors duration-700',
         state.accent
       )}>
         <div className="flex items-center gap-2 mb-5">
@@ -94,7 +91,7 @@ function FloatingPreview() {
           className="space-y-3"
         >
           {state.lines.map((line, i) => (
-            <div key={i} className="flex items-start gap-3 bg-zinc-800/50 rounded-lg px-3 py-2.5 text-sm">
+            <div key={i} className="flex items-start gap-3 bg-zinc-800/60 rounded-lg px-3 py-2.5 text-sm">
               <span>{line.icon}</span>
               <span className={line.color}>{line.text}</span>
             </div>
@@ -111,8 +108,6 @@ function FloatingPreview() {
   )
 }
 
-// ─── feature card ─────────────────────────────────────────────────────────────
-
 function FeatureCard({ icon: Icon, title, description, delay = 0 }: {
   icon: React.ComponentType<{ className?: string }>
   title: string; description: string; delay?: number
@@ -125,7 +120,7 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }: {
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay }}
     >
-      <Card className="bg-zinc-900/50 border-zinc-800 p-6 h-full hover:border-indigo-500/50 transition-all duration-300 group cursor-default">
+      <Card className="bg-zinc-900/80 border-zinc-800 p-6 h-full hover:border-indigo-500/50 transition-all duration-300 group cursor-default">
         <div className="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-500/20 transition-colors">
           <Icon className="w-5 h-5 text-indigo-400" />
         </div>
@@ -135,8 +130,6 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }: {
     </motion.div>
   )
 }
-
-// ─── use-case card ────────────────────────────────────────────────────────────
 
 function UseCaseCard({ emoji, title, description, items, delay = 0 }: {
   emoji: string; title: string; description: string; items: string[]; delay?: number
@@ -149,7 +142,7 @@ function UseCaseCard({ emoji, title, description, items, delay = 0 }: {
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.5, delay }}
     >
-      <Card className="bg-zinc-900/50 border-zinc-800 p-7 h-full">
+      <Card className="bg-zinc-900/80 border-zinc-800 p-7 h-full">
         <div className="text-3xl mb-3">{emoji}</div>
         <h3 className="text-xl font-semibold text-zinc-100 mb-2">{title}</h3>
         <p className="text-zinc-400 text-sm mb-5">{description}</p>
@@ -165,8 +158,6 @@ function UseCaseCard({ emoji, title, description, items, delay = 0 }: {
     </motion.div>
   )
 }
-
-// ─── main landing ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const containerRef = useRef(null)
@@ -245,15 +236,15 @@ export default function LandingPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
-      {/* ambient background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-violet-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/2 w-[300px] h-[300px] bg-indigo-500/8 rounded-full blur-3xl" />
-      </div>
+
+      {/* Three.js wave background — fixed behind everything, visible only in hero */}
+      <DottedSurface className="opacity-[0.18]" />
+
+      {/* Top edge fade: hides dots behind the nav */}
+      <div className="pointer-events-none fixed top-0 inset-x-0 h-24 bg-gradient-to-b from-zinc-950 to-transparent z-10" />
 
       {/* nav */}
-      <nav className="relative z-50 border-b border-zinc-800/50 backdrop-blur-xl bg-zinc-950/60 sticky top-0">
+      <nav className="relative z-50 border-b border-zinc-800/40 backdrop-blur-xl bg-zinc-950/70 sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
@@ -280,9 +271,16 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* hero */}
-      <section className="relative pt-28 pb-24 px-6">
-        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="max-w-7xl mx-auto">
+      {/* ── HERO ── */}
+      <section className="relative min-h-[88vh] flex items-center pt-16 pb-0 px-6">
+
+        {/* Soft glow accents behind the content — subtle focal points */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-indigo-500/8 rounded-full blur-[120px]" />
+          <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-violet-500/8 rounded-full blur-[100px]" />
+        </div>
+
+        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 max-w-7xl mx-auto w-full pb-28">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
             <div className="space-y-7">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -319,7 +317,7 @@ export default function LandingPage() {
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="border-zinc-700 hover:border-indigo-500 text-base px-7">
+                <Button size="lg" variant="outline" asChild className="border-zinc-700 hover:border-indigo-500 text-base px-7 bg-transparent">
                   <Link href="/dev">Ver demo en vivo</Link>
                 </Button>
               </motion.div>
@@ -337,10 +335,15 @@ export default function LandingPage() {
             <FloatingPreview />
           </div>
         </motion.div>
+
+        {/* Bottom fade — transitions hero into the next solid section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent to-zinc-950" />
       </section>
 
+      {/* ── SECTIONS BELOW — solid bg covers the fixed dots ── */}
+
       {/* diferencial callout */}
-      <section id="diferencial" className="relative py-16 px-6 border-y border-zinc-800/50 bg-zinc-900/20">
+      <section id="diferencial" className="relative py-16 px-6 border-y border-zinc-800/50 bg-zinc-950">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -376,7 +379,7 @@ export default function LandingPage() {
       </section>
 
       {/* features */}
-      <section id="features" className="relative py-28 px-6">
+      <section id="features" className="relative py-28 px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -399,7 +402,7 @@ export default function LandingPage() {
       </section>
 
       {/* use cases */}
-      <section id="use-cases" className="relative py-28 px-6 bg-zinc-900/25">
+      <section id="use-cases" className="relative py-28 px-6 bg-zinc-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
@@ -417,14 +420,14 @@ export default function LandingPage() {
       </section>
 
       {/* final CTA */}
-      <section className="relative py-28 px-6">
+      <section className="relative py-28 px-6 bg-zinc-950">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="relative"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/15 to-violet-500/15 blur-3xl rounded-3xl" />
-            <Card className="relative bg-zinc-900/60 border-zinc-800 p-12">
+            <Card className="relative bg-zinc-900/80 border-zinc-800 p-12">
               <h2 className="text-4xl font-bold mb-4">
                 Tu equipo merece una interfaz que{' '}
                 <GradientText>trabaje con él</GradientText>
@@ -444,7 +447,7 @@ export default function LandingPage() {
       </section>
 
       {/* footer */}
-      <footer className="relative border-t border-zinc-800/50 py-10 px-6">
+      <footer className="relative border-t border-zinc-800/50 py-10 px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">

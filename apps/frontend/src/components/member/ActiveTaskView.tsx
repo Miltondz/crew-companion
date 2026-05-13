@@ -20,9 +20,10 @@ interface ActiveTaskViewProps {
   task: Task | undefined
   memberName: string
   onMarkDone?: (taskId: string) => void
+  onMarkInProgress?: (taskId: string) => void
 }
 
-export function ActiveTaskView({ task, memberName, onMarkDone }: ActiveTaskViewProps) {
+export function ActiveTaskView({ task, memberName, onMarkDone, onMarkInProgress }: ActiveTaskViewProps) {
   if (!task) {
     return (
       <Card className="flex flex-col items-center justify-center p-8 text-center space-y-4">
@@ -79,13 +80,20 @@ export function ActiveTaskView({ task, memberName, onMarkDone }: ActiveTaskViewP
         </div>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 flex flex-col gap-2">
         {task.status === 'done' ? (
           <div className="w-full py-3 bg-green-50 rounded-lg border border-green-100 text-center">
             <span className="text-sm font-bold text-green-700">¡Tarea completada! 🎉</span>
           </div>
+        ) : task.status === 'todo' ? (
+          <Button
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold h-11"
+            onClick={() => onMarkInProgress?.(task.id)}
+          >
+            ▶ Empezar tarea
+          </Button>
         ) : (
-          <Button 
+          <Button
             className="w-full bg-green-500 hover:bg-green-600 text-white font-bold h-11"
             onClick={() => onMarkDone?.(task.id)}
           >

@@ -5,8 +5,11 @@ and prompt token consumption.
 """
 from ..tools import (
     create_task,
+    update_task,
     update_task_status,
+    delete_task,
     create_milestone,
+    update_milestone,
     resolve_blocker,
     get_documents,
     create_blocker,
@@ -17,8 +20,11 @@ from ..tools import (
 # Planner: operational tools — tasks, milestones, blockers, team structure
 PLANNER_TOOLS = [
     create_task,
+    update_task,
     update_task_status,
+    delete_task,
     create_milestone,
+    update_milestone,
     resolve_blocker,
     create_blocker,
     add_member,
@@ -28,13 +34,17 @@ PLANNER_TOOLS = [
 COACH_TOOLS = [
     get_documents,
     create_blocker,
+    update_task_status,
 ]
 
 # Orchestrator: all tools (direct handling + delegation capability)
 ORCHESTRATOR_TOOLS = [
     create_task,
+    update_task,
     update_task_status,
+    delete_task,
     create_milestone,
+    update_milestone,
     resolve_blocker,
     get_documents,
     create_blocker,

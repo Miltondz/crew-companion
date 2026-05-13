@@ -7,6 +7,55 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Added — Visual redesign (GlowCard system)
+- Shared glow CSS primitives in `globals.css` — `[data-glow-card]` (hue-shifting radial border glow, `background-attachment: fixed`) and `[data-glow-item]` (static blue spotlight); eliminates per-component `<style>` injection
+- `TaskCard` — full GlowCard redesign: `StatusBadge` + `PriorityBadge` with Lucide icons, `Initials` avatar, priority-hue `--base` CSS var, dark mode via opacity tokens
+- `ApprovalGate` — risk-colored glow: `RISK_CONFIG` with ShieldCheck/ShieldAlert/ShieldX/Skull icons + hue per risk level; Spanish confirm/reject labels
+- `UrgencyBanner` — GlowCard with phase-reactive hue; shadcn `Alert` primitive (`alert.tsx` created)
+- `TeamOverview` — `MemberCard` with GlowCard per member: purple (leader), blue (member), orange (blocked); blocker callout inside card
+- `ActivityStream` — `data-glow-item` on each row; single container-level `pointermove` handler; dark mode text tokens
+
+### Added — New surfaces + components
+- `FocusedTaskPanel` surface — priority-driven glow (high=orange, medium=yellow, low=emerald); `coachNote` indigo callout; routed by both Planner and Coach; registered in `bootstrap.ts`
+- `FileCard` (`file-card-collections.tsx`) — 25 format types, format-specific mini previews, `inferFileFormat()` from extension
+- `DocumentSummaryPanel` — `FileCard` thumbnail in header; `documentFormat` field added to Zod schema; `resolveFormat()` validates against `VALID_FORMATS` or infers from title
+- `DottedSurface` (`components/ui/dotted-surface.tsx`) — Three.js animated wave particle grid; `useTheme`-aware dot color; proper cleanup on unmount
+- `three` + `@types/three` added to frontend dependencies
+
+### Added — Landing page redesign
+- `DottedSurface` as `fixed z-[-1] opacity-18` page background — visible in hero, covered by solid `bg-zinc-950` in subsequent sections
+- Top gradient `from-zinc-950` masks dots behind sticky nav; bottom gradient `from-transparent to-zinc-950 h-56` transitions hero into content
+- Hero section: `min-h-[88vh]` + soft indigo/violet glow accents; `FloatingPreview` with increased backdrop opacity for readability over wave
+- All below-fold sections set to solid backgrounds (`bg-zinc-950` / `bg-zinc-900`) — no dot bleed-through
+
+### Added — Python tool CRUD coverage
+- `update_task(task_id, title?, description?, assigned_to?, priority?)` — patch any task field, partial update
+- `update_milestone(milestone_id, title?, deadline_iso?)` — change milestone title or deadline
+- `delete_task(task_id)` — removes task from state + cleans `taskIds` from all milestones
+- All three tools added to `PLANNER_TOOLS`, `ORCHESTRATOR_TOOLS`; `update_task_status` added to `COACH_TOOLS`
+
+### Added — Frontend tool coverage (agent-usability gap fix)
+- Leader page: `reportBlocker` frontend tool (logs blocker + pushActivity + toast)
+- Leader page: `logActivity` frontend tool (pushActivity + toast) — Python-tool mutations now visible in activity stream
+- Member page: `highlightTasks` frontend tool
+- Member page: `logActivity` frontend tool (toast only)
+- All agent prompts updated with `AVAILABLE FRONTEND TOOLS` section listing all callable tools
+
+### Added — UI interaction gaps (member page)
+- `ActiveTaskView`: `onMarkInProgress` prop + "▶ Empezar tarea" button for `status=todo`; "✅ Marcar como completada" only shows for `in-progress`
+- Member page: `handleMarkInProgress` handler
+- Member page: member self-dismiss blocker button ("✓ Resolver" inline in blocker panel)
+- Member page: all-tasks list replaced with `TaskCard` grid + highlight support + status change handler
+
+### Added — Agent prompt improvements
+- PLANNER: tool routing table (create/update/delete for tasks + milestones)
+- PLANNER + COACH: `assignedTo` in `focused_task_panel` must be member NAME not ID
+- COACH: use `update_task_status` when member says they've started or finished a task
+- All prompts: `AVAILABLE FRONTEND TOOLS` section
+
+### Added — CLAUDE.md
+- Mandatory 4-axis gap check section before Visual design rules
+
 ### Added — Companion Habitat Phase 1
 - `CompanionEventBus` — typed pub/sub singleton; any component emits/subscribes to `CompanionEvent` union
 - `companionMachine` (xstate) — 6-state machine (idle/alert/celebrating/thinking/sleeping/guiding), anti-spam 5-min cooldown on proactive bubbles

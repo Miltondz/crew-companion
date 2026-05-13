@@ -154,6 +154,46 @@ function LeaderCanvas() {
     },
   })
 
+  useFrontendTool({
+    name: 'reportBlocker',
+    description: 'Registra un blocker para un miembro del equipo',
+    parameters: z.object({ memberId: z.string(), description: z.string() }),
+    handler: async ({ memberId: targetMemberId, description }) => {
+      const member = state.members.find(m => m.id === targetMemberId)
+      setState(prev => ({
+        ...prev,
+        blockers: [
+          ...prev.blockers,
+          {
+            id: crypto.randomUUID(),
+            memberId: targetMemberId,
+            description,
+            reportedAt: new Date().toISOString(),
+            resolved: false,
+          },
+        ],
+      }))
+      pushActivity('blocker_reported', `Blocker reportado para ${member?.name ?? targetMemberId}`, '⚠️')
+      toast.warning(`Blocker: ${member?.name ?? targetMemberId}`, { description })
+      return 'blocker registrado'
+    },
+  })
+
+  useFrontendTool({
+    name: 'logActivity',
+    description: 'Registra un evento en el activity stream y muestra un toast',
+    parameters: z.object({
+      type: z.enum(['task_created', 'task_done', 'task_started', 'blocker_reported', 'blocker_resolved', 'milestone_complete', 'phase_change', 'doc_opened']),
+      message: z.string(),
+      icon: z.string().optional(),
+    }),
+    handler: async ({ type, message, icon }) => {
+      pushActivity(type, message, icon ?? '📋')
+      toast.info(message, { duration: 3000 })
+      return 'logged'
+    },
+  })
+
   const runtimeContext = useRuntimeContext({
     role: 'leader',
     phase: urgencyPhase,

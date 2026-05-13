@@ -17,6 +17,7 @@ import { manifest as countdownCritical } from '@/components/surfaces/CountdownCr
 import { manifest as ideaMatrix } from '@/components/surfaces/IdeaMatrix/manifest'
 import { manifest as triageWarRoom } from '@/components/surfaces/TriageWarRoom/manifest'
 import { manifest as ambientOverlayWidget } from '@/components/surfaces/AmbientOverlayWidget/manifest'
+import { manifest as focusedTask } from '@/components/surfaces/FocusedTaskPanel/manifest'
 
 let bootstrapped = false
 
@@ -38,5 +39,6 @@ export function bootstrapRegistry(): void {
     ideaMatrix,
     triageWarRoom,
     ambientOverlayWidget,
+    focusedTask,
   ].forEach(m => surfaceRegistry.register(m))
 }
