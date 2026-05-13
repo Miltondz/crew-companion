@@ -9,11 +9,9 @@ Crew Companion is a Cognitive Operational Runtime built on Next.js 15 (frontend)
 - `project-docs/PROJECT_STRUCTURE.md` — file map with descriptions
 
 **Phase status:**
-- Phase A (Kernel): not started — Surface Registry, Layout Engine, Capability Engine, Persistence, Envelopes
-- Phase B (Product): not started — Auth, multi-agent, Rive mascot, polish, new surfaces
-- Phase C (Deploy): not started — token caps, errors, free-tier deploy
-
-Until Phase A passes its gate, do not begin Phase B work. See MASTER_WORK_PLAN Part 5.
+- Phase A (Kernel): **COMPLETE** — Surface Registry (SurfaceHost + manifests + bootstrap), Layout Engine (6 regions, pinning), Capability Engine (@guarded_tool, PolicyEngine, audit log), Persistence (AsyncPostgresSaver, workspace_state), Envelope protocol
+- Phase B (Product): **COMPLETE** — NextAuth + Resend magic-link, WorkspaceShell wrapping all 3 pages (leader/member/docs), 13 surfaces, multi-agent (orchestrator/planner/coach), companion habitat, onboarding wizard, dashboard, invite flow
+- Phase C (Deploy): **IN PROGRESS** — Services live on Vercel+Render+Neon+Upstash; global-error, not-found, /api/copilotkit proxy, /status debug page done; pending: BFF_URL env var in Vercel + smoke test
 
 ---
 
@@ -94,7 +92,7 @@ If a requested change would violate any invariant, refuse and ask for confirmati
 
 **Persistence active (3.4):** AsyncPostgresSaver replaces MemorySaver when DATABASE_URL set; workspace state hydrated from `workspace_state` table; migrations idempotent via `_migrations` meta table; run `bash scripts/migrate.sh up`.
 
-**Spatial Grammar built (3.2):** LayoutEngine + 6 regions (command-surface, primary-workzone, context-rail, agent-rail, activity-stream, ambient-overlay) + pinning (localStorage) in `apps/frontend/src/runtime/workspace/`. WorkspaceShell available but NOT yet wrapping the 3 pages — page-to-shell migration deferred to Phase B (4.x). renderSurface tool still renders inline for now.
+**Spatial Grammar complete (3.2):** LayoutEngine + 6 regions (command-surface, primary-workzone, context-rail, agent-rail, activity-stream, ambient-overlay) + pinning (localStorage) in `apps/frontend/src/runtime/workspace/`. WorkspaceShell wraps all 3 pages (leader, member, docs).
 
 ---
 

@@ -157,6 +157,38 @@ app.use("*", async (c, next) => {
   }
 });
 
+app.get("/api/health", async (c) => {
+  const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123"
+  const t0 = Date.now()
+  let langgraph: Record<string, unknown> = {}
+  try {
+    const r = await fetch(`${lgUrl}/info`, { signal: AbortSignal.timeout(5000) })
+    const d = (await r.json()) as Record<string, unknown>
+    langgraph = { ok: r.ok, latencyMs: Date.now() - t0, status: r.status, data: d }
+  } catch (e: unknown) {
+    langgraph = { ok: false, latencyMs: Date.now() - t0, error: (e as Error).message }
+  }
+  const m = process.memoryUsage()
+  return c.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+    bff: {
+      uptimeSeconds: Math.round(process.uptime()),
+      memory: { rssBytes: m.rss, heapUsedBytes: m.heapUsed, heapTotalBytes: m.heapTotal },
+      nodeVersion: process.version,
+      env: {
+        LANGGRAPH_DEPLOYMENT_URL: !!process.env.LANGGRAPH_DEPLOYMENT_URL,
+        INTELLIGENCE_API_URL: !!process.env.INTELLIGENCE_API_URL,
+        INTELLIGENCE_API_KEY: !!process.env.INTELLIGENCE_API_KEY,
+        COPILOTKIT_LICENSE_TOKEN: !!process.env.COPILOTKIT_LICENSE_TOKEN,
+        MCP_SERVER_URL: !!process.env.MCP_SERVER_URL,
+        LANGSMITH_API_KEY: !!process.env.LANGSMITH_API_KEY,
+      },
+    },
+    langgraph,
+  })
+})
+
 // Approval stubs — replace body with graph.invoke(Command(resume={...})) on thread_id post-auth.
 app.post("/api/approvals/:envelopeId/approve", async (c) => {
   const { envelopeId } = c.req.param();
