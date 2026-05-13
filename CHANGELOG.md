@@ -1,83 +1,108 @@
 # Changelog
 
-All notable changes to Crew Companion are documented here.  
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+All notable changes to this project are documented here.
 
 ---
 
-## [Unreleased] — 2026-05-13
+## [Unreleased]
 
 ### Added
-- **Full member-identity linking** — invite page now shows unclaimed member slot picker; joining writes `userId` onto the member object in `state_json`; `crew_member_id` cookie set on workspace switch; `/api/me/identity` endpoint for server-side identity resolution; leader page auto-redirects members to `/member/[id]`; member page validates URL param vs actual identity; `x-member-id` header forwarded to all CopilotKit requests so agent knows who is speaking
-- `/api/me/identity` route — returns `{ workspaceId, memberId, role }` from httpOnly cookies + DB
-- `unclaimedMembers` field on `GET /api/invite/[code]` — lists member slots without a `userId` set
+- **i18n (English + Spanish)** — Custom locale context with cookie persistence; language switcher in navigation; dynamic `lang` attribute on `<html>`; all key UI strings translated
+- **`/api/health` endpoint** — Unauthenticated `GET` returns `{ ok: true, ts }` for Render keepalive and smoke tests
+- **OG / Twitter metadata** — `og:title`, `og:description`, `og:image`, `twitter:card` added to root `layout.tsx`
+- **Chat daily cap enforcement** — `/api/copilotkit` proxy now checks `chat_usage` before forwarding; returns HTTP 429 with `{ error, remaining: 0 }` when workspace exceeds 200 turns/day
 
 ### Changed
-- `POST /api/invite/[code]` — accepts optional `memberId` body param, upserts `user_projects` with the member's actual role, returns `memberId` in response
-- `GET /api/projects` — each project now includes `member_id` field (null for leaders)
-- `POST /api/projects` — sets `crew_member_id` cookie alongside `crew_project_id` on workspace switch
-- Dashboard `openProject` — routes to `/member/[member_id]` when user is a non-leader member
-- Middleware — forwards `x-member-id` header to `/api/copilotkit/*` when cookie present
-
----
-
-## Phase C — Deploy — 2026-05
-
-### Added
-- `/status` debug page — service health cards, usage bars, 7-day mini charts, audit log, activity feed, platform API section (Neon/Vercel/Render), env var grid, download JSON/MD, auto-refresh toggle
-- `/api/debug/status` route — parallel health checks for BFF, Postgres, Redis, LangGraph; workspace usage; env var presence
-- BFF `/api/health` endpoint — LangGraph ping, process uptime, memory stats
-- Global error page (`error.tsx`) and not-found page (`not-found.tsx`)
-- `/api/copilotkit` proxy route — forwards to `BFF_URL`
-- Pre-wizard intro screen on `/onboarding` — explains what info user needs before starting
+- **Demo banner gated to development** — Banner now renders only when `NODE_ENV === 'development'`; removed from production build
+- **Shared `useCrewAgent` hook** — Extracted `mergeCrewState` + `useCrewAgent` from `leader/page.tsx`, `member/[memberId]/page.tsx`, and `docs/page.tsx` into `@/lib/useCrewAgent.ts`
+- **Shared Zod envelope schemas** — `LegacyEnvelopeSchema` + `FullEnvelopeSchema` extracted from page files into `@/runtime/surface-registry/envelope-schema.ts`
 
 ### Fixed
-- `/status` page redirected to non-existent `/login` → corrected to `/auth/signin`
-- Auth sign-in now reads `?callbackUrl=` query param → correct post-login redirect
-- Dashboard auto-redirects to `/onboarding` when user has no projects
-- Middleware now protects `/onboarding` and `/status` routes
-- Error handling added to share, invite, and observer-config API routes
+- Deleted orphan `apps/frontend/src/components/surfaces/TaskSuggestionPanel.tsx` root file (canonical component lives in `TaskSuggestionPanel/TaskSuggestionPanel.tsx`)
 
 ---
 
-## Phase B — Product — 2025-Q4 / 2026-Q1
+## [0.9.0] — 2026-05-10
 
-### Added
-- **NextAuth v5** with Resend magic-link provider, PostgresAdapter, database session strategy
-- **Multi-project dashboard** (`/dashboard`) — project cards with progress, urgency badge, share links, observer config panel
-- **Onboarding wizard** (`/onboarding`) — 4-step setup: project name, deadline, team members, context
-- **Invite flow** — leader generates invite link; member joins via `/invite/[code]`; workspace activated via cookie
-- **Observer view** (`/share/[token]`) — read-only public page, auto-refreshes 30s, countdown, stats, task list, custom message, join CTA
-- **WorkspaceShell** wrapping all 3 workspace pages (leader, member, docs)
-- 13 UI surfaces registered in Surface Registry with manifests
-- Companion Habitat Phase 1 — xstate machine, EventBus, PropRegistry, SVG creature, CompanionPanel, TechnicalStepper
-- Multi-agent topology — Orchestrator + Planner + Coach as separate LangGraph graphs
-- TechnicalStepper wired to Coach via Gemini API for real adaptive rescue flows
-- Token economy — per-workspace caps on chat, image gen, doc summaries
+### Fixed — Round 9
+- **Invite race condition** — `/api/invite/[code]` `POST` replaced read-modify-write pattern with single atomic JSONB `UPDATE … WHERE userId IS NULL`; concurrent join requests now return HTTP 409 instead of silently clobbering each other
+- **Empty-name avatar crash** — `m.name[0]` on empty string replaced with `m.name?.[0] ?? '?'` in both `leader/page.tsx` and `member/[memberId]/page.tsx`
 
 ---
 
-## Phase A — Kernel — 2025-Q3 / Q4
+## [0.8.0] — 2026-05-08
 
-### Added
-- **Surface Registry** — manifest-based registration, `SurfaceHost`, `bootstrap.ts`
-- **Layout Engine** — 6 spatial zones, pinning via localStorage
-- **Capability Engine** — `@guarded_tool`, `PolicyEngine`, audit log
-- **Persistence** — `AsyncPostgresSaver` for LangGraph checkpoints, `workspace_state` table, idempotent SQL migrations
-- **Envelope protocol** — typed agent→frontend envelopes through BFF
-- SQL migrations 001–011: auth, workspaces, surfaces, activity, usage, multi-project
+### Fixed — Round 8
+- **Redis reconnect per call** — `approval_store.py` replaced per-call `redis.from_url()` factory with module-level `_redis_client` singleton via `_get_redis()`; eliminates connection churn under load
+- **Countdown overflow** — `computeCountdown()` in `derive.ts` now caps hours at 99 (`Math.min(99, …)`); prevents 7-char strings that broke downstream 6-slot destructuring
+- **Onboarding key instability** — Member list in `onboarding/page.tsx` replaced `key={i}` (array index) with `key={m.id}` (stable UUID); prevents React reconciliation issues when list order changes
 
 ---
 
-## Foundation — 2025-Q2 / Q3
+## [0.7.0] — 2026-05-05
 
-### Added
-- Project scaffolded from [Generative-UI Global Hackathon Starter Kit](https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit)
-- Crew domain model — `TeamMember`, `Task`, `Milestone`, `Blocker`, `SharedDocument` TypeScript + Python TypedDicts
-- Urgency phase engine — `getUrgencyPhase(deadline)`, 5 phases, reactive 30s sync
-- `/leader`, `/member/[memberId]`, `/docs` workspace routes
-- 12 initial UI surfaces with `renderSurface` tool
-- MilestoneCountdown — live 1s countdown with phase-aware styling
-- Companion mascot (`MascotSVG`) — 5 mood states
-- Marketing site — landing, /features, /how-it-works, /roadmap, /about, GlowCard spotlight
-- BFF Hono server — CopilotKit Runtime v2, Redis-backed approval store
+### Fixed — Round 7
+- **Cookie-based workspace isolation** — `crew_project_id` cookie set on workspace switch; `/api/me/identity` and usage routes read workspace from cookie rather than user ID
+- **Post-onboarding redirect** — Onboarding completion now redirects to `/leader` instead of hanging on the wizard page
+
+---
+
+## [0.6.0] — 2026-05-02
+
+### Fixed — Round 6
+- **Dev route guard** — Auth middleware skips gate when `AUTH_SECRET` not set; enables local dev without credentials
+- **Token caps** — Image generation capped at 16/workspace lifetime, 100 global; chat capped at 200 turns/day/workspace; both tracked in `image_gen_usage` and `chat_usage` tables
+
+---
+
+## [0.5.0] — 2026-04-28
+
+### Fixed — Round 5
+- **Observer config** — Read-only observer role wired through `user_projects`; observer sees workspace but cannot mutate state
+- **Workspace switching** — Multi-project dashboard correctly updates `crew_project_id` cookie and reloads workspace state on switch
+
+---
+
+## [0.4.0] — 2026-04-20
+
+### Added — Phase B complete
+- **Auth** — NextAuth v5 + Resend magic-link email; JWT strategy; `user_projects` table for role-based access
+- **WorkspaceShell** — Wraps all workspace pages (leader, member, docs) with Layout Engine regions
+- **14 generative surfaces** — CountdownCritical, MilestoneSummaryPanel, TaskSuggestionPanel, FocusedTaskPanel, BlockerInsightPanel, TriageWarRoom, ForceGraph, IdeaMatrix, ChecklistPanel, TroubleshootingWizard, DocumentSummaryPanel, BeginnerGuidePanel, MemberActionPanel, AmbientOverlayWidget
+- **Onboarding wizard** — 4-step flow: project config → milestones → members → review; creates workspace on completion
+- **Multi-project dashboard** — Project cards with urgency phase indicators; workspace switch via cookie
+- **Invite flow** — Shareable invite links; member-slot claiming with atomic JSONB update; observer mode
+- **Companion Habitat Phase 1** — xstate machine, EventBus, PropRegistry, SVG creature, CompanionPanel, TechnicalStepper
+
+---
+
+## [0.3.0] — 2026-04-10
+
+### Added — Phase A complete
+- **Surface Registry** — `SurfaceHost`, manifest schema, `bootstrapRegistry`; surfaces register via manifests, no switch/case routing
+- **Layout Engine** — 6 spatial zones: command-surface, primary-workzone, context-rail, agent-rail, activity-stream, ambient-overlay; localStorage pinning
+- **Capability Engine** — `@guarded_tool` decorator, `PolicyEngine`, `AuditLogger`; every tool declares required capabilities
+- **Persistence** — `AsyncPostgresSaver` for LangGraph checkpoints; `workspace_state` table; idempotent SQL migrations
+- **Envelope protocol** — `SurfaceEnvelope` typed envelopes; BFF logs correlation; frontend accepts legacy + full shapes
+
+---
+
+## [0.2.0] — 2026-03-25
+
+### Added — Multi-agent topology
+- Orchestrator + Planner + Coach LangGraph graphs registered in `langgraph.json`
+- Full task CRUD: `create_task`, `update_task`, `update_task_status`, `delete_task`
+- Full milestone CRUD: `create_milestone`, `update_milestone`
+- Frontend tools: `renderSurface`, `setMascotMood`, `logActivity`, `reportBlocker`, `highlightTasks`, `updateTask`, `setCrewState`
+- TechnicalStepper powered by Coach agent via Gemini API
+
+---
+
+## [0.1.0] — 2026-03-10
+
+### Added — Initial scaffold
+- Next.js 15 App Router monorepo with Hono BFF and Python LangGraph agent
+- Landing page, `/features`, `/how-it-works`, `/roadmap`, `/about`, `/dev` marketing pages
+- Tailwind CSS 4, shadcn/ui, framer-motion, xstate, Rive stubs
+- Docker Compose local infra (Postgres 5433, Redis 6381, CopilotKit Intelligence)
+- `scripts/migrate.sh` and `scripts/seed.ts`

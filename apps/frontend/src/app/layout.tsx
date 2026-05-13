@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Spline_Sans_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
+import { LocaleProvider } from "@/lib/i18n";
 import { Toaster } from "sonner";
 import "./globals.css";
 // v2 owns its own stylesheet. Do NOT import @copilotkit/react-ui/styles.css —
@@ -26,6 +27,27 @@ const splineMono = Spline_Sans_Mono({
 export const metadata: Metadata = {
   title: "Crew Companion — AI Team Dashboard",
   description: "Intelligent crew management: tasks, milestones, blockers, and AI assistance for every team member.",
+  openGraph: {
+    title: "Crew Companion — AI Team Dashboard",
+    description: "A runtime where three specialized agents build the interface based on who you are, how technical you are, and how urgent things are.",
+    url: "https://crew-companion.vercel.app",
+    siteName: "Crew Companion",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Crew Companion — AI Team Dashboard",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Crew Companion — AI Team Dashboard",
+    description: "A runtime where three specialized agents build the interface based on who you are, how technical you are, and how urgent things are.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
@@ -33,17 +55,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isDev = process.env.NODE_ENV === 'development'
   return (
-    <html lang="en" className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
+    <html lang="es" className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
       <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
-        <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
-          <span>🧪</span>
-          <span>Demo — datos simulados. Equipo real y despliegue completo: próximamente.</span>
-        </div>
-        <div className="pt-6">
-          <SessionProvider>
-            <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
-          </SessionProvider>
+        {isDev && (
+          <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
+            <span>Demo — datos simulados</span>
+          </div>
+        )}
+        <div className={isDev ? 'pt-6' : ''}>
+          <LocaleProvider>
+            <SessionProvider>
+              <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
+            </SessionProvider>
+          </LocaleProvider>
         </div>
         <Toaster richColors position="top-right" closeButton />
       </body>

@@ -1,7 +1,22 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
 
 const BFF_URL = process.env.BFF_URL ?? 'http://localhost:4000'
+const CHAT_DAILY_LIMIT = 200
+
+async function getUsageCount(workspaceId: string): Promise<number> {
+  if (!process.env.DATABASE_URL) return 0
+  const today = new Date().toISOString().split('T')[0]
+  try {
+    const { rows } = await getPool().query(
+      'SELECT count FROM chat_usage WHERE workspace_id = $1 AND date = $2',
+      [workspaceId, today]
+    )
+    return rows[0]?.count ?? 0
+  } catch {
+    return 0
+  }
+}
 
 async function incrementUsage(workspaceId: string) {
   const today = new Date().toISOString().split('T')[0]
@@ -21,10 +36,16 @@ async function proxy(req: NextRequest): Promise<Response> {
   headers.delete('x-forwarded-host')
   headers.delete('x-forwarded-for')
 
-  // Count every user-initiated chat POST (injected x-workspace-id comes from middleware)
   if (req.method === 'POST') {
     const workspaceId = req.headers.get('x-workspace-id')
     if (workspaceId && process.env.DATABASE_URL) {
+      const count = await getUsageCount(workspaceId)
+      if (count >= CHAT_DAILY_LIMIT) {
+        return NextResponse.json(
+          { error: 'Daily chat limit reached', remaining: 0, limit: CHAT_DAILY_LIMIT },
+          { status: 429 }
+        )
+      }
       incrementUsage(workspaceId).catch(() => {})
     }
   }

@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
-  useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
@@ -21,37 +20,18 @@ import { TaskCard } from '@/components/shared/TaskCard'
 import { ActiveTaskView } from '@/components/member/ActiveTaskView'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
-import { SEED_STATE } from '@/lib/crew/seed'
+import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import type { CrewState, UrgencyPhase, TaskStatus } from '@/lib/crew/types'
 
-function mergeCrewState(raw: unknown): CrewState {
-  const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
-  return {
-    urgencyPhase: 'normal',
-    mascotMood: 'calm',
-    mascotMode: 'idle',
-    highlightedTaskIds: [],
-    ...SEED_STATE,
-    ...partial,
-  }
-}
-
-function useCrewAgent() {
-  const { agent } = useAgent({ agentId: "crew_agent" })
-  const state = mergeCrewState(agent?.state)
-  const setState = (updater: (prev: CrewState) => CrewState) => {
-    agent?.setState(updater(mergeCrewState(agent?.state)))
-  }
-  return { agent, state, setState }
-}
 
 function MemberCanvas({ memberId }: { memberId: string }) {
   const router = useRouter()
@@ -67,19 +47,19 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       .then(d => {
         if (d.role === 'leader') { router.replace('/leader'); return }
         if (d.memberId && d.memberId !== memberId) { router.replace(`/member/${d.memberId}`); return }
+        setState(prev => ({ ...prev, actorRole: 'member', currentMemberId: memberId }))
       })
       .catch(() => {})
   }, [memberId, router])
 
+  const activeMilestoneDeadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
+
   useEffect(() => {
-    const sync = () => {
-      const active = state.milestones.find(m => m.id === state.activeMilestoneId)
-      if (active) setUrgencyPhase(getUrgencyPhase(active.deadline))
-    }
+    const sync = () => setUrgencyPhase(getUrgencyPhase(activeMilestoneDeadline))
     sync()
     const id = setInterval(sync, 30_000)
     return () => clearInterval(id)
-  }, [state.milestones, state.activeMilestoneId])
+  }, [activeMilestoneDeadline])
 
   const currentMember = state.members.find(m => m.id === memberId)
   const myTasks = state.tasks.filter(t => t.assignedTo === memberId)
@@ -191,27 +171,6 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     hasActiveBlocker: !!myBlocker,
   })
 
-  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
-  const FullEnvelopeSchema = z.object({
-    envelopeId: z.string(),
-    agentId: z.string(),
-    emittedAt: z.number(),
-    intent: z.string(),
-    priority: z.enum(['low', 'medium', 'high', 'critical']),
-    surfaceId: z.string(),
-    payload: z.record(z.unknown()),
-    context: z.object({
-      role: z.string(),
-      techLevel: z.string().optional(),
-      phase: z.string(),
-      hasActiveBlocker: z.boolean(),
-      workspaceId: z.string(),
-    }),
-    requiredCapabilities: z.array(z.string()),
-    hibernatable: z.boolean(),
-    pinnable: z.boolean(),
-    ephemeral: z.number().optional(),
-  })
 
   useFrontendTool({
     name: 'renderSurface',
@@ -327,7 +286,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                   onClick={() => router.push(`/member/${m.id}`)}
                   className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25 transition ring-1 ring-white/20"
                 >
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[9px]">{m.name[0]}</span>
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[9px]">{m.name?.[0] ?? '?'}</span>
                   {m.name}
                 </button>
               ))}

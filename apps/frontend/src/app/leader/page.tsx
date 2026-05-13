@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
-  useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
@@ -20,12 +19,13 @@ import { TaskCard } from '@/components/shared/TaskCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestonePanel } from '@/components/leader/MilestonePanel'
 import { TeamOverview } from '@/components/leader/TeamOverview'
 import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
-import { SEED_STATE } from '@/lib/crew/seed'
+import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
@@ -37,26 +37,6 @@ import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
-function mergeCrewState(raw: unknown): CrewState {
-  const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
-  return {
-    urgencyPhase: 'normal',
-    mascotMood: 'calm',
-    mascotMode: 'idle',
-    highlightedTaskIds: [],
-    ...SEED_STATE,
-    ...partial,
-  }
-}
-
-function useCrewAgent() {
-  const { agent } = useAgent({ agentId: "crew_agent" })
-  const state = mergeCrewState(agent?.state)
-  const setState = (updater: (prev: CrewState) => CrewState) => {
-    agent?.setState(updater(mergeCrewState(agent?.state)))
-  }
-  return { agent, state, setState }
-}
 
 interface AddTaskForm {
   title: string
@@ -86,20 +66,21 @@ function LeaderCanvas() {
       .then(d => {
         if (d.memberId && d.role !== 'leader') {
           router.replace(`/member/${d.memberId}`)
+          return
         }
+        setState(prev => ({ ...prev, actorRole: 'leader' }))
       })
       .catch(() => {})
   }, [router])
 
+  const activeMilestoneDeadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
+
   useEffect(() => {
-    const sync = () => {
-      const active = state.milestones.find(m => m.id === state.activeMilestoneId)
-      if (active) setUrgencyPhase(getUrgencyPhase(active.deadline))
-    }
+    const sync = () => setUrgencyPhase(getUrgencyPhase(activeMilestoneDeadline))
     sync()
     const id = setInterval(sync, 30_000)
     return () => clearInterval(id)
-  }, [state.milestones, state.activeMilestoneId])
+  }, [activeMilestoneDeadline])
 
   useConfigureSuggestions({
     available: 'before-first-message',
@@ -170,22 +151,25 @@ function LeaderCanvas() {
     description: 'Registra un blocker para un miembro del equipo',
     parameters: z.object({ memberId: z.string(), description: z.string() }),
     handler: async ({ memberId: targetMemberId, description }) => {
-      const member = state.members.find(m => m.id === targetMemberId)
-      setState(prev => ({
-        ...prev,
-        blockers: [
-          ...prev.blockers,
-          {
-            id: crypto.randomUUID(),
-            memberId: targetMemberId,
-            description,
-            reportedAt: new Date().toISOString(),
-            resolved: false,
-          },
-        ],
-      }))
-      pushActivity('blocker_reported', `Blocker reportado para ${member?.name ?? targetMemberId}`, '⚠️')
-      toast.warning(`Blocker: ${member?.name ?? targetMemberId}`, { description })
+      let memberName = targetMemberId
+      setState(prev => {
+        memberName = prev.members.find(m => m.id === targetMemberId)?.name ?? targetMemberId
+        return {
+          ...prev,
+          blockers: [
+            ...prev.blockers,
+            {
+              id: crypto.randomUUID(),
+              memberId: targetMemberId,
+              description,
+              reportedAt: new Date().toISOString(),
+              resolved: false,
+            },
+          ],
+        }
+      })
+      pushActivity('blocker_reported', `Blocker reportado para ${memberName}`, '⚠️')
+      toast.warning(`Blocker: ${memberName}`, { description })
       return 'blocker registrado'
     },
   })
@@ -211,27 +195,6 @@ function LeaderCanvas() {
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
   })
 
-  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
-  const FullEnvelopeSchema = z.object({
-    envelopeId: z.string(),
-    agentId: z.string(),
-    emittedAt: z.number(),
-    intent: z.string(),
-    priority: z.enum(['low', 'medium', 'high', 'critical']),
-    surfaceId: z.string(),
-    payload: z.record(z.unknown()),
-    context: z.object({
-      role: z.string(),
-      techLevel: z.string().optional(),
-      phase: z.string(),
-      hasActiveBlocker: z.boolean(),
-      workspaceId: z.string(),
-    }),
-    requiredCapabilities: z.array(z.string()),
-    hibernatable: z.boolean(),
-    pinnable: z.boolean(),
-    ephemeral: z.number().optional(),
-  })
 
   useFrontendTool({
     name: 'renderSurface',
@@ -245,7 +208,6 @@ function LeaderCanvas() {
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
       const result = layoutEngine.mount(fullEnvelope)
-      pushActivity('task_created', `Superficie "${fullEnvelope.surfaceId}" renderizada`, '🧩')
       if (!result.ok) {
         return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
       }
@@ -296,7 +258,7 @@ function LeaderCanvas() {
   const handleAddTask = () => {
     if (!taskForm.title.trim()) return
     const newTask = {
-      id: `t${Date.now()}`,
+      id: crypto.randomUUID(),
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       assignedTo: taskForm.assignedTo,
@@ -380,7 +342,7 @@ function LeaderCanvas() {
                   className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
-                    {m.name[0]}
+                    {m.name?.[0] ?? '?'}
                   </span>
                   {m.name}
                   {state.blockers.find(b => b.memberId === m.id && !b.resolved) && (

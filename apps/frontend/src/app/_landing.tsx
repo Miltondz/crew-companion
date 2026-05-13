@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion, useScroll, useTransform, useInView } from 'framer-motion'
+import { motion, useScroll, useTransform, useInView } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,8 @@ import {
   CheckCircle2, LayoutDashboard, BrainCircuit, AlertTriangle, Layers, Clock, MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLocale } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher'
 
 function GradientText({ children }: { children: React.ReactNode }) {
   return (
@@ -164,39 +166,10 @@ export default function LandingPage() {
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start start', 'end start'] })
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '40%'])
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
+  const { t } = useLocale()
 
-  const features = [
-    {
-      icon: LayoutDashboard,
-      title: 'Una interfaz por persona',
-      description: 'El rol, el nivel técnico y la urgencia del momento determinan qué ve cada uno. El líder tiene panorama operativo; el miembro, su próxima acción específica. No hay que configurar nada.',
-    },
-    {
-      icon: AlertTriangle,
-      title: 'Urgencia automática',
-      description: 'El sistema deriva la fase de urgencia del deadline del equipo: normal → focus → urgent → panic → expired. Colores, superficies y tono del agente cambian solos. Sin alertas manuales.',
-    },
-    {
-      icon: Layers,
-      title: '14 superficies generativas',
-      description: 'El agente emite datos estructurados y el runtime decide cómo mostrarlos según contexto. Modo guerra, cuenta regresiva con viabilidad, grafo de dependencias, wizard de troubleshooting — sin navegación.',
-    },
-    {
-      icon: Users,
-      title: 'Tres agentes especializados',
-      description: 'Orquestador para routing general, Planner para tareas y milestones, Coach para guiar a miembros bloqueados. Cada uno sabe qué hacer según quién habla y qué fase es.',
-    },
-    {
-      icon: BrainCircuit,
-      title: 'Coach que se adapta al nivel',
-      description: 'Para perfiles no técnicos: pasos numerados en lenguaje llano, sin jerga. Para técnicos: respuestas directas y precisas. El mismo agente, dos registros completamente distintos.',
-    },
-    {
-      icon: Zap,
-      title: 'Estado compartido en tiempo real',
-      description: 'Tareas, blockers, milestones y documentos en un modelo de estado persistente. Cada acción del agente o del equipo actualiza la vista de todos al instante, sin recargas.',
-    },
-  ]
+  const featureIcons = [LayoutDashboard, AlertTriangle, Layers, Users, BrainCircuit, Zap]
+  const features = t.features.items.map((item, i) => ({ icon: featureIcons[i], ...item }))
 
   const useCases = [
     {
@@ -256,18 +229,19 @@ export default function LandingPage() {
             <span className="text-lg font-bold tracking-tight">Crew Companion</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/features" className="text-zinc-400 hover:text-zinc-100 transition-colors">Capacidades</Link>
-            <Link href="/how-it-works" className="text-zinc-400 hover:text-zinc-100 transition-colors">Cómo funciona</Link>
-            <Link href="/roadmap" className="text-zinc-400 hover:text-zinc-100 transition-colors">Roadmap</Link>
-            <Link href="/about" className="text-zinc-400 hover:text-zinc-100 transition-colors">Acerca de</Link>
+            <Link href="/features" className="text-zinc-400 hover:text-zinc-100 transition-colors">{t.nav.features}</Link>
+            <Link href="/how-it-works" className="text-zinc-400 hover:text-zinc-100 transition-colors">{t.nav.howItWorks}</Link>
+            <Link href="/roadmap" className="text-zinc-400 hover:text-zinc-100 transition-colors">{t.nav.roadmap}</Link>
+            <Link href="/about" className="text-zinc-400 hover:text-zinc-100 transition-colors">{t.nav.about}</Link>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-white">
-              <Link href="/auth/signin">Iniciar sesión</Link>
+              <Link href="/auth/signin">{t.nav.signIn}</Link>
             </Button>
             <Button size="sm" asChild className="bg-indigo-600 hover:bg-indigo-500">
               <Link href="/auth/signin">
-                Empezar
+                {t.nav.getStarted}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </Button>
@@ -290,7 +264,7 @@ export default function LandingPage() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 gap-1.5">
                   <Sparkles className="w-3 h-3" />
-                  Runtime operacional con IA
+                  {t.hero.badge}
                 </Badge>
               </motion.div>
 
@@ -298,18 +272,16 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
                 className="text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight"
               >
-                El workspace que{' '}
-                <GradientText>se adapta a cada persona</GradientText>
-                {' '}del equipo
+                {t.hero.title}{' '}
+                <GradientText>{t.hero.titleHighlight}</GradientText>
+                {' '}{t.hero.titleSuffix}
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
                 className="text-lg text-zinc-400 leading-relaxed max-w-lg"
               >
-                Crew Companion no es un dashboard con IA encima. Es un runtime donde tres agentes especializados
-                construyen la interfaz según quién sos, qué tan técnico sos, y qué tan urgente está la situación.
-                La UI emerge del contexto — no se configura.
+                {t.hero.subtitle}
               </motion.p>
 
               <motion.div
@@ -318,12 +290,12 @@ export default function LandingPage() {
               >
                 <Button size="lg" asChild className="bg-indigo-600 hover:bg-indigo-500 text-base px-7">
                   <Link href="/auth/signin">
-                    Empezar ahora
+                    {t.hero.cta}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild className="border-zinc-700 hover:border-indigo-500 text-base px-7 bg-transparent">
-                  <Link href="/dev">Ver demo en vivo</Link>
+                  <Link href="/dev">{t.hero.demo}</Link>
                 </Button>
               </motion.div>
 
@@ -331,9 +303,9 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}
                 className="flex items-center gap-6 text-sm text-zinc-500"
               >
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> 3 agentes especializados</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> 14 superficies generativas</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Open source</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> {t.hero.badge1}</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> {t.hero.badge2}</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> {t.hero.badge3}</span>
               </motion.div>
             </div>
 
@@ -354,12 +326,12 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest mb-4">Por qué es diferente</p>
+            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest mb-4">{t.differentiator.eyebrow}</p>
             <p className="text-2xl md:text-3xl font-medium text-zinc-100 leading-relaxed max-w-3xl mx-auto">
-              La mayoría de herramientas con IA te dan un chat más. Crew Companion{' '}
-              <span className="text-indigo-400">cambia la interfaz completa</span>{' '}
-              según quién sos y qué está pasando — sin que tengas que pedirlo.{' '}
-              <span className="text-violet-400">El agente trabaja para vos, no al revés.</span>
+              {t.differentiator.text}{' '}
+              <span className="text-indigo-400">{t.differentiator.highlight}</span>{' '}
+              {t.differentiator.text2}{' '}
+              <span className="text-violet-400">{t.differentiator.highlight2}</span>
             </p>
           </motion.div>
           <motion.div
@@ -368,10 +340,10 @@ export default function LandingPage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 text-center"
           >
             {[
-              { label: 'Agentes especializados', value: '3', sub: 'Orquestador · Planner · Coach' },
-              { label: 'Superficies generativas', value: '14', sub: 'emergen según el contexto' },
-              { label: 'Fases de urgencia', value: '5', sub: 'normal → focus → panic → expirado' },
-              { label: 'Zonas espaciales', value: '6', sub: 'layout inteligente por contexto' },
+              { label: t.differentiator.stat1Label, value: '3', sub: t.differentiator.stat1Sub },
+              { label: t.differentiator.stat2Label, value: '14', sub: t.differentiator.stat2Sub },
+              { label: t.differentiator.stat3Label, value: '5', sub: t.differentiator.stat3Sub },
+              { label: t.differentiator.stat4Label, value: '6', sub: t.differentiator.stat4Sub },
             ].map((s, i) => (
               <div key={i}>
                 <div className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">{s.value}</div>
@@ -388,13 +360,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Capacidades</Badge>
+              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">{t.features.eyebrow}</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Construido para cuando{' '}
-                <GradientText>el margen de error es cero</GradientText>
+                {t.features.title}{' '}
+                <GradientText>{t.features.titleHighlight}</GradientText>
               </h2>
               <p className="text-zinc-400 max-w-xl mx-auto">
-                Cada capacidad nació de un problema real: equipos que no se coordinan, miembros que no saben qué hacer, líderes que no tienen visibilidad cuando más la necesitan.
+                {t.features.subtitle}
               </p>
             </motion.div>
           </div>
@@ -411,10 +383,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Casos de uso</Badge>
+              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">{t.useCases.eyebrow}</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Diseñado para el{' '}
-                <GradientText>caos real del trabajo en equipo</GradientText>
+                {t.useCases.title}{' '}
+                <GradientText>{t.useCases.titleHighlight}</GradientText>
               </h2>
             </motion.div>
           </div>
@@ -434,15 +406,14 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/15 to-violet-500/15 blur-3xl rounded-3xl" />
             <Card className="relative bg-zinc-900/80 border-zinc-800 p-12">
               <h2 className="text-4xl font-bold mb-4">
-                Tu equipo merece una interfaz que{' '}
-                <GradientText>piense con él</GradientText>
+                {t.cta.title}
               </h2>
               <p className="text-zinc-400 mb-8 text-lg">
-                Configurá tu workspace en minutos. El sistema aprende el contexto de tu proyecto y empieza a trabajar con tu equipo desde la primera sesión.
+                {t.cta.subtitle}
               </p>
               <Button size="lg" asChild className="bg-indigo-600 hover:bg-indigo-500 text-base px-8">
                 <Link href="/auth/signin">
-                  Empezar ahora
+                  {t.cta.button}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -462,10 +433,10 @@ export default function LandingPage() {
             <span className="text-zinc-600 text-xs ml-2">Cognitive Operational Runtime</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-zinc-500">
-            <Link href="/features" className="hover:text-zinc-300 transition-colors">Capacidades</Link>
-            <Link href="/how-it-works" className="hover:text-zinc-300 transition-colors">Cómo funciona</Link>
-            <Link href="/roadmap" className="hover:text-zinc-300 transition-colors">Roadmap</Link>
-            <Link href="/about" className="hover:text-zinc-300 transition-colors">Acerca de</Link>
+            <Link href="/features" className="hover:text-zinc-300 transition-colors">{t.nav.features}</Link>
+            <Link href="/how-it-works" className="hover:text-zinc-300 transition-colors">{t.nav.howItWorks}</Link>
+            <Link href="/roadmap" className="hover:text-zinc-300 transition-colors">{t.nav.roadmap}</Link>
+            <Link href="/about" className="hover:text-zinc-300 transition-colors">{t.nav.about}</Link>
             <Link href="/dev" className="hover:text-zinc-300 transition-colors">Demo</Link>
           </div>
           <div className="flex items-center gap-4 text-zinc-600">

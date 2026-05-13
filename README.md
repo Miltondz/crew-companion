@@ -88,6 +88,7 @@ CountdownCritical supports `variant: 'compact' | 'full'` and `orientation: 'vert
 | Auth | NextAuth v5 + Resend magic-link |
 | Database | PostgreSQL (AsyncPostgresSaver for agent checkpoints) |
 | Cache | Redis (Upstash in prod) |
+| i18n | Custom locale context — English + Spanish, cookie-persisted |
 | Deploy | Vercel (frontend) + Render (BFF+agent) + Neon (DB) |
 
 ---
@@ -233,10 +234,11 @@ Tamagotchi-style mini habitat (240×180px) in the workspace corner. Not a status
 | Phase | Status | What |
 |---|---|---|
 | A — Kernel | ✅ Complete | Surface Registry, Layout Engine, Capability Engine, Persistence, Envelope Protocol |
-| B — Product | ✅ Complete | Auth, WorkspaceShell, 13 surfaces, onboarding wizard, multi-project dashboard, invite + observer flows |
+| B — Product | ✅ Complete | Auth, WorkspaceShell, 14 surfaces, onboarding wizard, multi-project dashboard, invite + observer flows |
 | Multi-agent | ✅ Complete | Orchestrator + Planner + Coach LangGraph topology |
 | Companion Habitat | ✅ Phase 1 complete | xstate runtime, EventBus, PropRegistry, SVG creature, panel, stepper |
 | Member identity | ✅ Complete | Member-slot linking: invite page picker → userId on state_json → auto-redirect to `/member/[id]` |
+| i18n | ✅ Complete | English + Spanish locale support; language switcher in nav; dynamic `lang` attribute |
 | C — Deploy | 🔄 In progress | Services live on Vercel+Render+Neon+Upstash; pending: full smoke test |
 
 **Next:** Companion Habitat Phase 2 (Rive art), deploy smoke test.
@@ -260,6 +262,7 @@ Every surface, frontend tool, Python tool, and agent prompt change must pass a 4
 | `DATABASE_URL` | Yes | Neon (prod) or Docker (local) |
 | `RESEND_API_KEY` | Yes | [Resend](https://resend.com) |
 | `NEXTAUTH_URL` | Yes | Your app URL |
+| `BFF_URL` | Yes (prod) | Render BFF service URL |
 | `ANTHROPIC_API_KEY` | No | Alternate LLM runtime |
 | `COPILOTKIT_API_KEY` | No | CopilotKit Intelligence persistence |
 

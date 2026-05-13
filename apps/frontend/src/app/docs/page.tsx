@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
-  useAgent,
   useConfigureSuggestions,
   useDefaultRenderTool,
   useFrontendTool,
@@ -20,31 +19,11 @@ import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
-import { SEED_STATE } from '@/lib/crew/seed'
+import { useCrewAgent } from '@/lib/useCrewAgent'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import type { CrewState } from '@/lib/crew/types'
 
-function mergeCrewState(raw: unknown): CrewState {
-  const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
-  return {
-    urgencyPhase: 'normal',
-    mascotMood: 'calm',
-    mascotMode: 'idle',
-    highlightedTaskIds: [],
-    ...SEED_STATE,
-    ...partial,
-  }
-}
-
-function useCrewAgent() {
-  const { agent } = useAgent({ agentId: "crew_agent" })
-  const state = mergeCrewState(agent?.state)
-  const setState = (updater: (prev: CrewState) => CrewState) => {
-    agent?.setState(updater(mergeCrewState(agent?.state)))
-  }
-  return { agent, state, setState }
-}
 
 function MarkdownContent({ content }: { content: string }) {
   return (
@@ -88,20 +67,23 @@ function DocsCanvas() {
     parameters: z.object({ documentId: z.string() }),
     handler: async ({ documentId }) => {
       setSelectedDocId(documentId)
-      setState(prev => ({
-        ...prev,
-        openDocumentIds: prev.openDocumentIds.includes(documentId)
-          ? prev.openDocumentIds
-          : [...prev.openDocumentIds, documentId],
-      }))
-      const doc = state.sharedDocuments.find(d => d.id === documentId)
-      toast.info('Documento abierto', { description: doc?.title })
+      let docTitle: string | undefined
+      setState(prev => {
+        docTitle = prev.sharedDocuments.find(d => d.id === documentId)?.title
+        return {
+          ...prev,
+          openDocumentIds: prev.openDocumentIds.includes(documentId)
+            ? prev.openDocumentIds
+            : [...prev.openDocumentIds, documentId],
+        }
+      })
+      toast.info('Documento abierto', { description: docTitle })
       return `documento ${documentId} abierto`
     },
   })
 
   const runtimeContext = useRuntimeContext({
-    role: 'leader',
+    role: (state.actorRole as 'leader' | 'member') ?? 'leader',
     phase: state.urgencyPhase,
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
   })
