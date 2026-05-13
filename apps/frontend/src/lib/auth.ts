@@ -12,8 +12,17 @@ const pool = new Pool({
   connectionTimeoutMillis: 3_000,
 })
 
-// pg-adapter sends queries with camelCase column aliases.
-// Our users table has id::uuid — pg auto-casts string ↔ uuid for us.
+// Ensure verification_token (singular) exists — @auth/pg-adapter uses singular table name.
+// Migration 009 incorrectly used plural. This idempotent fix runs on cold start.
+pool.query(`
+  CREATE TABLE IF NOT EXISTS verification_token (
+    identifier  TEXT        NOT NULL,
+    token       TEXT        UNIQUE NOT NULL,
+    expires     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (identifier, token)
+  )
+`).catch(() => {})
+
 const adapter = PostgresAdapter(pool)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -26,4 +35,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   session: { strategy: 'jwt' },
+  trustHost: true,
 })
