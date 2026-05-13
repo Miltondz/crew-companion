@@ -180,7 +180,7 @@ export default function StatusPage() {
     setRefreshing(true)
     try {
       const res = await fetch('/api/debug/status')
-      if (res.status === 401) { window.location.href = '/login'; return }
+      if (res.status === 401) { window.location.href = '/auth/signin'; return }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json() as StatusData
       setData(json)

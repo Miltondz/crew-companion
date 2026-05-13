@@ -18,7 +18,7 @@ export default function SignInPage() {
       const result = await signIn('resend', {
         email: email.trim(),
         redirect: false,
-        callbackUrl: '/leader',
+        callbackUrl: '/dashboard',
       })
       if (result?.error) {
         setError('No pudimos enviarte el link. Verificá tu email.')

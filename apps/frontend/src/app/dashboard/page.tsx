@@ -211,9 +211,14 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/projects')
       .then(r => r.json())
-      .then(d => { setProjects(d.projects ?? []); setLoading(false) })
+      .then(d => {
+        const list = d.projects ?? []
+        if (list.length === 0) { router.replace('/onboarding'); return }
+        setProjects(list)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
-  }, [])
+  }, [router])
 
   const openProject = async (workspaceId: string) => {
     await fetch('/api/projects', {

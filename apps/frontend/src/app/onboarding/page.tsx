@@ -328,8 +328,64 @@ function StepTeam({ members, update }: {
 
 // ─── Main wizard ─────────────────────────────────────────────────────────────
 
+function Intro({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-white">Antes de empezar</h2>
+        <p className="text-zinc-400 text-sm mt-1">
+          El proceso toma menos de 2 minutos. Tené a mano:
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          {
+            icon: '📛',
+            label: 'Nombre del proyecto',
+            desc: 'Cómo se llama el hackathon, sprint o cliente.',
+          },
+          {
+            icon: '📅',
+            label: 'Fecha y hora límite',
+            desc: 'El deadline exacto — día, mes y hora de entrega.',
+          },
+          {
+            icon: '👥',
+            label: 'Nombres del equipo',
+            desc: 'Quién participa, qué rol tiene cada uno (líder o miembro) y si es técnico o no.',
+          },
+          {
+            icon: '🔗',
+            label: 'Contexto del proyecto (opcional)',
+            desc: 'URL del brief, enunciado, Notion o Google Docs. También podés pegar texto directamente.',
+          },
+        ].map(({ icon, label, desc }) => (
+          <div key={label} className="flex gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-3.5">
+            <span className="text-xl shrink-0 mt-0.5">{icon}</span>
+            <div>
+              <p className="text-sm font-semibold text-white">{label}</p>
+              <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onStart}
+        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all"
+      >
+        Comenzar
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
+  const [started, setStarted] = useState(false)
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -404,9 +460,10 @@ export default function OnboardingPage() {
           <span className="text-white font-bold text-lg">Crew Companion</span>
         </div>
 
-        <ProgressBar step={step} total={STEPS.length} />
+        {!started && <Intro onStart={() => setStarted(true)} />}
+        {started && <ProgressBar step={step} total={STEPS.length} />}
 
-        <div className="overflow-hidden">
+        {started && <div className="overflow-hidden">
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div
               key={step}
@@ -422,11 +479,11 @@ export default function OnboardingPage() {
               {step === 3 && <StepTeam members={state.members} update={m => update('members', m)} />}
             </motion.div>
           </AnimatePresence>
-        </div>
+        </div>}
 
-        {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
+        {started && error && <p className="text-red-400 text-sm mt-4">{error}</p>}
 
-        <div className="flex items-center justify-between mt-8">
+        {started && <div className="flex items-center justify-between mt-8">
           <button
             type="button"
             onClick={() => go(step - 1)}
@@ -454,11 +511,11 @@ export default function OnboardingPage() {
               disabled={!canAdvance() || loading}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
             >
-              {loading ? 'Creando workspace...' : 'Comenzar'}
+              {loading ? 'Creando workspace...' : 'Lanzar'}
               {!loading && <Rocket className="w-4 h-4" />}
             </button>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   )
