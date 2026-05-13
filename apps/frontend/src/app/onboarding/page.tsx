@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, ChevronLeft, Plus, X, Check, Link, FileText, Users, Rocket } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Plus, X, Check, Link, FileText, Users, Rocket, ArrowLeft, Zap, Clock, Brain } from 'lucide-react'
+import NextLink from 'next/link'
 import { cn } from '@/lib/utils'
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -26,12 +27,12 @@ interface WizardState {
 // ─── config ───────────────────────────────────────────────────────────────────
 
 const PROJECT_TYPES: { id: ProjectTypeId; label: string; icon: string; desc: string; devDefault: boolean }[] = [
-  { id: 'hackathon',    label: 'Hackathon',          icon: '🏆', desc: 'Sprint de 24-72h, deadline fijo, alta presión', devDefault: true  },
-  { id: 'sprint',       label: 'Sprint de desarrollo',icon: '💻', desc: 'Ciclo de 1-2 semanas, equipo técnico',          devDefault: true  },
-  { id: 'remote-team',  label: 'Equipo remoto',       icon: '🌍', desc: 'Trabajo distribuido, colaboración continua',    devDefault: false },
-  { id: 'launch',       label: 'Lanzamiento',         icon: '🚀', desc: 'Preparar y ejecutar un go-to-market',           devDefault: false },
-  { id: 'consulting',   label: 'Consultoría',         icon: '🤝', desc: 'Proyecto con cliente, entregables definidos',   devDefault: false },
-  { id: 'other',        label: 'Otro',                icon: '⚙️', desc: 'Proyecto personalizado',                        devDefault: false },
+  { id: 'hackathon',    label: 'Hackathon',           icon: '🏆', desc: 'Sprint de 24-72h, deadline fijo, alta presión', devDefault: true  },
+  { id: 'sprint',       label: 'Sprint de desarrollo', icon: '💻', desc: 'Ciclo de 1-2 semanas, equipo técnico',          devDefault: true  },
+  { id: 'remote-team',  label: 'Equipo remoto',        icon: '🌍', desc: 'Trabajo distribuido, colaboración continua',    devDefault: false },
+  { id: 'launch',       label: 'Lanzamiento',          icon: '🚀', desc: 'Preparar y ejecutar un go-to-market',           devDefault: false },
+  { id: 'consulting',   label: 'Consultoría',          icon: '🤝', desc: 'Proyecto con cliente, entregables definidos',   devDefault: false },
+  { id: 'other',        label: 'Otro',                 icon: '⚙️', desc: 'Proyecto personalizado',                        devDefault: false },
 ]
 
 const STEPS = ['Tipo', 'Proyecto', 'Contexto', 'Equipo']
@@ -52,7 +53,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
         <div key={i} className="flex items-center gap-2">
           <div className={cn(
             'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300',
-            i < step  ? 'bg-indigo-500 text-white' :
+            i < step   ? 'bg-indigo-500 text-white' :
             i === step ? 'bg-indigo-500/20 border-2 border-indigo-500 text-indigo-400' :
                          'bg-zinc-800 text-zinc-500'
           )}>
@@ -117,7 +118,7 @@ function StepDetails({
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-white">Detalles del proyecto</h2>
-        <p className="text-zinc-400 text-sm mt-1">Nombre, deadline y perfil técnico.</p>
+        <p className="text-zinc-400 text-sm mt-1">El nombre y deadline son la base del sistema de urgencia — el agente monitorea el tiempo restante en tiempo real.</p>
       </div>
 
       <div>
@@ -141,14 +142,17 @@ function StepDetails({
           onChange={e => update('deadline', e.target.value)}
           className="w-full rounded-lg bg-zinc-800 border border-zinc-700 text-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
         />
+        <p className="text-xs text-zinc-500 mt-1.5">
+          El agente pasa automáticamente por fases: Normal → Focus → Urgente → Pánico a medida que se acerca la hora.
+        </p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-zinc-300 mb-2">Perfil del equipo</label>
         <div className="grid grid-cols-2 gap-3">
           {([
-            { value: true,  label: 'Técnico / Dev',     icon: '💻', desc: 'Código, arquitectura, APIs' },
-            { value: false, label: 'No técnico / Mixed', icon: '🎨', desc: 'Diseño, negocios, gestión' },
+            { value: true,  label: 'Técnico / Dev',      icon: '💻', desc: 'Código, arquitectura, APIs' },
+            { value: false, label: 'No técnico / Mixed',  icon: '🎨', desc: 'Diseño, negocios, gestión' },
           ] as const).map(opt => (
             <button
               key={String(opt.value)}
@@ -185,7 +189,7 @@ function StepContext({
       <div>
         <h2 className="text-xl font-bold text-white">Contexto del proyecto</h2>
         <p className="text-zinc-400 text-sm mt-1">
-          El agente usará esto para entender tu proyecto y sugerir tareas, prioridades y riesgos desde el primer mensaje.
+          El agente usará esto para entender tu proyecto y sugerir tareas, prioridades y riesgos desde el primer mensaje. Podés omitirlo y compartirlo directo en el chat.
         </p>
       </div>
 
@@ -215,14 +219,12 @@ function StepContext({
       <AnimatePresence mode="wait">
         {state.contextMode === 'url' && (
           <motion.div key="url" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-              URL del proyecto
-            </label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1.5">URL del proyecto</label>
             <input
               type="url"
               value={state.contextUrl}
               onChange={e => update('contextUrl', e.target.value)}
-              placeholder="https://hackathon.io/challenge/2026  ·  notion.so/mi-brief  ·  docs.google.com/..."
+              placeholder="https://hackathon.io/challenge  ·  notion.so/mi-brief  ·  docs.google.com/..."
               className="w-full rounded-lg bg-zinc-800 border border-zinc-700 text-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-zinc-500"
             />
             <p className="text-xs text-zinc-500 mt-1.5">Página del hackathon, brief del cliente, Notion, Google Docs, etc.</p>
@@ -231,9 +233,7 @@ function StepContext({
 
         {state.contextMode === 'text' && (
           <motion.div key="text" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-              Descripción / brief / tareas
-            </label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Descripción / brief / tareas</label>
             <textarea
               value={state.contextText}
               onChange={e => update('contextText', e.target.value)}
@@ -257,10 +257,7 @@ function StepContext({
 
 // ─── Step 4: Team ─────────────────────────────────────────────────────────────
 
-function StepTeam({ members, update }: {
-  members: Member[]
-  update: (members: Member[]) => void
-}) {
+function StepTeam({ members, update }: { members: Member[]; update: (members: Member[]) => void }) {
   const set = (i: number, field: keyof Member, value: string) =>
     update(members.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
   const add = () => update([...members, { name: '', role: 'member', technicalLevel: 'low-tech' }])
@@ -270,7 +267,14 @@ function StepTeam({ members, update }: {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-white">Miembros del equipo</h2>
-        <p className="text-zinc-400 text-sm mt-1">Al menos un líder. Podés agregar más después.</p>
+        <p className="text-zinc-400 text-sm mt-1">
+          Cada miembro recibe su propio workspace personalizado. El agente adapta el tono y las sugerencias según su rol y nivel técnico. Podés agregar más después.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs text-zinc-500 flex items-start gap-2">
+        <Users className="w-3.5 h-3.5 mt-0.5 shrink-0 text-indigo-400" />
+        <span>Después de crear el proyecto vas a obtener un link de invitación para compartir con tu equipo. Cada miembro podrá reclamar su perfil al unirse.</span>
       </div>
 
       <div className="space-y-2.5">
@@ -326,62 +330,69 @@ function StepTeam({ members, update }: {
   )
 }
 
-// ─── Main wizard ─────────────────────────────────────────────────────────────
+// ─── Intro ─────────────────────────────────────────────────────────────────────
 
 function Intro({ onStart }: { onStart: () => void }) {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white">Antes de empezar</h2>
-        <p className="text-zinc-400 text-sm mt-1">
-          El proceso toma menos de 2 minutos. Tené a mano:
+      {/* Value prop */}
+      <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5">
+        <h2 className="text-lg font-bold text-white mb-1">Tu workspace de coordinación con IA</h2>
+        <p className="text-zinc-400 text-sm leading-relaxed">
+          Crew Companion crea un workspace compartido donde un agente de IA monitorea tu proyecto en tiempo real: asigna tareas, detecta blockers y adapta la interfaz según quién sos y qué tan cerca está el deadline.
         </p>
-      </div>
-
-      <div className="space-y-3">
-        {[
-          {
-            icon: '📛',
-            label: 'Nombre del proyecto',
-            desc: 'Cómo se llama el hackathon, sprint o cliente.',
-          },
-          {
-            icon: '📅',
-            label: 'Fecha y hora límite',
-            desc: 'El deadline exacto — día, mes y hora de entrega.',
-          },
-          {
-            icon: '👥',
-            label: 'Nombres del equipo',
-            desc: 'Quién participa, qué rol tiene cada uno (líder o miembro) y si es técnico o no.',
-          },
-          {
-            icon: '🔗',
-            label: 'Contexto del proyecto (opcional)',
-            desc: 'URL del brief, enunciado, Notion o Google Docs. También podés pegar texto directamente.',
-          },
-        ].map(({ icon, label, desc }) => (
-          <div key={label} className="flex gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-3.5">
-            <span className="text-xl shrink-0 mt-0.5">{icon}</span>
-            <div>
-              <p className="text-sm font-semibold text-white">{label}</p>
-              <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{desc}</p>
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          {[
+            { icon: Brain,  label: 'Agente adaptivo',    desc: 'Cambia según rol y urgencia' },
+            { icon: Clock,  label: 'Urgencia en tiempo real', desc: 'Normal → Pánico automático' },
+            { icon: Zap,    label: 'Vista por miembro',  desc: 'Cada uno ve lo suyo' },
+          ].map(({ icon: Icon, label, desc }) => (
+            <div key={label} className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+              <Icon className="w-4 h-4 text-indigo-400" />
+              <p className="text-xs font-semibold text-white leading-tight">{label}</p>
+              <p className="text-[10px] text-zinc-500 leading-tight">{desc}</p>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onStart}
-        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all"
-      >
-        Comenzar
-        <ChevronRight className="w-4 h-4" />
-      </button>
+      {/* What you need */}
+      <div>
+        <p className="text-sm font-semibold text-zinc-300 mb-3">Para configurar tu proyecto vas a necesitar:</p>
+        <div className="space-y-2.5">
+          {[
+            { icon: '📛', label: 'Nombre del proyecto',         desc: 'Cómo se llama el hackathon, sprint o cliente.' },
+            { icon: '📅', label: 'Fecha y hora límite',         desc: 'El deadline exacto — el agente monitorea el tiempo restante.' },
+            { icon: '👥', label: 'Nombres del equipo',          desc: 'Quién participa, su rol (líder o miembro) y si es técnico o no.' },
+            { icon: '🔗', label: 'Contexto del proyecto (opcional)', desc: 'URL, Notion, brief o descripción para que el agente entienda tu proyecto.' },
+          ].map(({ icon, label, desc }) => (
+            <div key={label} className="flex gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-3.5">
+              <span className="text-xl shrink-0 mt-0.5">{icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        <button
+          type="button"
+          onClick={onStart}
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-all"
+        >
+          Crear proyecto
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <p className="text-center text-xs text-zinc-500">El proceso toma menos de 2 minutos.</p>
+      </div>
     </div>
   )
 }
+
+// ─── Main wizard ──────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -421,7 +432,6 @@ export default function OnboardingPage() {
     setStep(next)
   }
 
-  // When picking project type, pre-set isDevProject
   const pickType = (t: ProjectTypeId) => {
     const found = PROJECT_TYPES.find(p => p.id === t)
     setState(prev => ({ ...prev, projectType: t, isDevProject: found?.devDefault ?? false }))
@@ -440,7 +450,7 @@ export default function OnboardingPage() {
           members: state.members,
           projectType: state.projectType,
           isDevProject: state.isDevProject,
-          contextUrl: state.contextMode === 'url' ? state.contextUrl : undefined,
+          contextUrl:  state.contextMode === 'url'  ? state.contextUrl  : undefined,
           contextText: state.contextMode === 'text' ? state.contextText : undefined,
         }),
       })
@@ -453,69 +463,96 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 py-12">
-      <div className="w-full max-w-xl">
-        <div className="flex items-center gap-3 mb-8">
-          <Rocket className="w-6 h-6 text-indigo-400" />
-          <span className="text-white font-bold text-lg">Crew Companion</span>
+    <div className="min-h-screen flex flex-col bg-zinc-950 px-4 py-12">
+      {/* Ambient */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/3 w-96 h-96 rounded-full bg-indigo-500/8 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-xl mx-auto flex-1">
+        {/* Nav */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+              <Rocket className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-white font-bold text-sm">Crew Companion</span>
+          </div>
+          <NextLink href="/dashboard"
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Mis proyectos
+          </NextLink>
         </div>
 
-        {!started && <Intro onStart={() => setStarted(true)} />}
+        {/* Page title — only on intro */}
+        {!started && (
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white">Nuevo proyecto</h1>
+            <p className="text-zinc-500 text-sm mt-1">Configurá tu workspace de coordinación de equipo con IA.</p>
+          </div>
+        )}
+
         {started && <ProgressBar step={step} total={STEPS.length} />}
 
-        {started && <div className="overflow-hidden">
-          <AnimatePresence mode="wait" custom={dir}>
-            <motion.div
-              key={step}
-              custom={dir}
-              variants={slide}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
-              {step === 0 && <StepType value={state.projectType} onChange={pickType} />}
-              {step === 1 && <StepDetails state={state} update={update} />}
-              {step === 2 && <StepContext state={state} update={update} />}
-              {step === 3 && <StepTeam members={state.members} update={m => update('members', m)} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>}
+        {!started && <Intro onStart={() => setStarted(true)} />}
+
+        {started && (
+          <div className="overflow-hidden">
+            <AnimatePresence mode="wait" custom={dir}>
+              <motion.div
+                key={step}
+                custom={dir}
+                variants={slide}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                {step === 0 && <StepType value={state.projectType} onChange={pickType} />}
+                {step === 1 && <StepDetails state={state} update={update} />}
+                {step === 2 && <StepContext state={state} update={update} />}
+                {step === 3 && <StepTeam members={state.members} update={m => update('members', m)} />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
 
         {started && error && <p className="text-red-400 text-sm mt-4">{error}</p>}
 
-        {started && <div className="flex items-center justify-between mt-8">
-          <button
-            type="button"
-            onClick={() => go(step - 1)}
-            disabled={step === 0}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white disabled:opacity-0 transition-all"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Atrás
-          </button>
+        {started && (
+          <div className="flex items-center justify-between mt-8">
+            <button
+              type="button"
+              onClick={() => step === 0 ? setStarted(false) : go(step - 1)}
+              className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {step === 0 ? 'Volver' : 'Atrás'}
+            </button>
 
-          {step < STEPS.length - 1 ? (
-            <button
-              type="button"
-              onClick={() => go(step + 1)}
-              disabled={!canAdvance()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
-            >
-              Continuar
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canAdvance() || loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
-            >
-              {loading ? 'Creando workspace...' : 'Lanzar'}
-              {!loading && <Rocket className="w-4 h-4" />}
-            </button>
-          )}
-        </div>}
+            {step < STEPS.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => go(step + 1)}
+                disabled={!canAdvance()}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+              >
+                Continuar
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canAdvance() || loading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+              >
+                {loading ? 'Creando workspace...' : 'Lanzar proyecto'}
+                {!loading && <Rocket className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
