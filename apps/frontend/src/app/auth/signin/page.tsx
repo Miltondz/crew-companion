@@ -18,19 +18,14 @@ function SignInForm() {
     setLoading(true)
     setError('')
     try {
-      const result = await signIn('resend', {
+      await signIn('resend', {
         email: email.trim(),
         redirect: false,
         callbackUrl,
       })
-      // NextAuth v5 returns error:'EmailSignin' even on success for magic-link providers
-      if (result?.error && result.error !== 'EmailSignin') {
-        setError('No pudimos enviarte el link. Verificá tu email.')
-      } else {
-        setSent(true)
-      }
+      setSent(true)
     } catch {
-      setError('Error inesperado. Intentá de nuevo.')
+      setError('No pudimos enviarte el link. Verificá tu email.')
     } finally {
       setLoading(false)
     }
