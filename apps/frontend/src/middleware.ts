@@ -24,6 +24,8 @@ export const config = {
     '/member/:path*',
     '/docs',
     '/dashboard',
+    '/onboarding',
+    '/status',
     '/api/copilotkit/:path*',
   ],
 }

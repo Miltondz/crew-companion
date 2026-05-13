@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 
 export default function SignInPage() {
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard'
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -18,7 +21,7 @@ export default function SignInPage() {
       const result = await signIn('resend', {
         email: email.trim(),
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl,
       })
       if (result?.error) {
         setError('No pudimos enviarte el link. Verificá tu email.')

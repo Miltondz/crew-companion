@@ -22,12 +22,15 @@ export async function PATCH(req: Request) {
     customMessage?: string
   }
 
-  await pool.query(
-    `UPDATE workspace_state
-     SET state_json = jsonb_set(state_json, '{observerConfig}', $2::jsonb)
-     WHERE workspace_id = $1`,
-    [workspaceId, JSON.stringify(config)]
-  )
-
-  return NextResponse.json({ ok: true })
+  try {
+    await pool.query(
+      `UPDATE workspace_state
+       SET state_json = jsonb_set(state_json, '{observerConfig}', $2::jsonb)
+       WHERE workspace_id = $1`,
+      [workspaceId, JSON.stringify(config)]
+    )
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
 }

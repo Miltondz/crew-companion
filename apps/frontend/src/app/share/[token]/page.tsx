@@ -60,13 +60,15 @@ export default function SharePage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetch_data = async () => {
-    const res = await fetch(`/api/share/${token}`)
-    if (!res.ok) { setError(true); return }
-    const data = await res.json()
-    setState(data.state)
-    setInviteCode(data.inviteCode)
-    setUpdatedAt(data.updatedAt)
-    setLastRefresh(Date.now())
+    try {
+      const res = await fetch(`/api/share/${token}`)
+      if (!res.ok) { setError(true); return }
+      const data = await res.json()
+      setState(data.state)
+      setInviteCode(data.inviteCode)
+      setUpdatedAt(data.updatedAt)
+      setLastRefresh(Date.now())
+    } catch { setError(true) }
   }
 
   useEffect(() => {
