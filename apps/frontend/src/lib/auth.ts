@@ -25,5 +25,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: process.env.AUTH_EMAIL_FROM ?? 'Crew Companion <noreply@crew-companion.app>',
     }),
   ],
-  session: { strategy: 'database' },
+  session: { strategy: 'jwt' },
 })

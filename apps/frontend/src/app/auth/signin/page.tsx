@@ -23,7 +23,8 @@ function SignInForm() {
         redirect: false,
         callbackUrl,
       })
-      if (result?.error) {
+      // NextAuth v5 returns error:'EmailSignin' even on success for magic-link providers
+      if (result?.error && result.error !== 'EmailSignin') {
         setError('No pudimos enviarte el link. Verificá tu email.')
       } else {
         setSent(true)
