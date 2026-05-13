@@ -11,7 +11,7 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue>({
   locale: 'es',
-  t: messages.es,
+  t: messages.en,
   setLocale: () => {},
 })
 
