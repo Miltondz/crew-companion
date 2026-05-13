@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, useScroll, useTransform, useInView } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -23,47 +23,83 @@ function GradientText({ children }: { children: React.ReactNode }) {
   )
 }
 
-const PREVIEW_STATES = [
-  {
-    label: 'Modo pánico — 47 min restantes',
-    labelColor: 'text-red-400',
-    lines: [
-      { icon: '🚨', text: 'Deadline crítico detectado. Cambiando a modo guerra.', color: 'text-red-300' },
-      { icon: '✂️', text: 'Planner: recortá notificaciones push — ganás 2h', color: 'text-amber-300' },
-      { icon: '🔒', text: 'Coach: bloqueando nuevas features hasta el release', color: 'text-zinc-300' },
-    ],
-    accent: 'border-red-500/40',
-  },
-  {
-    label: 'Vista del líder — Sprint en curso',
-    labelColor: 'text-indigo-400',
-    lines: [
-      { icon: '✅', text: 'Auth completada — 2h antes de lo estimado', color: 'text-green-300' },
-      { icon: '⚠️', text: 'Ana bloqueada en deploy — riesgo alto para el milestone', color: 'text-amber-300' },
-      { icon: '🎯', text: 'Milestone al 78% · 3 tareas críticas sin asignar', color: 'text-indigo-300' },
-    ],
-    accent: 'border-indigo-500/40',
-  },
-  {
-    label: 'Vista del miembro — nivel no técnico',
-    labelColor: 'text-violet-400',
-    lines: [
-      { icon: '📋', text: 'Tu siguiente tarea: revisar copy de la landing', color: 'text-zinc-300' },
-      { icon: '💬', text: 'Coach: "Hacé clic en Deploy > Preview. ¿Ves el botón azul?"', color: 'text-violet-300' },
-      { icon: '🕐', text: 'Carlos necesita tu aprobación antes de las 18:00', color: 'text-amber-300' },
-    ],
-    accent: 'border-violet-500/40',
-  },
-]
+const PREVIEW_STATES = {
+  es: [
+    {
+      label: 'Modo pánico — 47 min restantes',
+      labelColor: 'text-red-400',
+      lines: [
+        { icon: '🚨', text: 'Deadline crítico detectado. Cambiando a modo guerra.', color: 'text-red-300' },
+        { icon: '✂️', text: 'Planner: recortá notificaciones push — ganás 2h', color: 'text-amber-300' },
+        { icon: '🔒', text: 'Coach: bloqueando nuevas features hasta el release', color: 'text-zinc-300' },
+      ],
+      accent: 'border-red-500/40',
+    },
+    {
+      label: 'Vista del líder — Sprint en curso',
+      labelColor: 'text-indigo-400',
+      lines: [
+        { icon: '✅', text: 'Auth completada — 2h antes de lo estimado', color: 'text-green-300' },
+        { icon: '⚠️', text: 'Ana bloqueada en deploy — riesgo alto para el milestone', color: 'text-amber-300' },
+        { icon: '🎯', text: 'Milestone al 78% · 3 tareas críticas sin asignar', color: 'text-indigo-300' },
+      ],
+      accent: 'border-indigo-500/40',
+    },
+    {
+      label: 'Vista del miembro — nivel no técnico',
+      labelColor: 'text-violet-400',
+      lines: [
+        { icon: '📋', text: 'Tu siguiente tarea: revisar copy de la landing', color: 'text-zinc-300' },
+        { icon: '💬', text: 'Coach: "Hacé clic en Deploy > Preview. ¿Ves el botón azul?"', color: 'text-violet-300' },
+        { icon: '🕐', text: 'Carlos necesita tu aprobación antes de las 18:00', color: 'text-amber-300' },
+      ],
+      accent: 'border-violet-500/40',
+    },
+  ],
+  en: [
+    {
+      label: 'Panic mode — 47 min left',
+      labelColor: 'text-red-400',
+      lines: [
+        { icon: '🚨', text: 'Critical deadline detected. Switching to war mode.', color: 'text-red-300' },
+        { icon: '✂️', text: 'Planner: cut push notifications — you gain 2h', color: 'text-amber-300' },
+        { icon: '🔒', text: 'Coach: blocking new features until release', color: 'text-zinc-300' },
+      ],
+      accent: 'border-red-500/40',
+    },
+    {
+      label: 'Leader view — Sprint in progress',
+      labelColor: 'text-indigo-400',
+      lines: [
+        { icon: '✅', text: 'Auth done — 2h ahead of schedule', color: 'text-green-300' },
+        { icon: '⚠️', text: 'Ana blocked on deploy — high risk for milestone', color: 'text-amber-300' },
+        { icon: '🎯', text: 'Milestone at 78% · 3 critical tasks unassigned', color: 'text-indigo-300' },
+      ],
+      accent: 'border-indigo-500/40',
+    },
+    {
+      label: 'Member view — non-technical level',
+      labelColor: 'text-violet-400',
+      lines: [
+        { icon: '📋', text: 'Your next task: review landing copy', color: 'text-zinc-300' },
+        { icon: '💬', text: 'Coach: "Click Deploy > Preview. See the blue button?"', color: 'text-violet-300' },
+        { icon: '🕐', text: 'Carlos needs your approval before 6:00 PM', color: 'text-amber-300' },
+      ],
+      accent: 'border-violet-500/40',
+    },
+  ],
+}
 
 function FloatingPreview() {
+  const { locale } = useLocale()
   const [idx, setIdx] = useState(0)
+  const states = PREVIEW_STATES[locale]
   useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % PREVIEW_STATES.length), 3500)
+    const t = setInterval(() => setIdx(i => (i + 1) % states.length), 3500)
     return () => clearInterval(t)
-  }, [])
+  }, [states.length])
 
-  const state = PREVIEW_STATES[idx]
+  const state = states[idx]
 
   return (
     <motion.div
@@ -100,7 +136,7 @@ function FloatingPreview() {
           ))}
         </motion.div>
         <div className="flex gap-1.5 mt-5 justify-center">
-          {PREVIEW_STATES.map((_, i) => (
+          {states.map((_, i) => (
             <button key={i} onClick={() => setIdx(i)}
               className={cn('w-1.5 h-1.5 rounded-full transition-all', i === idx ? 'bg-indigo-400 w-4' : 'bg-zinc-600')} />
           ))}
@@ -169,7 +205,10 @@ export default function LandingPage() {
   const { t } = useLocale()
 
   const featureIcons = [LayoutDashboard, AlertTriangle, Layers, Users, BrainCircuit, Zap]
-  const features = t.features.items.map((item, i) => ({ icon: featureIcons[i], ...item }))
+  const features = useMemo(
+    () => t.features.items.map((item, i) => ({ icon: featureIcons[i], ...item })),
+    [t]
+  )
 
   const useCases = [
     {

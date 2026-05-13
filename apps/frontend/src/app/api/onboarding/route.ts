@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     id: crypto.randomUUID(),
     name: (m.name ?? '').trim().slice(0, 100),
     role: ['leader', 'member'].includes(m.role) ? m.role : 'member',
-    technicalLevel: m.technicalLevel,
+    technicalLevel: m.technicalLevel === 'high-tech' ? 'high-tech' : 'low-tech',
     activeBlockerId: null,
   }))
 
@@ -72,9 +72,9 @@ export async function POST(req: Request) {
     projectConfig: { type: projectType, isDevProject, contextUrl, contextText },
     blockers: [],
     sharedDocuments: contextText
-      ? [{ id: crypto.randomUUID(), title: 'Contexto inicial', content: contextText, createdAt: new Date().toISOString() }]
+      ? [{ id: crypto.randomUUID(), title: 'Contexto inicial', content: contextText, sharedBy: leaderId, sharedAt: new Date().toISOString() }]
       : contextUrl
-      ? [{ id: crypto.randomUUID(), title: 'Referencia del proyecto', content: contextUrl, createdAt: new Date().toISOString() }]
+      ? [{ id: crypto.randomUUID(), title: 'Referencia del proyecto', content: contextUrl, sharedBy: leaderId, sharedAt: new Date().toISOString() }]
       : [],
     openDocumentIds: [],
     urgencyPhase: 'normal',

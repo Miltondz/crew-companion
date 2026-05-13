@@ -18,6 +18,7 @@ import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
+import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
@@ -86,28 +87,6 @@ function DocsCanvas() {
     role: (state.actorRole as 'leader' | 'member') ?? 'leader',
     phase: state.urgencyPhase,
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
-  })
-
-  const LegacyEnvelopeSchema = z.object({ type: z.string(), payload: z.record(z.unknown()) })
-  const FullEnvelopeSchema = z.object({
-    envelopeId: z.string(),
-    agentId: z.string(),
-    emittedAt: z.number(),
-    intent: z.string(),
-    priority: z.enum(['low', 'medium', 'high', 'critical']),
-    surfaceId: z.string(),
-    payload: z.record(z.unknown()),
-    context: z.object({
-      role: z.string(),
-      techLevel: z.string().optional(),
-      phase: z.string(),
-      hasActiveBlocker: z.boolean(),
-      workspaceId: z.string(),
-    }),
-    requiredCapabilities: z.array(z.string()),
-    hibernatable: z.boolean(),
-    pinnable: z.boolean(),
-    ephemeral: z.number().optional(),
   })
 
   useFrontendTool({

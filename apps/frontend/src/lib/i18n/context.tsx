@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 import { messages, type Locale, type Messages } from './messages'
 
 interface LocaleContextValue {
@@ -15,19 +15,14 @@ const LocaleContext = createContext<LocaleContextValue>({
   setLocale: () => {},
 })
 
-function readStoredLocale(): Locale {
-  if (typeof document === 'undefined') return 'es'
-  const match = document.cookie.match(/(?:^|; )crew_locale=([^;]*)/)
-  const val = match ? decodeURIComponent(match[1]) : null
-  return val === 'en' || val === 'es' ? val : 'es'
-}
-
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('es')
-
-  useEffect(() => {
-    setLocaleState(readStoredLocale())
-  }, [])
+export function LocaleProvider({
+  children,
+  initialLocale = 'es',
+}: {
+  children: React.ReactNode
+  initialLocale?: Locale
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale)
 
   const setLocale = useCallback((l: Locale) => {
     document.cookie = `crew_locale=${l}; path=/; max-age=31536000; SameSite=Lax`

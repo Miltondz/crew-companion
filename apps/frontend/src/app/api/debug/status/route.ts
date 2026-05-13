@@ -166,6 +166,18 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const jar = await cookies()
+  const workspaceIdForRoleCheck = jar.get('crew_project_id')?.value ?? session.user.id
+  try {
+    const { rows: roleRows } = await getPool().query(
+      `SELECT role FROM user_projects WHERE user_id = $1 AND workspace_id = $2`,
+      [session.user.id, workspaceIdForRoleCheck]
+    )
+    if (roleRows[0]?.role !== 'leader') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  } catch { /* DB not configured — allow in dev */ }
+
+
   const workspaceId = jar.get('crew_project_id')?.value ?? session.user.id
 
   const [bffInfo, bffHealth, postgres, redis, usage, audit, activity, neon, vercel, render] =

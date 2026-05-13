@@ -60,6 +60,12 @@ export async function POST(req: Request) {
   const userId = session.user.id
   const { workspaceId } = await req.json() as { workspaceId: string }
 
+  const { rows: membership } = await getPool().query(
+    'SELECT 1 FROM user_projects WHERE user_id = $1 AND workspace_id = $2',
+    [userId, workspaceId]
+  )
+  if (!membership[0]) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const cookieStore = await cookies()
   cookieStore.set('crew_project_id', workspaceId, COOKIE_OPTS)
 

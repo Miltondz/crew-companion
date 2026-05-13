@@ -4,7 +4,9 @@ import { Plus_Jakarta_Sans, Spline_Sans_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
 import { LocaleProvider } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
 import { Toaster } from "sonner";
+import { cookies } from "next/headers";
 import "./globals.css";
 // v2 owns its own stylesheet. Do NOT import @copilotkit/react-ui/styles.css —
 // v1's .copilotKitButton / .copilotKitSidebar / .copilotKitWindow rules
@@ -50,14 +52,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const isDev = process.env.NODE_ENV === 'development'
+  const cookieStore = await cookies()
+  const initialLocale: Locale = cookieStore.get('crew_locale')?.value === 'en' ? 'en' : 'es'
+
   return (
-    <html lang="es" className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
+    <html lang={initialLocale} className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
       <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
         {isDev && (
           <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
@@ -65,7 +70,7 @@ export default function RootLayout({
           </div>
         )}
         <div className={isDev ? 'pt-6' : ''}>
-          <LocaleProvider>
+          <LocaleProvider initialLocale={initialLocale}>
             <SessionProvider>
               <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
             </SessionProvider>

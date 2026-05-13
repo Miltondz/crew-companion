@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { cookies } from 'next/headers'
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? ''
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite'
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
 
 const TECH_FLOW_SCHEMA = `
 {
@@ -75,33 +70,64 @@ const INTENT_NOTES: Record<string, string> = {
   understand_task: 'Focus on breaking down the task into sub-items. Shell commands only if the task involves running code.',
 }
 
+// Simple in-memory rate limiter: 10 requests / 60s per identifier
+const _rateMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 10
+const RATE_WINDOW = 60_000
+
+function checkRateLimit(id: string): boolean {
+  const now = Date.now()
+  const entry = _rateMap.get(id)
+  if (!entry || entry.resetAt < now) {
+    _rateMap.set(id, { count: 1, resetAt: now + RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
 export async function POST(req: Request) {
   // Skip auth in dev when AUTH_SECRET is not configured
+  let userId: string | undefined
   if (process.env.AUTH_SECRET) {
     const session = await auth()
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    userId = session.user.id
   }
 
-  if (!GEMINI_API_KEY) {
+  const apiKey = process.env.GEMINI_API_KEY ?? ''
+  if (!apiKey) {
     return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 503 })
   }
 
+  const rateLimitId = userId ?? req.headers.get('x-forwarded-for') ?? 'anon'
+  if (!checkRateLimit(rateLimitId)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const body = await req.json() as {
-    intent: string
+    intent?: string
     techLevel?: string
     context?: string
   }
 
-  const intent = body.intent ?? 'resolve_error'
-  const techLevel = body.techLevel ?? 'low-tech'
-  const context = body.context ?? 'equipo de hackathon, proyecto web'
-  const intentLabel = INTENT_LABELS[intent] ?? intent
-  const intentNote = INTENT_NOTES[intent]
+  // Whitelist intent and techLevel — never pass raw user input into the prompt
+  const intent = Object.hasOwn(INTENT_LABELS, body.intent ?? '') ? (body.intent as string) : 'resolve_error'
+  const techLevel = body.techLevel === 'high-tech' ? 'high-tech' : 'low-tech'
+  // Truncate context to prevent prompt injection via large payloads
+  const context = (body.context ?? 'equipo de hackathon, proyecto web').slice(0, 2_000)
 
+  const intentLabel = INTENT_LABELS[intent]
+  const intentNote = INTENT_NOTES[intent]
   const prompt = buildPrompt(intentLabel, techLevel, context, intentNote)
 
-  const geminiRes = await fetch(GEMINI_URL, {
+  const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite'
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+  const geminiRes = await fetch(geminiUrl, {
     method: 'POST',
+    signal: AbortSignal.timeout(25_000),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
