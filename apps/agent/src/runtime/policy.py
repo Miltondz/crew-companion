@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from typing import Optional, Union
+
+_REDIS_URL = os.environ.get("REDIS_URL")
+_TOOL_RATE_LIMIT = 120  # tool calls per workspace per hour
 
 from .capabilities import Capability, RiskLevel
 
@@ -92,7 +96,19 @@ class PolicyEngine:
         return None
 
     def _rate_limit_exceeded(self, workspace_id: str, tool_id: str) -> bool:
-        return False  # TODO(4.7): real rate limit via Redis
+        if not _REDIS_URL:
+            return False
+        try:
+            import redis  # type: ignore[import]
+            r = redis.from_url(_REDIS_URL, decode_responses=True)
+            hour_bucket = int(time.time()) // 3600
+            key = f"crew:rl:{workspace_id}:{hour_bucket}"
+            count = r.incr(key)
+            if count == 1:
+                r.expire(key, 3600)
+            return int(count) > _TOOL_RATE_LIMIT
+        except Exception:
+            return False
 
     def _approval_token_valid(
         self,
