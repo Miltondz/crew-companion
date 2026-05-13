@@ -9,9 +9,10 @@ export default auth((req) => {
 
   if (pathname.startsWith('/api/copilotkit') && req.auth?.user?.id) {
     const headers = new Headers(req.headers)
-    // Use active project cookie if set, otherwise fall back to user.id (legacy)
     const activeProject = req.cookies.get('crew_project_id')?.value
     headers.set('x-workspace-id', activeProject ?? req.auth.user.id)
+    const memberId = req.cookies.get('crew_member_id')?.value
+    if (memberId) headers.set('x-member-id', memberId)
     return NextResponse.next({ request: { headers } })
   }
 

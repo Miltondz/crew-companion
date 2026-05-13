@@ -45,15 +45,39 @@ export async function GET() {
     [userId]
   )
 
-  return NextResponse.json({ projects: rows })
+  const projects = rows.map(row => {
+    const members = (row.state_json?.members as Array<{ id: string; userId?: string }> | undefined) ?? []
+    const memberSlot = members.find(m => m.userId === userId)
+    return { ...row, member_id: memberSlot?.id ?? null }
+  })
+
+  return NextResponse.json({ projects })
 }
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = session.user.id
   const { workspaceId } = await req.json() as { workspaceId: string }
 
   const cookieStore = await cookies()
   cookieStore.set('crew_project_id', workspaceId, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 30 })
+
+  try {
+    const { rows } = await pool.query<{ state_json: { members?: Array<{ id: string; userId?: string }> } }>(
+      `SELECT state_json FROM workspace_state WHERE workspace_id = $1`,
+      [workspaceId]
+    )
+    if (rows[0]) {
+      const members = rows[0].state_json?.members ?? []
+      const slot = members.find(m => m.userId === userId)
+      if (slot) {
+        cookieStore.set('crew_member_id', slot.id, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 30 })
+      } else {
+        cookieStore.delete('crew_member_id')
+      }
+    }
+  } catch { /* non-fatal */ }
+
   return NextResponse.json({ ok: true })
 }

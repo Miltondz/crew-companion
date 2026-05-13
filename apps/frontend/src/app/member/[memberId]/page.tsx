@@ -60,6 +60,17 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [blockerText, setBlockerText] = useState('')
   const [showBlockerForm, setShowBlockerForm] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/me/identity')
+      .then(r => r.json())
+      .then(d => {
+        if (d.role === 'leader') { router.replace('/leader'); return }
+        if (d.memberId && d.memberId !== memberId) { router.replace(`/member/${d.memberId}`); return }
+      })
+      .catch(() => {})
+  }, [memberId, router])
+
   useEffect(() => {
     const sync = () => {
       const active = state.milestones.find(m => m.id === state.activeMilestoneId)

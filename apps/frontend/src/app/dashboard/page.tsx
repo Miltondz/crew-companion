@@ -37,6 +37,7 @@ interface Project {
   invite_code: string
   updated_at: string
   role: string
+  member_id: string | null
 }
 
 function timeLeft(deadline?: string): string {
@@ -220,13 +221,17 @@ export default function DashboardPage() {
       .catch(() => setLoading(false))
   }, [router])
 
-  const openProject = async (workspaceId: string) => {
+  const openProject = async (p: Project) => {
     await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workspaceId }),
+      body: JSON.stringify({ workspaceId: p.workspace_id }),
     })
-    router.push('/leader')
+    if (p.member_id && p.role !== 'leader') {
+      router.push(`/member/${p.member_id}`)
+    } else {
+      router.push('/leader')
+    }
   }
 
   return (
@@ -279,7 +284,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map(p => (
-              <ProjectCard key={p.workspace_id} project={p} onOpen={() => openProject(p.workspace_id)} />
+              <ProjectCard key={p.workspace_id} project={p} onOpen={() => openProject(p)} />
             ))}
           </div>
         )}

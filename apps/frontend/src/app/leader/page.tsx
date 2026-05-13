@@ -81,6 +81,17 @@ function LeaderCanvas() {
   })
 
   useEffect(() => {
+    fetch('/api/me/identity')
+      .then(r => r.json())
+      .then(d => {
+        if (d.memberId && d.role !== 'leader') {
+          router.replace(`/member/${d.memberId}`)
+        }
+      })
+      .catch(() => {})
+  }, [router])
+
+  useEffect(() => {
     const sync = () => {
       const active = state.milestones.find(m => m.id === state.activeMilestoneId)
       if (active) setUrgencyPhase(getUrgencyPhase(active.deadline))

@@ -163,7 +163,7 @@ Shows all CountdownCritical variants and any surfaces under active development.
 ```
 apps/
   frontend/          Next.js 15 app
-    src/app/         Routes: / (landing), /features, /how-it-works, /roadmap, /about, /dashboard, /leader, /member, /docs, /onboarding
+    src/app/         Routes: / (landing), /features, /how-it-works, /roadmap, /about, /dashboard, /leader, /member, /docs, /onboarding, /invite/[code], /share/[token], /status
     src/runtime/     Surface Registry, Layout Engine, envelope validation
     src/components/
       surfaces/      14 registered generative UI surfaces
@@ -233,12 +233,13 @@ Tamagotchi-style mini habitat (240×180px) in the workspace corner. Not a status
 | Phase | Status | What |
 |---|---|---|
 | A — Kernel | ✅ Complete | Surface Registry, Layout Engine, Capability Engine, Persistence, Envelope Protocol |
-| B — Product | ✅ Complete | Auth, WorkspaceShell, 13 surfaces, onboarding wizard, multi-project dashboard |
+| B — Product | ✅ Complete | Auth, WorkspaceShell, 13 surfaces, onboarding wizard, multi-project dashboard, invite + observer flows |
 | Multi-agent | ✅ Complete | Orchestrator + Planner + Coach LangGraph topology |
 | Companion Habitat | ✅ Phase 1 complete | xstate runtime, EventBus, PropRegistry, SVG creature, panel, stepper |
-| C — Deploy | ⬜ Pending | Full deploy smoke tests on Vercel + Render + Neon + Upstash |
+| Member identity | ✅ Complete | Member-slot linking: invite page picker → userId on state_json → auto-redirect to `/member/[id]` |
+| C — Deploy | 🔄 In progress | Services live on Vercel+Render+Neon+Upstash; pending: full smoke test |
 
-**Next:** Companion Habitat Phase 2 (Rive art), `/project/[id]` route migration, deploy tests.
+**Next:** Companion Habitat Phase 2 (Rive art), deploy smoke test.
 
 ### Agent-usability gap check (mandatory)
 
