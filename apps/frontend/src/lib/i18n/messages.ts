@@ -206,4 +206,10 @@ export const messages = {
   },
 } as const
 
-export type Messages = typeof messages.en
+type Stringified<T> = T extends string
+  ? string
+  : T extends readonly (infer U)[]
+    ? Stringified<U>[]
+    : { [K in keyof T]: Stringified<T[K]> }
+
+export type Messages = Stringified<typeof messages.en>
