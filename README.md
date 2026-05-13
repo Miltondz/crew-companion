@@ -139,6 +139,15 @@ npm run dev:agent   # Agent only     :8123
 npm run dev:infra   # Docker only
 ```
 
+### Marketing site
+
+```
+http://localhost:3010/features        Capability deep-dive
+http://localhost:3010/how-it-works    Pipeline walkthrough
+http://localhost:3010/roadmap         Phase status board
+http://localhost:3010/about           Project context + architecture
+```
+
 ### Visual component preview
 
 ```
@@ -154,10 +163,11 @@ Shows all CountdownCritical variants and any surfaces under active development.
 ```
 apps/
   frontend/          Next.js 15 app
-    src/app/         Routes: / (landing), /dashboard, /leader, /member, /docs, /onboarding
+    src/app/         Routes: / (landing), /features, /how-it-works, /roadmap, /about, /dashboard, /leader, /member, /docs, /onboarding
     src/runtime/     Surface Registry, Layout Engine, envelope validation
     src/components/
-      surfaces/      13 registered generative UI surfaces
+      surfaces/      14 registered generative UI surfaces
+      marketing/     Shared MarketingLayout (nav + footer) for public pages
       ui/            shadcn/ui primitives
   bff/               Hono server — CopilotKit bridge
   agent/

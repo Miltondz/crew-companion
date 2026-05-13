@@ -1,15 +1,24 @@
 'use client';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-type DottedSurfaceProps = Omit<React.ComponentProps<'div'>, 'ref'>;
+type DottedSurfaceProps = Omit<React.ComponentProps<'div'>, 'ref'> & {
+    /** Override dot color instead of relying on theme detection.
+     *  'light' = white dots (use on dark backgrounds)
+     *  'dark'  = black dots (use on light backgrounds)
+     *  'auto'  = theme-aware (default) */
+    dotColor?: 'light' | 'dark' | 'auto'
+};
 
-export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
+export function DottedSurface({ className, dotColor = 'auto', ...props }: DottedSurfaceProps) {
     const { theme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => { setMounted(true) }, []);
     const sceneRef = useRef<{
         scene: THREE.Scene;
         camera: THREE.PerspectiveCamera;
@@ -20,7 +29,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     } | null>(null);
 
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!containerRef.current || !mounted) return;
 
         const SEPARATION = 150;
         const AMOUNTX = 40;
@@ -60,7 +69,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
                 const z = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2;
 
                 positions.push(x, y, z);
-                if (theme === 'dark') {
+                const useLightDots =
+                    dotColor === 'light' ||
+                    (dotColor === 'auto' && theme === 'dark');
+                if (useLightDots) {
                     colors.push(200, 200, 200);
                 } else {
                     colors.push(0, 0, 0);
@@ -154,12 +166,12 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
                 }
             }
         };
-    }, [theme]);
+    }, [theme, mounted]);
 
     return (
         <div
             ref={containerRef}
-            className={cn('pointer-events-none fixed inset-0 z-[-1]', className)}
+            className={cn('pointer-events-none fixed inset-0 z-[0]', className)}
             {...props}
         />
     );

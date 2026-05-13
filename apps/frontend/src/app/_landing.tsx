@@ -23,32 +23,32 @@ function GradientText({ children }: { children: React.ReactNode }) {
 
 const PREVIEW_STATES = [
   {
-    label: 'Fase: PÁNICO',
+    label: 'Modo pánico — 47 min restantes',
     labelColor: 'text-red-400',
     lines: [
-      { icon: '🚨', text: 'Deadline en 47 minutos', color: 'text-red-300' },
-      { icon: '⚠️', text: '3 bloqueadores sin resolver', color: 'text-amber-300' },
-      { icon: '✂️', text: 'Sugiero recortar: notificaciones en tiempo real', color: 'text-zinc-300' },
+      { icon: '🚨', text: 'Deadline crítico detectado. Cambiando a modo guerra.', color: 'text-red-300' },
+      { icon: '✂️', text: 'Planner: recortá notificaciones push — ganás 2h', color: 'text-amber-300' },
+      { icon: '🔒', text: 'Coach: bloqueando nuevas features hasta el release', color: 'text-zinc-300' },
     ],
     accent: 'border-red-500/40',
   },
   {
-    label: 'Vista: Líder técnico',
+    label: 'Vista del líder — Sprint en curso',
     labelColor: 'text-indigo-400',
     lines: [
-      { icon: '✅', text: 'Auth migrada — 2h antes de lo planeado', color: 'text-green-300' },
-      { icon: '🔄', text: 'PR #47 en review — riesgo bajo', color: 'text-zinc-300' },
-      { icon: '🎯', text: 'Milestone 2/3 al 78%', color: 'text-indigo-300' },
+      { icon: '✅', text: 'Auth completada — 2h antes de lo estimado', color: 'text-green-300' },
+      { icon: '⚠️', text: 'Ana bloqueada en deploy — riesgo alto para el milestone', color: 'text-amber-300' },
+      { icon: '🎯', text: 'Milestone al 78% · 3 tareas críticas sin asignar', color: 'text-indigo-300' },
     ],
     accent: 'border-indigo-500/40',
   },
   {
-    label: 'Vista: Miembro (no técnico)',
+    label: 'Vista del miembro — nivel no técnico',
     labelColor: 'text-violet-400',
     lines: [
-      { icon: '📋', text: 'Tu próxima tarea: revisar copy de landing', color: 'text-zinc-300' },
-      { icon: '🕐', text: 'Carlos está bloqueado — necesita tu input', color: 'text-amber-300' },
-      { icon: '💬', text: '¿Querés ver el resumen del sprint?', color: 'text-violet-300' },
+      { icon: '📋', text: 'Tu siguiente tarea: revisar copy de la landing', color: 'text-zinc-300' },
+      { icon: '💬', text: 'Coach: "Hacé clic en Deploy > Preview. ¿Ves el botón azul?"', color: 'text-violet-300' },
+      { icon: '🕐', text: 'Carlos necesita tu aprobación antes de las 18:00', color: 'text-amber-300' },
     ],
     accent: 'border-violet-500/40',
   },
@@ -168,68 +168,71 @@ export default function LandingPage() {
   const features = [
     {
       icon: LayoutDashboard,
-      title: 'Interfaz adaptativa',
-      description: 'La UI se transforma según el rol, nivel técnico y fase de urgencia de cada persona. El líder ve el panorama; el miembro ve su próxima acción.',
+      title: 'Una interfaz por persona',
+      description: 'El rol, el nivel técnico y la urgencia del momento determinan qué ve cada uno. El líder tiene panorama operativo; el miembro, su próxima acción específica. No hay que configurar nada.',
     },
     {
       icon: AlertTriangle,
-      title: 'Motor de urgencia',
-      description: 'normal → focus → urgent → panic → expired. El workspace evoluciona con tu deadline de forma automática, sin configuración manual.',
+      title: 'Urgencia automática',
+      description: 'El sistema deriva la fase de urgencia del deadline del equipo: normal → focus → urgent → panic → expired. Colores, superficies y tono del agente cambian solos. Sin alertas manuales.',
     },
     {
       icon: Layers,
-      title: 'Superficies generativas',
-      description: 'El agente emite datos estructurados y el runtime decide cómo mostrarlos. CountdownCritical, ForceGraph, IdeaMatrix — según el contexto.',
+      title: '14 superficies generativas',
+      description: 'El agente emite datos estructurados y el runtime decide cómo mostrarlos según contexto. Modo guerra, cuenta regresiva con viabilidad, grafo de dependencias, wizard de troubleshooting — sin navegación.',
     },
     {
       icon: Users,
-      title: 'Multi-rol nativo',
-      description: 'Líder, miembro, observador: cada rol tiene vistas, permisos y agentes especializados. Un solo proyecto, múltiples perspectivas coordinadas.',
+      title: 'Tres agentes especializados',
+      description: 'Orquestador para routing general, Planner para tareas y milestones, Coach para guiar a miembros bloqueados. Cada uno sabe qué hacer según quién habla y qué fase es.',
     },
     {
       icon: BrainCircuit,
-      title: 'Contexto persistente',
-      description: 'Documentos, bloqueadores, tareas y decisiones en un modelo de estado compartido. El agente siempre sabe dónde está el equipo.',
+      title: 'Coach que se adapta al nivel',
+      description: 'Para perfiles no técnicos: pasos numerados en lenguaje llano, sin jerga. Para técnicos: respuestas directas y precisas. El mismo agente, dos registros completamente distintos.',
     },
     {
       icon: Zap,
-      title: '$0/mes en infraestructura',
-      description: 'Deploy en Vercel + Render + Neon + Upstash. Totalmente funcional en free tier. Sin tarjeta de crédito, sin sorpresas.',
+      title: 'Estado compartido en tiempo real',
+      description: 'Tareas, blockers, milestones y documentos en un modelo de estado persistente. Cada acción del agente o del equipo actualiza la vista de todos al instante, sin recargas.',
     },
   ]
 
   const useCases = [
     {
-      emoji: '🏆',
-      title: 'Hackathon',
-      description: 'Alta presión, deadline fijo, decisiones bajo fuego',
+      emoji: '⚡',
+      title: 'Deadline en 8 horas',
+      description: 'Son las 10pm, el release es mañana a mediodía. Tres tareas críticas sin terminar.',
       items: [
-        'Cuenta regresiva en tiempo real con viabilidad del proyecto',
-        'Features a recortar ordenadas por tiempo ahorrado',
-        'El workspace entra en modo panic automáticamente',
-        'Resumen de estado para el pitch al final',
+        'El sistema detecta "6h 23min restantes" y activa modo pánico automáticamente — sin que nadie lo configure',
+        'La UI muestra en war-room: qué tareas bloquean el release, quién las tiene, cuánto falta',
+        'Martín está bloqueado por un migration error. Coach le escribe: "Línea 47: falta el ROLLBACK — ¿muestro el script corregido?"',
+        'El Planner sugiere: "Cortá la feature de exportación PDF — ganás 2.5h sin afectar el milestone"',
+        'El líder ve el porcentaje de viabilidad caer de 84% a 61% y reasigna sin fricción',
       ],
     },
     {
-      emoji: '💻',
-      title: 'Sprint de desarrollo',
-      description: 'Ciclo corto, equipo técnico, entrega semanal',
+      emoji: '🧩',
+      title: 'Diseñador + dev en el mismo sprint',
+      description: 'Laura diseña, Carlos desarrolla. Ninguno sabe qué necesita el otro hasta que es tarde.',
       items: [
-        'Bloqueadores detectados antes de que frenen el sprint',
-        'Distribución de tareas por nivel técnico del miembro',
-        'Vista diferenciada líder/dev para cada sprint',
-        'Escalación automática cuando el sprint está en riesgo',
+        'Laura termina el mockup y no sabe si subir a Figma o esperar a Carlos — la UI le muestra su próxima tarea exacta con instrucciones en lenguaje llano',
+        'Carlos pregunta sobre el schema de la API. El Coach le responde con los tipos exactos, no con pasos básicos',
+        'Cuando Laura se traba con el deploy de preview, el Coach le dice: "Hacé clic en Vercel > Deployments > Preview. ¿Ves el botón azul?"',
+        'El líder ve que Laura lleva 2h bloqueada — el sistema ya escaló el riesgo al milestone de diseño',
+        'Cada uno opera desde su vista sin invadir ni confundir la del otro',
       ],
     },
     {
-      emoji: '🌍',
-      title: 'Equipo remoto',
-      description: 'Trabajo distribuido, colaboración asincrónica',
+      emoji: '🌐',
+      title: 'Equipo en tres zonas horarias',
+      description: 'Dev en Buenos Aires cierra laptop a las 18:00. Frontend en Madrid abre a las 9:00 siguiente.',
       items: [
-        'Estado del equipo siempre visible sin reuniones',
-        'Contexto del proyecto compartido desde el onboarding',
-        'Notificaciones de urgencia sin ruido innecesario',
-        'Cada miembro opera desde su propia vista contextual',
+        'Al abrir sesión, Sofia ve exactamente qué quedó bloqueado, qué se decidió y qué le toca — sin preguntarle a nadie',
+        'El agente mantiene el contexto completo del proyecto: tareas, decisiones, documentos, blockers',
+        'El blocker de Diego en infraestructura aparece en el panel del líder en Madrid aunque Diego esté durmiendo',
+        'El Coach puede responder preguntas sobre el doc de arquitectura a las 3am sin que nadie intervenga',
+        'El líder resuelve blockers a primera hora; el equipo retoma sin reuniones de 30 minutos para "ponerse al día"',
       ],
     },
   ]
@@ -238,7 +241,7 @@ export default function LandingPage() {
     <div ref={containerRef} className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden">
 
       {/* Three.js wave background — fixed behind everything, visible only in hero */}
-      <DottedSurface className="opacity-[0.18]" />
+      <DottedSurface dotColor="light" className="opacity-35" />
 
       {/* Top edge fade: hides dots behind the nav */}
       <div className="pointer-events-none fixed top-0 inset-x-0 h-24 bg-gradient-to-b from-zinc-950 to-transparent z-10" />
@@ -253,9 +256,10 @@ export default function LandingPage() {
             <span className="text-lg font-bold tracking-tight">Crew Companion</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="text-zinc-400 hover:text-zinc-100 transition-colors">Características</a>
-            <a href="#use-cases" className="text-zinc-400 hover:text-zinc-100 transition-colors">Casos de uso</a>
-            <a href="#diferencial" className="text-zinc-400 hover:text-zinc-100 transition-colors">¿Por qué?</a>
+            <Link href="/features" className="text-zinc-400 hover:text-zinc-100 transition-colors">Capacidades</Link>
+            <Link href="/how-it-works" className="text-zinc-400 hover:text-zinc-100 transition-colors">Cómo funciona</Link>
+            <Link href="/roadmap" className="text-zinc-400 hover:text-zinc-100 transition-colors">Roadmap</Link>
+            <Link href="/about" className="text-zinc-400 hover:text-zinc-100 transition-colors">Acerca de</Link>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild className="text-zinc-400 hover:text-white">
@@ -263,7 +267,7 @@ export default function LandingPage() {
             </Button>
             <Button size="sm" asChild className="bg-indigo-600 hover:bg-indigo-500">
               <Link href="/auth/signin">
-                Comenzar gratis
+                Empezar
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </Button>
@@ -286,7 +290,7 @@ export default function LandingPage() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 gap-1.5">
                   <Sparkles className="w-3 h-3" />
-                  Cognitive Operational Runtime
+                  Runtime operacional con IA
                 </Badge>
               </motion.div>
 
@@ -294,17 +298,18 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
                 className="text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight"
               >
-                La interfaz que{' '}
-                <GradientText>entiende a tu equipo</GradientText>
-                {' '}en tiempo real
+                El workspace que{' '}
+                <GradientText>se adapta a cada persona</GradientText>
+                {' '}del equipo
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
                 className="text-lg text-zinc-400 leading-relaxed max-w-lg"
               >
-                Crew Companion no es un dashboard con IA. Es un runtime que transforma la UI según el rol,
-                nivel técnico y urgencia de cada persona. La interfaz emerge — no se navega.
+                Crew Companion no es un dashboard con IA encima. Es un runtime donde tres agentes especializados
+                construyen la interfaz según quién sos, qué tan técnico sos, y qué tan urgente está la situación.
+                La UI emerge del contexto — no se configura.
               </motion.p>
 
               <motion.div
@@ -313,7 +318,7 @@ export default function LandingPage() {
               >
                 <Button size="lg" asChild className="bg-indigo-600 hover:bg-indigo-500 text-base px-7">
                   <Link href="/auth/signin">
-                    Comenzar gratis
+                    Empezar ahora
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </Button>
@@ -326,8 +331,8 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}
                 className="flex items-center gap-6 text-sm text-zinc-500"
               >
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Sin tarjeta de crédito</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> $0/mes en infraestructura</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> 3 agentes especializados</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> 14 superficies generativas</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Open source</span>
               </motion.div>
             </div>
@@ -343,18 +348,18 @@ export default function LandingPage() {
       {/* ── SECTIONS BELOW — solid bg covers the fixed dots ── */}
 
       {/* diferencial callout */}
-      <section id="diferencial" className="relative py-16 px-6 border-y border-zinc-800/50 bg-zinc-950">
+      <section id="diferencial" className="relative z-[1] py-16 px-6 border-y border-zinc-800/50 bg-zinc-950">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest mb-4">¿Por qué es diferente?</p>
+            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest mb-4">Por qué es diferente</p>
             <p className="text-2xl md:text-3xl font-medium text-zinc-100 leading-relaxed max-w-3xl mx-auto">
-              No es un Trello con IA encima. Es un runtime donde{' '}
-              <span className="text-indigo-400">el agente decide qué mostrar</span>,{' '}
-              el runtime decide cómo layoutearlo, y{' '}
-              <span className="text-violet-400">el usuario siempre tiene la última palabra</span>.
+              La mayoría de herramientas con IA te dan un chat más. Crew Companion{' '}
+              <span className="text-indigo-400">cambia la interfaz completa</span>{' '}
+              según quién sos y qué está pasando — sin que tengas que pedirlo.{' '}
+              <span className="text-violet-400">El agente trabaja para vos, no al revés.</span>
             </p>
           </motion.div>
           <motion.div
@@ -363,10 +368,10 @@ export default function LandingPage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 text-center"
           >
             {[
-              { label: 'Roles soportados', value: '3', sub: 'líder · miembro · observer' },
-              { label: 'Superficies generativas', value: '13', sub: 'y creciendo' },
-              { label: 'Fases de urgencia', value: '5', sub: 'normal → panic → expired' },
-              { label: 'Costo mensual', value: '$0', sub: 'free tier completo' },
+              { label: 'Agentes especializados', value: '3', sub: 'Orquestador · Planner · Coach' },
+              { label: 'Superficies generativas', value: '14', sub: 'emergen según el contexto' },
+              { label: 'Fases de urgencia', value: '5', sub: 'normal → focus → panic → expirado' },
+              { label: 'Zonas espaciales', value: '6', sub: 'layout inteligente por contexto' },
             ].map((s, i) => (
               <div key={i}>
                 <div className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">{s.value}</div>
@@ -379,17 +384,17 @@ export default function LandingPage() {
       </section>
 
       {/* features */}
-      <section id="features" className="relative py-28 px-6 bg-zinc-950">
+      <section id="features" className="relative z-[1] py-28 px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Características</Badge>
+              <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Capacidades</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Diseñado para equipos que{' '}
-                <GradientText>trabajan en serio</GradientText>
+                Construido para cuando{' '}
+                <GradientText>el margen de error es cero</GradientText>
               </h2>
               <p className="text-zinc-400 max-w-xl mx-auto">
-                Cada pieza resuelve un problema real de coordinación bajo presión.
+                Cada capacidad nació de un problema real: equipos que no se coordinan, miembros que no saben qué hacer, líderes que no tienen visibilidad cuando más la necesitan.
               </p>
             </motion.div>
           </div>
@@ -402,14 +407,14 @@ export default function LandingPage() {
       </section>
 
       {/* use cases */}
-      <section id="use-cases" className="relative py-28 px-6 bg-zinc-900">
+      <section id="use-cases" className="relative z-[1] py-28 px-6 bg-zinc-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Casos de uso</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Para el equipo que{' '}
-                <GradientText>no tiene tiempo que perder</GradientText>
+                Diseñado para el{' '}
+                <GradientText>caos real del trabajo en equipo</GradientText>
               </h2>
             </motion.div>
           </div>
@@ -420,7 +425,7 @@ export default function LandingPage() {
       </section>
 
       {/* final CTA */}
-      <section className="relative py-28 px-6 bg-zinc-950">
+      <section className="relative z-[1] py-28 px-6 bg-zinc-950">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -430,14 +435,14 @@ export default function LandingPage() {
             <Card className="relative bg-zinc-900/80 border-zinc-800 p-12">
               <h2 className="text-4xl font-bold mb-4">
                 Tu equipo merece una interfaz que{' '}
-                <GradientText>trabaje con él</GradientText>
+                <GradientText>piense con él</GradientText>
               </h2>
               <p className="text-zinc-400 mb-8 text-lg">
-                Crea tu workspace en 2 minutos. Sin configuración, sin crédito, sin fricción.
+                Configurá tu workspace en minutos. El sistema aprende el contexto de tu proyecto y empieza a trabajar con tu equipo desde la primera sesión.
               </p>
               <Button size="lg" asChild className="bg-indigo-600 hover:bg-indigo-500 text-base px-8">
                 <Link href="/auth/signin">
-                  Comenzar ahora — es gratis
+                  Empezar ahora
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -447,7 +452,7 @@ export default function LandingPage() {
       </section>
 
       {/* footer */}
-      <footer className="relative border-t border-zinc-800/50 py-10 px-6 bg-zinc-950">
+      <footer className="relative z-[1] border-t border-zinc-800/50 py-10 px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
@@ -457,10 +462,11 @@ export default function LandingPage() {
             <span className="text-zinc-600 text-xs ml-2">Cognitive Operational Runtime</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-zinc-500">
-            <a href="#features" className="hover:text-zinc-300 transition-colors">Características</a>
-            <a href="#use-cases" className="hover:text-zinc-300 transition-colors">Casos de uso</a>
+            <Link href="/features" className="hover:text-zinc-300 transition-colors">Capacidades</Link>
+            <Link href="/how-it-works" className="hover:text-zinc-300 transition-colors">Cómo funciona</Link>
+            <Link href="/roadmap" className="hover:text-zinc-300 transition-colors">Roadmap</Link>
+            <Link href="/about" className="hover:text-zinc-300 transition-colors">Acerca de</Link>
             <Link href="/dev" className="hover:text-zinc-300 transition-colors">Demo</Link>
-            <Link href="/auth/signin" className="hover:text-zinc-300 transition-colors">Entrar</Link>
           </div>
           <div className="flex items-center gap-4 text-zinc-600">
             <GitBranch className="w-4 h-4 hover:text-zinc-300 cursor-pointer transition-colors" />

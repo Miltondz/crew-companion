@@ -1,595 +1,245 @@
-import Image from "next/image";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  BookOpen,
-  Boxes,
-  Code2,
-  Cpu,
-  Github,
-  KeyRound,
-  Layers,
-  Plug,
-  Rocket,
-  Server,
-  Sparkles,
-} from "lucide-react";
-import { AboutToc, type TocItem } from "./toc";
+'use client'
 
-export const metadata = {
-  title:
-    "About — Generative UI · Global Agents · Agentic Interfaces Hackathon Starter",
-  description:
-    "What ships with the kit, how to run it, and where to start hacking.",
-};
+import { motion } from 'framer-motion'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { MarketingLayout } from '@/components/marketing/MarketingLayout'
+import { Sparkles, GitBranch, BrainCircuit, Layers, Zap, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
-const tocItems: TocItem[] = [
-  { id: "overview", label: "Overview" },
-  { id: "about", label: "About this Kit" },
-  { id: "quickstart", label: "Quickstart" },
-  { id: "demos", label: "Demo prompts" },
-  { id: "customize", label: "Customization" },
-  { id: "vibe-coding", label: "Vibe coding" },
-  { id: "env", label: "Required keys" },
-  { id: "docs", label: "Documentation" },
-];
-
-const pillars = [
-  {
-    name: "CopilotKit",
-    icon: Sparkles,
-    href: "https://docs.copilotkit.ai",
-    blurb:
-      "Connects your app's logic, state, and user context to AI agents — across embedded UIs and headless interfaces. Ships with CopilotKit Intelligence wired in: durable Postgres-backed threads, a runtime that bridges any LangGraph agent, and built-in support for generative UI and MCP App composition.",
-  },
-  {
-    name: "LangChain Deep Agents",
-    icon: Cpu,
-    href: "https://github.com/langchain-ai/deepagents",
-    blurb:
-      "A Python framework that gives an LLM built-in planning, sub-agent dispatch, a virtual filesystem, and a TODO loop — the patterns popularized by Claude Code and Manus, packaged as a single create_deep_agent(...) call on top of LangGraph. The kit uses Deep Agents as the brain behind the canvas.",
-  },
-  {
-    name: "Gemini",
-    icon: Rocket,
-    href: "https://ai.google.dev/gemini-api/docs",
-    blurb:
-      "Gemini 3.1 Flash-Lite is Google's high-volume workhorse — fast, cheap, and tool-calling-capable. Default for chat. Drop in an API key from Google AI Studio, restart, and you're done. Switch to Pro, OpenAI, Anthropic, or Ollama with a one-line edit.",
-  },
-  {
-    name: "A2UI",
-    icon: Layers,
-    href: "https://a2ui.org",
-    blurb:
-      "A protocol for agent-driven interfaces — lets agents generate rich, interactive UI that renders natively across web, mobile, and desktop without executing arbitrary code. Sandboxed-by-default; pairs naturally with Gemini-emitted generative UI. Browse the custom catalog at a2ui-composer.ag-ui.com for component examples.",
-  },
-  {
-    name: "Notion MCP",
-    icon: Plug,
-    href: "https://github.com/makenotion/notion-mcp-server",
-    blurb:
-      "Notion's official MCP server gives the agent first-class read/write access to a Notion workspace via the open Model Context Protocol. The kit calls it through mcp-use — no broker, no OAuth dance, just a Notion integration token and a per-database share. Swap in Linear, Slack, GitHub, or Drive MCP servers by changing one config dict.",
-  },
-  {
-    name: "Manufact (mcp-use)",
-    icon: Server,
-    href: "https://mcp-use.com",
-    blurb:
-      "A deployment platform for MCP servers built on the open-source mcp-use framework. The kit's apps/mcp/ package is a single-file MCP server that gives the agent a third surface — runnable inside Claude or ChatGPT directly. One command tunnels publicly; one command deploys to Manufact Cloud.",
-  },
-  {
-    name: "Daytona",
-    icon: Boxes,
-    href: "https://www.daytona.io",
-    blurb:
-      "Secure, elastic infrastructure runtime for AI-generated code execution and agent workflows. Sandboxes spin up in under 90ms with full isolation — dedicated kernel, filesystem, network, and allocated vCPU/RAM/disk — and run any Python, TypeScript, or JavaScript. A natural fit when an agent needs to execute generated code or persist a workspace across sessions.",
-  },
-];
-
-const quickstart = [
-  {
-    title: "Run the CLI",
-    body: "npx @copilotkit/cli@latest init",
-    note: "Select Intelligence when prompted.",
-  },
-  {
-    title: "Add your Gemini key",
-    body: "GEMINI_API_KEY=AIza...",
-    note: "Get a key at aistudio.google.com → Get API key. Drop it in BOTH .env and apps/agent/.env (the agent reads its own dotenv).",
-  },
-  {
-    title: "Install + run",
-    body: "npm install && npm run dev",
-    note: "Boots the Docker infra (Postgres + Redis + Intelligence), then UI + BFF + agent. Use npm run dev:full to also start the MCP server.",
-  },
-];
-
-const demos = [
-  {
-    label: "Notion MCP (external integration)",
-    items: [
-      "Import the workshop leads from Notion.",
-    ],
-  },
-  {
-    label: "Canvas (agent-driven UI)",
-    items: [
-      "What's the most requested workshop?",
-      "Open Ethan Moore.",
-      "Show me demand stats.",
-    ],
-  },
-  {
-    label: "Multi-step planning (Deep Agents)",
-    items: [
-      "Draft an email to Ethan.",
-    ],
-  },
-  {
-    label: "Intelligence (durable threads)",
-    items: [
-      "Open my last thread from earlier.",
-      "Reload the browser. The conversation is still in the sidebar.",
-    ],
-  },
-  {
-    label: "Manufact MCP — needs npm run dev:full",
-    items: ["Use the Manufact tool to show a sample widget."],
-  },
-];
-
-const docs = [
-  { label: "CopilotKit docs", href: "https://docs.copilotkit.ai" },
-  {
-    label: "Intelligence Platform",
-    href: "https://docs.copilotkit.ai/learn/intelligence-platform",
-  },
-  {
-    label: "Coding Agents (vibe coding)",
-    href: "https://docs.copilotkit.ai/coding-agents",
-  },
-  {
-    label: "CopilotKit Skills",
-    href: "https://github.com/CopilotKit/skills",
-  },
-  {
-    label: "LangChain Deep Agents",
-    href: "https://github.com/langchain-ai/deepagents",
-  },
-  { label: "Gemini API", href: "https://ai.google.dev/gemini-api/docs" },
-  { label: "Notion MCP server", href: "https://github.com/makenotion/notion-mcp-server" },
-  { label: "Model Context Protocol", href: "https://modelcontextprotocol.io" },
-  {
-    label: "Manufact / mcp-use",
-    href: "https://mcp-use.com/docs/typescript/getting-started/quickstart",
-  },
-  { label: "A2UI", href: "https://a2ui.org" },
-  { label: "Daytona", href: "https://github.com/daytonaio/daytona" },
-];
-
-const repoDocs = [
-  { label: "Setup", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/setup.md" },
-  { label: "Architecture", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/architecture.md" },
-  { label: "Customization", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/customization.md" },
-  { label: "Model switching", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/model-switching.md" },
-  { label: "MCP server", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/mcp-server.md" },
-  { label: "Threads / Intelligence", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/threads.md" },
-  { label: "Vibe coding", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/vibe-coding.md" },
-  { label: "Demo prompts", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/demo-prompts.md" },
-  { label: "Troubleshooting", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/troubleshooting.md" },
-  { label: "Scripts", href: "https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit/blob/main/dev-docs/scripts.md" },
-];
-
-function Section({
-  id,
-  eyebrow,
-  title,
-  subtitle,
-  children,
-}: {
-  id?: string;
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+function GradientText({ children }: { children: React.ReactNode }) {
   return (
-    <section id={id} className="mt-16 scroll-mt-12 first:mt-0">
-      {eyebrow ? (
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-accent">
-          {eyebrow}
-        </p>
-      ) : null}
-      <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
-      {subtitle ? (
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {subtitle}
-        </p>
-      ) : null}
-      <div className="mt-6">{children}</div>
-    </section>
-  );
-}
-
-function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <code className="rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[0.8em] break-all">
+    <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
       {children}
-    </code>
-  );
+    </span>
+  )
 }
+
+function ArchitectureDiagram() {
+  const layers = [
+    {
+      name: 'Frontend',
+      color: 'border-indigo-500/40 bg-indigo-500/5',
+      labelColor: 'text-indigo-300',
+      dotColor: 'bg-indigo-500',
+      tags: ['Next.js 15', 'React 19', 'CopilotKit v2', 'Framer Motion'],
+      note: 'Surfaces generativas · Layout Engine · Urgency phases',
+    },
+    {
+      name: 'BFF',
+      color: 'border-violet-500/40 bg-violet-500/5',
+      labelColor: 'text-violet-300',
+      dotColor: 'bg-violet-500',
+      tags: ['Hono', 'CopilotKit Runtime', 'Envelope validation'],
+      note: 'Frontend nunca llama al agente directamente',
+    },
+    {
+      name: 'Agent',
+      color: 'border-emerald-500/40 bg-emerald-500/5',
+      labelColor: 'text-emerald-300',
+      dotColor: 'bg-emerald-500',
+      tags: ['Python + LangGraph', 'Gemini Flash', '@guarded_tool'],
+      note: 'Orquestador · Planner · Coach',
+    },
+    {
+      name: 'Persistence',
+      color: 'border-zinc-600/40 bg-zinc-800/30',
+      labelColor: 'text-zinc-400',
+      dotColor: 'bg-zinc-500',
+      tags: ['Postgres (Neon)', 'Redis (Upstash)', 'AsyncPostgresSaver'],
+      note: 'Estado de workspace · Checkpoints de agentes',
+    },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="my-14"
+    >
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-6">Arquitectura de capas</p>
+      <div className="relative">
+        <div className="absolute left-[22px] top-6 bottom-6 w-px bg-gradient-to-b from-indigo-500/50 via-violet-500/50 via-emerald-500/50 to-zinc-600/50" />
+        <div className="space-y-3">
+          {layers.map((layer, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -16 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className={`border rounded-xl p-4 pl-12 relative ${layer.color}`}
+            >
+              <div className={`absolute left-[17px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ${layer.dotColor} ring-4 ring-zinc-950`} />
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <span className={`text-sm font-semibold ${layer.labelColor}`}>{layer.name}</span>
+                  <p className="text-xs text-zinc-500 mt-0.5">{layer.note}</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {layer.tags.map((tag, j) => (
+                    <span key={j} className="text-xs bg-zinc-900/60 border border-zinc-700/50 text-zinc-400 rounded-md px-2 py-0.5 font-mono">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-5 flex items-center gap-2 text-xs text-zinc-600">
+        <div className="flex-1 h-px bg-zinc-800" />
+        <span>Separación de capas — invariante del proyecto</span>
+        <div className="flex-1 h-px bg-zinc-800" />
+      </div>
+    </motion.div>
+  )
+}
+
+
+const PRINCIPLES = [
+  {
+    icon: Layers,
+    title: 'La UI emerge del contexto',
+    desc: 'No hay pantallas fijas ni navegación que aprender. El agente emite envelopes tipados y el runtime monta la superficie correcta. La interfaz es consecuencia del estado.',
+  },
+  {
+    icon: BrainCircuit,
+    title: 'Agentes especializados, no monolíticos',
+    desc: 'Un agente que intenta hacer todo termina haciendo todo mal. Tres agentes con roles claros, herramientas propias y contexto delimitado producen comportamientos predecibles.',
+  },
+  {
+    icon: Zap,
+    title: 'Urgencia derivada, nunca configurada',
+    desc: 'La única variable de urgencia es el deadline. El sistema calcula la fase en tiempo real. Ningún humano tiene que recordar activar el modo guerra.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Separación estricta de capas',
+    desc: 'Frontend nunca llama al agente directamente. Siempre pasa por el BFF. Los tipos están sincronizados entre TypeScript y Python. Una violación aquí rompe todo.',
+  },
+]
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto flex max-w-6xl gap-12 px-6 py-12 md:px-12 md:py-16">
-      <main className="min-w-0 flex-1">
-        <Link
-          href="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-accent"
+    <MarketingLayout>
+      <div className="max-w-4xl mx-auto px-6 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-20"
         >
-          <ArrowLeft size={14} aria-hidden />
-          Back to home
-        </Link>
-
-        <header id="overview" className="scroll-mt-12">
-        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-accent">
-          Hackathon Starter
-        </p>
-        <h1 className="text-4xl font-semibold leading-tight text-foreground md:text-5xl">
-          Generative UI{" "}
-          <span className="text-muted-foreground/60">·</span> Global Agents{" "}
-          <span className="text-muted-foreground/60">·</span> Agentic
-          Interfaces
-        </h1>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          A complete AI agent starter for hackathon teams: durable
-          conversation threads, an agent-driven canvas, real external
-          integrations, and a deployable MCP App — all in one repo.
-        </p>
-        <div className="mt-6 overflow-hidden rounded-xl border bg-muted">
-          <Image
-            src="/banner.jpg"
-            alt="Hackathon banner"
-            width={1280}
-            height={420}
-            priority
-            className="h-auto w-full object-cover"
-          />
-        </div>
-      </header>
-
-      <Section
-        id="about"
-        eyebrow="What you get"
-        title="About this Starter Kit"
-        subtitle="Seven well-known pieces, wired together so a team of two can ship something credible in 24–48 hours."
-      >
-        <ul className="grid gap-4 md:grid-cols-2">
-          {pillars.map(({ name, icon: Icon, blurb, href }) => (
-            <li
-              key={name}
-              className="rounded-xl border bg-card p-5 shadow-sm"
-            >
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-accent">
-                  <Icon size={16} aria-hidden />
-                </span>
-                <h3 className="text-base font-semibold text-foreground">
-                  {name}
-                </h3>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {blurb}
-              </p>
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
-              >
-                More about {name}
-                <span aria-hidden>→</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section
-        id="quickstart"
-        eyebrow="Get running"
-        title="Quickstart"
-        subtitle="Three steps from clone to first agent reply."
-      >
-        <ol className="space-y-3">
-          {quickstart.map((step, idx) => (
-            <li key={step.title} className="rounded-xl border bg-card p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full border bg-background text-xs font-semibold text-foreground">
-                  {idx + 1}
-                </span>
-                <h3 className="text-base font-semibold text-foreground">
-                  {step.title}
-                </h3>
-              </div>
-              <pre className="mt-3 overflow-x-auto rounded-md border bg-muted px-4 py-3 font-mono text-sm text-foreground">
-                {step.body}
-              </pre>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {step.note}
-              </p>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-4 text-sm text-muted-foreground">
-          On a fresh clone, <Code>.env.example</Code> ships a placeholder
-          Gemini key; chat fails until you replace it. The agent will print a
-          warning at startup so you don&apos;t miss it.
-        </p>
-      </Section>
-
-      <Section
-        id="demos"
-        eyebrow="Try it out"
-        title="Demo prompts"
-        subtitle="Drop these into the chat to exercise each layer of the stack."
-      >
-        <div className="space-y-6">
-          {demos.map((group) => (
-            <div key={group.label}>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {group.label}
-              </h3>
-              <ul className="space-y-2">
-                {group.items.map((item) => (
-                  <li
-                    key={item}
-                    className="rounded-lg border bg-card px-4 py-3 text-sm text-foreground"
-                  >
-                    &ldquo;{item}&rdquo;
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section
-        id="customize"
-        eyebrow="Make it yours"
-        title="Customization"
-      >
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border bg-card p-5">
-            <div className="flex items-center gap-2">
-              <Code2 size={16} className="text-accent" aria-hidden />
-              <h3 className="text-sm font-semibold text-foreground">
-                Add a frontend tool
-              </h3>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Register a new <Code>useFrontendTool</Code> in{" "}
-              <Code>apps/frontend/src/app/leads/page.tsx</Code> with the
-              parameters it accepts and a handler that mutates state. Tell
-              the agent about it in <Code>apps/agent/src/prompts.py</Code>.
-              Anything you don&apos;t give a dedicated render slot will
-              fall through to the generic CopilotKit-branded card.
-            </p>
-          </div>
-          <div className="rounded-xl border bg-card p-5">
-            <div className="flex items-center gap-2">
-              <Plug size={16} className="text-accent" aria-hidden />
-              <h3 className="text-sm font-semibold text-foreground">
-                Swap the integration MCP server
-              </h3>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Pick a different MCP server from the{" "}
-              <a
-                className="text-accent hover:underline"
-                href="https://github.com/modelcontextprotocol/servers"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                MCP server registry
-              </a>
-              , swap the <Code>mcpServers</Code> config dict in{" "}
-              <Code>apps/agent/src/notion_mcp.py</Code>, then edit{" "}
-              <Code>INTEGRATION_PROMPT</Code> in{" "}
-              <Code>apps/agent/src/prompts.py</Code> with the new vocabulary.
-              Restart the agent. Done.
-            </p>
-          </div>
-          <div className="rounded-xl border bg-card p-5">
-            <div className="flex items-center gap-2">
-              <Server size={16} className="text-accent" aria-hidden />
-              <h3 className="text-sm font-semibold text-foreground">
-                Add an MCP App tool
-              </h3>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Edit <Code>apps/mcp/index.ts</Code> and add another{" "}
-              <Code>server.tool(...)</Code>. The runtime auto-discovers it on
-              the next reload. Want a fresh server alongside?{" "}
-              <Code>npx create-mcp-use-app@latest</Code>. Or point at a
-              remote one with <Code>MCP_SERVER_URL</Code>.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      <Section
-        id="vibe-coding"
-        eyebrow="Vibe coding"
-        title="Plug your coding agent in"
-        subtitle="Cursor, Claude Code, and Codex all benefit from these — they give the agent the canonical patterns for useFrontendTool, useAgent, and the runtime configuration shapes."
-      >
-        <div className="grid gap-3 md:grid-cols-2">
-          <a
-            href="https://docs.copilotkit.ai/coding-agents"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-3 rounded-xl border bg-card p-4 hover:border-accent/40"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent/10 text-accent">
-              <BookOpen size={16} aria-hidden />
-            </span>
-            <span className="flex-1">
-              <span className="block text-sm font-semibold text-foreground">
-                CopilotKit Coding Agents
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                docs.copilotkit.ai/coding-agents
-              </span>
-            </span>
-            <span
-              className="text-muted-foreground group-hover:text-accent"
-              aria-hidden
-            >
-              →
-            </span>
-          </a>
-          <a
-            href="https://github.com/CopilotKit/skills"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-3 rounded-xl border bg-card p-4 hover:border-accent/40"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent/10 text-accent">
-              <Github size={16} aria-hidden />
-            </span>
-            <span className="flex-1">
-              <span className="block text-sm font-semibold text-foreground">
-                CopilotKit Skills repo
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                github.com/CopilotKit/skills
-              </span>
-            </span>
-            <span
-              className="text-muted-foreground group-hover:text-accent"
-              aria-hidden
-            >
-              →
-            </span>
-          </a>
-        </div>
-      </Section>
-
-      <Section
-        id="env"
-        eyebrow="Plumbing"
-        title="Required keys"
-      >
-        <ul className="space-y-3">
-          <li className="flex items-start gap-3 rounded-xl border bg-card p-4">
-            <KeyRound
-              size={16}
-              className="mt-0.5 shrink-0 text-accent"
-              aria-hidden
-            />
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                <Code>GEMINI_API_KEY</Code> &mdash; required
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Set in both <Code>.env</Code> and{" "}
-                <Code>apps/agent/.env</Code>. Without it the agent boots but
-                every chat turn fails.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3 rounded-xl border bg-card p-4">
-            <KeyRound
-              size={16}
-              className="mt-0.5 shrink-0 text-accent"
-              aria-hidden
-            />
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                <Code>COPILOTKIT_LICENSE_TOKEN</Code> &mdash; issued by the
-                CLI
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Or run <Code>npm run license</Code>. Threads silently fail to
-                persist without it.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3 rounded-xl border bg-card p-4">
-            <KeyRound
-              size={16}
-              className="mt-0.5 shrink-0 text-accent"
-              aria-hidden
-            />
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                <Code>NOTION_TOKEN</Code> &mdash; required for lead-form demo
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Get a token at{" "}
-                <a
-                  className="text-accent hover:underline"
-                  href="https://notion.so/my-integrations"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  notion.so/my-integrations
-                </a>{" "}
-                and SHARE the leads database with that integration. Agent
-                boots without it but the import will refuse-with-reason.
-              </p>
-            </div>
-          </li>
-        </ul>
-      </Section>
-
-      <Section id="docs" eyebrow="Reference" title="Documentation">
-        <h3 className="mb-3 text-sm font-semibold text-foreground">
-          Deeper guides in the repo
-        </h3>
-        <ul className="mb-8 grid gap-2 md:grid-cols-2">
-          {repoDocs.map((d) => (
-            <li key={d.href}>
-              <a
-                href={d.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-md border bg-card px-3 py-2 text-sm text-foreground hover:border-accent/40 hover:text-accent"
-              >
-                {d.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-        <h3 className="mb-3 text-sm font-semibold text-foreground">
-          External docs
-        </h3>
-        <ul className="grid gap-2 md:grid-cols-2">
-          {docs.map((d) => (
-            <li key={d.href}>
-              <a
-                href={d.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-md border bg-card px-3 py-2 text-sm text-foreground hover:border-accent/40 hover:text-accent"
-              >
-                {d.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-        <footer className="mt-16 border-t pt-8 text-sm text-muted-foreground">
-          <p>
-            Built for the Generative UI · Global Agents · Agentic Interfaces
-            hackathon.
+          <Badge className="bg-indigo-500/10 text-indigo-300 border-indigo-500/20 mb-5">Acerca de</Badge>
+          <h1 className="text-5xl font-bold mb-6 leading-tight">
+            Un runtime cognitivo,<br />
+            <GradientText>no un dashboard más</GradientText>
+          </h1>
+          <p className="text-zinc-400 text-lg leading-relaxed max-w-2xl">
+            Crew Companion nació de una observación simple: la mayoría de herramientas de gestión de equipos asumen que todos los miembros necesitan ver lo mismo, al mismo tiempo, en la misma interfaz.
           </p>
-        </footer>
-      </main>
-      <AboutToc items={tocItems} />
-    </div>
-  );
+          <p className="text-zinc-400 text-lg leading-relaxed max-w-2xl mt-4">
+            Eso produce interfaces sobrecargadas para el dev senior, interfaces crípticas para el diseñador, y dashboards llenos de datos que el líder no puede leer cuando realmente los necesita — a las 11pm antes de un release.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-20"
+        >
+          <h2 className="text-2xl font-bold mb-6">La apuesta</h2>
+          <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-8 space-y-4 text-zinc-300 leading-relaxed">
+            <p>
+              ¿Qué pasaría si la interfaz no fuera un conjunto de pantallas que el equipo navega, sino el resultado de evaluar <em className="text-zinc-100 not-italic">quién está mirando</em>, <em className="text-zinc-100 not-italic">qué tan técnico es</em> y <em className="text-zinc-100 not-italic">qué tan urgente está la situación</em>?
+            </p>
+            <p>
+              Eso es Crew Companion: un Cognitive Operational Runtime. Tres agentes especializados emiten datos estructurados; el runtime monta las superficies correctas en las zonas correctas del workspace. La UI no se configura — emerge del contexto.
+            </p>
+            <p>
+              El Coach que guía a Laura con el deploy en pasos numerados es el mismo sistema que le da a Carlos un snippet directo sin explicaciones innecesarias. La diferencia está en lo que el sistema sabe sobre ellos, no en lo que ellos configuraron.
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-20"
+        >
+          <h2 className="text-2xl font-bold mb-8">Principios de diseño</h2>
+          <div className="grid sm:grid-cols-2 gap-5">
+            {PRINCIPLES.map((p, i) => {
+              const Icon = p.icon
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                >
+                  <Card className="bg-zinc-900/60 border-zinc-800 p-6 h-full">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4">
+                      <Icon className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <h3 className="font-semibold text-zinc-100 mb-2">{p.title}</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed">{p.desc}</p>
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-20"
+        >
+          <h2 className="text-2xl font-bold mb-6">Stack técnico</h2>
+          <ArchitectureDiagram />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-10 text-center"
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mx-auto mb-5">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Open source, en construcción</h2>
+          <p className="text-zinc-400 text-sm max-w-lg mx-auto mb-7">
+            El proyecto está activo. El código es público. Si el problema que resuelve es tuyo también, el demo está disponible ahora mismo.
+          </p>
+          <div className="flex items-center gap-3 justify-center flex-wrap">
+            <Link
+              href="/auth/signin"
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+            >
+              Empezar
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/dev"
+              className="inline-flex items-center gap-2 border border-zinc-700 hover:border-indigo-500 text-zinc-300 hover:text-white font-medium px-6 py-2.5 rounded-lg transition-colors text-sm"
+            >
+              Ver demo en vivo
+            </Link>
+            <Link
+              href="/roadmap"
+              className="inline-flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+            >
+              Ver roadmap
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </MarketingLayout>
+  )
 }

@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${splineMono.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
       <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
         <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
           <span>🧪</span>

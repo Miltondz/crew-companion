@@ -7,6 +7,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Added — Marketing site (4 pages)
+- `/features` — capability deep-dive: 8 capability rows (Interface, Urgency, 14 Surfaces, 3 Agents, Coach, State, Policy, Token Economy) + full 14-surface catalog grid
+- `/how-it-works` — 6-step pipeline walkthrough (workspace setup → routing → surface emission → urgency → shared state → approval gates)
+- `/roadmap` — 4-phase status board with per-item done/in-progress/planned badges (Kernel 100%, Product 100%, Deploy 35%, Future 0%)
+- `/about` — project origin, 4 design principles, full stack breakdown, CTA
+- `MarketingLayout` — shared nav + footer for all 4 pages; active link via `usePathname()`
+- Landing nav updated to link to all 4 pages; landing footer also updated
+
+### Added — Marketing visual components
+- `UrgencyPhaseStrip` — 5 colored phase cards (Normal/Focus/Urgent/Panic/Expired) with animated scaleY entrance and gradient progress bar
+- `SplitViewPreview` — side-by-side mock of leader view (task list + milestone progress bar) vs non-technical member view (next task callout + coach message + deadline alert)
+- `PipelineFlowDiagram` — 5-node arrow flow (User → Orquestador → Planner/Coach → Envelope → Surface) with envelope shape + surface emit + zone target code snippets
+- `AgentCapabilityMatrix` — per-agent capability tag rows (Orquestador/Planner/Coach) showing their tool surface
+- Roadmap phase progress bars — animated fill on scroll (100% / 100% / 35% / 0%)
+- `ArchitectureDiagram` — 4-layer vertical timeline with colored dots, tech tags, invariant separator line
+
+### Added — Landing improvements
+- Use cases rewritten with named-character explicit scenarios: Martín blocked by migration error at 10pm; Laura (designer) + Carlos (dev) sprint friction; async team Buenos Aires/Madrid timezone handoff
+- Five use case items per scenario with concrete identifiable moments
+
+### Fixed — DottedSurface Three.js visibility
+- Added `dotColor: 'light' | 'dark' | 'auto'` prop — `dotColor="light"` forces white dots regardless of ThemeProvider default (`'light'` theme returns black dots on dark bg)
+- Fixed z-index: canvas at `z-[0]` (stacking context) + non-hero sections at `z-[1]` prevents canvas painting over content
+- Added `mounted` state guard — Three.js only initializes after client mount; prevents SSR issues
+- `suppressHydrationWarning` on `<html>` tag — next-themes injects `style={{color-scheme:"light"}}` client-side, causing hydration mismatch
+
 ### Added — Visual redesign (GlowCard system)
 - Shared glow CSS primitives in `globals.css` — `[data-glow-card]` (hue-shifting radial border glow, `background-attachment: fixed`) and `[data-glow-item]` (static blue spotlight); eliminates per-component `<style>` injection
 - `TaskCard` — full GlowCard redesign: `StatusBadge` + `PriorityBadge` with Lucide icons, `Initials` avatar, priority-hue `--base` CSS var, dark mode via opacity tokens
