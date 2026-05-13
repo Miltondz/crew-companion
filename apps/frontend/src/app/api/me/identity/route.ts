@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
-import { Pool } from 'pg'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
 
 export async function GET() {
   const session = await auth()
@@ -17,7 +15,7 @@ export async function GET() {
   if (!workspaceId) return NextResponse.json({ workspaceId: null, memberId: null, role: null })
 
   try {
-    const { rows } = await pool.query<{ role: string }>(
+    const { rows } = await getPool().query<{ role: string }>(
       `SELECT role FROM user_projects WHERE user_id = $1 AND workspace_id = $2`,
       [userId, workspaceId]
     )

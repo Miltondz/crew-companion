@@ -1,23 +1,21 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
+const IS_PROD = process.env.NODE_ENV === 'production'
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ onboarded: false })
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   try {
-    // Check if user has any projects (new multi-project model)
-    const { rows: projectRows } = await pool.query(
+    const { rows: projectRows } = await getPool().query(
       'SELECT 1 FROM user_projects WHERE user_id = $1 LIMIT 1',
       [session.user.id]
     )
     if (projectRows.length > 0) return NextResponse.json({ onboarded: true })
 
-    // Legacy: check workspace_state by user.id
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       'SELECT state_json FROM workspace_state WHERE workspace_id = $1',
       [session.user.id]
     )
@@ -33,18 +31,34 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { projectName, deadline, members, projectType, isDevProject, contextUrl, contextText } = await req.json() as {
+  const body = await req.json() as {
     projectName: string; deadline: string; members: MemberInput[]
     projectType?: string; isDevProject?: boolean; contextUrl?: string; contextText?: string
+  }
+
+  // Input validation
+  const projectName = (body.projectName ?? '').trim().slice(0, 200)
+  const deadline = (body.deadline ?? '').trim().slice(0, 30)
+  const contextUrl = (body.contextUrl ?? '').trim().slice(0, 500) || null
+  const contextText = (body.contextText ?? '').trim().slice(0, 10_000) || null
+  const projectType = (body.projectType ?? 'other').trim().slice(0, 50)
+  const isDevProject = !!body.isDevProject
+  const rawMembers: MemberInput[] = Array.isArray(body.members) ? body.members.slice(0, 20) : []
+
+  if (!projectName || !deadline) {
+    return NextResponse.json({ error: 'projectName and deadline required' }, { status: 400 })
   }
 
   const workspaceId = crypto.randomUUID()
   const observerToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
   const inviteCode = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
 
-  const builtMembers = members.map((m) => ({
-    id: crypto.randomUUID(), name: m.name, role: m.role,
-    technicalLevel: m.technicalLevel, activeBlockerId: null,
+  const builtMembers = rawMembers.map((m) => ({
+    id: crypto.randomUUID(),
+    name: (m.name ?? '').trim().slice(0, 100),
+    role: ['leader', 'member'].includes(m.role) ? m.role : 'member',
+    technicalLevel: m.technicalLevel,
+    activeBlockerId: null,
   }))
 
   const leaderId = builtMembers.find(m => m.role === 'leader')?.id ?? builtMembers[0]?.id ?? crypto.randomUUID()
@@ -55,12 +69,7 @@ export async function POST(req: Request) {
     currentMemberId: leaderId,
     tasks: [],
     milestones: [{ id: milestoneId, title: projectName, deadline, taskIds: [], phase: 'normal' }],
-    projectConfig: {
-      type: projectType ?? 'other',
-      isDevProject: isDevProject ?? false,
-      contextUrl: contextUrl ?? null,
-      contextText: contextText ?? null,
-    },
+    projectConfig: { type: projectType, isDevProject, contextUrl, contextText },
     blockers: [],
     sharedDocuments: contextText
       ? [{ id: crypto.randomUUID(), title: 'Contexto inicial', content: contextText, createdAt: new Date().toISOString() }]
@@ -77,7 +86,7 @@ export async function POST(req: Request) {
     observerConfig: { showTasks: true, showTeamNames: true, showBlockerCount: true, customMessage: '' },
   }
 
-  await pool.query(
+  await getPool().query(
     `INSERT INTO workspace_state (workspace_id, state_json, thread_id, observer_token, invite_code, created_at)
      VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
      ON CONFLICT (workspace_id) DO UPDATE
@@ -85,14 +94,14 @@ export async function POST(req: Request) {
     [workspaceId, JSON.stringify(state), `thread-${workspaceId}`, observerToken, inviteCode]
   )
 
-  await pool.query(
+  await getPool().query(
     `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, 'leader') ON CONFLICT DO NOTHING`,
     [session.user.id, workspaceId]
   )
 
-  // Set active project cookie
   const cookieStore = await cookies()
-  cookieStore.set('crew_project_id', workspaceId, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 30 })
+  const cookieOpts = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 30, secure: IS_PROD }
+  cookieStore.set('crew_project_id', workspaceId, cookieOpts)
 
   return NextResponse.json({ ok: true, workspaceId })
 }

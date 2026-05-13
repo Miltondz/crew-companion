@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
 
 async function getWorkspaceId(userId: string): Promise<string> {
   const jar = await cookies()
@@ -23,12 +21,17 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    await pool.query(
+    const result = await getPool().query(
       `UPDATE workspace_state
        SET state_json = jsonb_set(state_json, '{observerConfig}', $2::jsonb)
-       WHERE workspace_id = $1`,
-      [workspaceId, JSON.stringify(config)]
+       WHERE workspace_id = $1
+         AND EXISTS (
+           SELECT 1 FROM user_projects
+           WHERE user_id = $3 AND workspace_id = $1
+         )`,
+      [workspaceId, JSON.stringify(config), session.user.id]
     )
+    if (result.rowCount === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

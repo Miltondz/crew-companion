@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
+import { getPool } from '@/lib/db'
 
 interface MemberSlot {
   id: string
@@ -20,7 +18,7 @@ interface StateJson {
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       `SELECT workspace_id, state_json FROM workspace_state WHERE invite_code = $1`,
       [code]
     )
@@ -48,39 +46,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
   const body = await req.json().catch(() => ({})) as { memberId?: string }
   const { memberId } = body
 
+  if (!memberId) return NextResponse.json({ error: 'memberId required' }, { status: 400 })
+
   try {
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       `SELECT workspace_id, state_json FROM workspace_state WHERE invite_code = $1`,
       [code]
     )
     if (!rows[0]) return NextResponse.json({ error: 'Invalid invite' }, { status: 404 })
     const { workspace_id, state_json } = rows[0] as { workspace_id: string; state_json: StateJson }
 
-    let role = 'member'
-
-    if (memberId) {
-      const members = state_json?.members ?? []
-      const slot = members.find(m => m.id === memberId)
-      if (!slot) return NextResponse.json({ error: 'Member slot not found' }, { status: 400 })
-      if (slot.userId && slot.userId !== session.user!.id) {
-        return NextResponse.json({ error: 'Member slot already claimed' }, { status: 409 })
-      }
-      role = slot.role ?? 'member'
-
-      const updatedMembers = members.map(m =>
-        m.id === memberId ? { ...m, userId: session.user!.id } : m
-      )
-      await pool.query(
-        `UPDATE workspace_state SET state_json = jsonb_set(state_json, '{members}', $2::jsonb) WHERE workspace_id = $1`,
-        [workspace_id, JSON.stringify(updatedMembers)]
-      )
+    const members = state_json?.members ?? []
+    const slot = members.find(m => m.id === memberId)
+    if (!slot) return NextResponse.json({ error: 'Member slot not found' }, { status: 400 })
+    if (slot.userId && slot.userId !== session.user!.id) {
+      return NextResponse.json({ error: 'Member slot already claimed' }, { status: 409 })
     }
+    const role = slot.role ?? 'member'
 
-    await pool.query(
+    const updatedMembers = members.map(m =>
+      m.id === memberId ? { ...m, userId: session.user!.id } : m
+    )
+    await getPool().query(
+      `UPDATE workspace_state SET state_json = jsonb_set(state_json, '{members}', $2::jsonb) WHERE workspace_id = $1`,
+      [workspace_id, JSON.stringify(updatedMembers)]
+    )
+
+    await getPool().query(
       `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, $3) ON CONFLICT (user_id, workspace_id) DO UPDATE SET role = $3`,
       [session.user.id, workspace_id, role]
     )
-    return NextResponse.json({ ok: true, workspaceId: workspace_id, memberId: memberId ?? null })
+    return NextResponse.json({ ok: true, workspaceId: workspace_id, memberId })
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }

@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
 
 const CHAT_DAILY_LIMIT = 200
 
@@ -20,7 +18,7 @@ export async function GET() {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    const { rows } = await pool.query(
+    const { rows } = await getPool().query(
       'SELECT count FROM chat_usage WHERE workspace_id = $1 AND date = $2',
       [workspaceId, today]
     )
@@ -45,7 +43,7 @@ export async function POST() {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    await pool.query(
+    await getPool().query(
       `INSERT INTO chat_usage (workspace_id, date, count) VALUES ($1, $2, 1)
        ON CONFLICT (workspace_id, date) DO UPDATE SET count = chat_usage.count + 1`,
       [workspaceId, today]

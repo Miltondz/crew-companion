@@ -1,24 +1,24 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 })
+const IS_PROD = process.env.NODE_ENV === 'production'
+const COOKIE_OPTS = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 30, secure: IS_PROD }
 
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = session.user.id
 
-  // Auto-migrate: if user has legacy workspace (workspace_id = user.id) but no user_projects entry
   try {
-    const legacy = await pool.query('SELECT workspace_id FROM workspace_state WHERE workspace_id = $1', [userId])
+    const legacy = await getPool().query('SELECT workspace_id FROM workspace_state WHERE workspace_id = $1', [userId])
     if (legacy.rows[0]) {
-      await pool.query(
+      await getPool().query(
         `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, 'leader') ON CONFLICT DO NOTHING`,
         [userId, userId]
       )
-      await pool.query(
+      await getPool().query(
         `UPDATE workspace_state SET
            observer_token = COALESCE(observer_token, encode(gen_random_bytes(16), 'hex')),
            invite_code    = COALESCE(invite_code, encode(gen_random_bytes(8), 'hex'))
@@ -26,9 +26,9 @@ export async function GET() {
         [userId]
       )
     }
-  } catch { /* table may not exist yet — run migrations */ }
+  } catch { /* migrations may not have run yet */ }
 
-  const { rows } = await pool.query<{
+  const { rows } = await getPool().query<{
     workspace_id: string
     state_json: Record<string, unknown>
     observer_token: string
@@ -61,18 +61,17 @@ export async function POST(req: Request) {
   const { workspaceId } = await req.json() as { workspaceId: string }
 
   const cookieStore = await cookies()
-  cookieStore.set('crew_project_id', workspaceId, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 30 })
+  cookieStore.set('crew_project_id', workspaceId, COOKIE_OPTS)
 
   try {
-    const { rows } = await pool.query<{ state_json: { members?: Array<{ id: string; userId?: string }> } }>(
+    const { rows } = await getPool().query<{ state_json: { members?: Array<{ id: string; userId?: string }> } }>(
       `SELECT state_json FROM workspace_state WHERE workspace_id = $1`,
       [workspaceId]
     )
     if (rows[0]) {
-      const members = rows[0].state_json?.members ?? []
-      const slot = members.find(m => m.userId === userId)
+      const slot = (rows[0].state_json?.members ?? []).find(m => m.userId === userId)
       if (slot) {
-        cookieStore.set('crew_member_id', slot.id, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 30 })
+        cookieStore.set('crew_member_id', slot.id, COOKIE_OPTS)
       } else {
         cookieStore.delete('crew_member_id')
       }

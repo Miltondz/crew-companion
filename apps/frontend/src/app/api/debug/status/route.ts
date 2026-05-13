@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { Pool } from 'pg'
+import { getPool } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { createConnection } from 'net'
 import { connect as tlsConnect } from 'tls'
 
 const BFF_URL = process.env.BFF_URL ?? 'http://localhost:4000'
 
-let _pool: Pool | null = null
-function pool(): Pool | null {
-  if (!process.env.DATABASE_URL) return null
-  if (!_pool) _pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 2 })
-  return _pool
+function pool() {
+  return process.env.DATABASE_URL ? getPool() : null
 }
 
 async function safeFetch(url: string, init?: RequestInit) {
@@ -129,7 +126,8 @@ function getEnvPresence() {
     'NEON_API_KEY', 'NEON_PROJECT_ID', 'VERCEL_TOKEN', 'VERCEL_PROJECT_ID',
     'RENDER_API_KEY', 'RENDER_SERVICE_ID_BFF', 'RENDER_SERVICE_ID_AGENT',
     'LANGSMITH_API_KEY', 'MCP_SERVER_URL', 'COPILOTKIT_LICENSE_TOKEN',
-    'VERCEL_URL', 'VERCEL_ENV', 'NEXT_PUBLIC_VERCEL_ENV',
+    'GEMINI_API_KEY', 'GEMINI_MODEL',
+    'VERCEL_URL', 'VERCEL_ENV',
   ]
   return Object.fromEntries(vars.map((k) => [k, !!process.env[k]]))
 }

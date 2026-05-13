@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, Users, AlertTriangle, CheckSquare, RefreshCw, Sparkles, UserPlus } from 'lucide-react'
+import { Eye, Users, AlertTriangle, CheckSquare, RefreshCw, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const PHASE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
@@ -52,7 +51,6 @@ interface State {
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
   const [state, setState] = useState<State | null>(null)
-  const [inviteCode, setInviteCode] = useState('')
   const [updatedAt, setUpdatedAt] = useState('')
   const [error, setError] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(Date.now())
@@ -65,7 +63,6 @@ export default function SharePage() {
       if (!res.ok) { setError(true); return }
       const data = await res.json()
       setState(data.state)
-      setInviteCode(data.inviteCode)
       setUpdatedAt(data.updatedAt)
       setLastRefresh(Date.now())
     } catch { setError(true) }
@@ -222,17 +219,6 @@ export default function SharePage() {
           </motion.div>
         )}
 
-        {/* join CTA */}
-        {inviteCode && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-            className="text-center pt-4 pb-8">
-            <p className="text-zinc-500 text-sm mb-3">¿Querés unirte al equipo?</p>
-            <Link href={`/invite/${inviteCode}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors">
-              <UserPlus className="w-4 h-4" /> Unirse al proyecto
-            </Link>
-          </motion.div>
-        )}
       </div>
     </div>
   )
