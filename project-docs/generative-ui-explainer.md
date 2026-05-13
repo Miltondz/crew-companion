@@ -1,130 +1,233 @@
-# Generative UI e Interfaces Agénticas — El Nuevo Paradigma
+# Capítulo 1 — Generative UI y Agentic Interfaces
 
 > Referencia del hackathon: [Generative UI Global Hackathon: Agentic Interfaces — AI Tinkerers](https://sf.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-sf)  
 > Presentado por AI Tinkerers, Google DeepMind y CopilotKit. 18 ciudades, 4 continentes, build sincronizado de 6 horas.
 
 ---
 
-## El problema con las interfaces de IA actuales
+## Para quien no conoce el tema
 
-La mayoría de las apps de IA hoy funcionan así: el usuario escribe algo, el modelo genera texto, el texto aparece en pantalla. En el mejor caso, el texto viene con algo de formato markdown. Es básicamente un chat que parece terminal de los años 80 con mejor CSS.
+### El problema con las interfaces de IA actuales
 
-El problema no es el modelo — los modelos ya son capaces de razonar, planear, y ejecutar tareas complejas. El problema es la interfaz. Estamos tomando una inteligencia que puede componer acciones, coordinar herramientas y adaptar su comportamiento al contexto, y la metemos en un cuadro de texto.
+Abrís una app de IA. Hay un cuadro de texto. Escribís algo. Aparece texto. En el mejor caso, el texto tiene formato markdown y un botón de "copiar".
 
-Es como darle a un arquitecto un bloc de notas y pedirle que "diseñe ahí dentro".
+Eso es básicamente todo. Y no es que los modelos sean malos — GPT-4, Gemini, Claude pueden razonar, planificar y ejecutar tareas complejas. El problema es que los metemos en cajas diseñadas para calculadoras del año 2005.
 
----
+Es como contratar a un arquitecto brillante y darle solo un bloc de notas. La inteligencia existe. El canal para expresarla, no.
 
-## ¿Qué es Generative UI?
+### ¿Qué cambia con Generative UI?
 
-Generative UI es el paradigma donde **la interfaz misma es generada por el agente en tiempo real**, no definida de antemano por el desarrollador.
+Generative UI invierte el control. En lugar de que el desarrollador decida qué pantallas existen y el usuario navegue entre ellas, el **agente decide en tiempo real qué mostrar** basándose en el contexto.
 
-En lugar de construir pantallas fijas que el usuario navega, el agente decide:
-- Qué componente mostrar
-- Con qué datos
-- En qué zona de la pantalla
-- Con qué ciclo de vida (temporal, persistente, interactivo)
+No es personalización en el sentido cosmético ("tu color favorito"). Es adaptación semántica: la interfaz responde al estado real del trabajo.
 
-El desarrollador define los componentes disponibles. El agente elige cuándo y cómo usarlos basándose en el contexto — quién es el usuario, qué está pasando, qué urgencia existe, qué acaba de ocurrir.
+Ejemplo concreto. Misma app, mismo usuario, dos momentos distintos:
 
-### La diferencia en términos concretos
+- **Martes 10am, deadline en 2 semanas** → el workspace muestra una vista espaciosa con sugerencias de tareas, métricas de milestone, el asistente tranquilo
+- **Domingo 11pm, demo mañana a las 9, 3 bloqueadores sin resolver** → el workspace colapsa a modo crisis: bloqueadores arriba, countdown visible, todo lo no-crítico desaparece
 
-| AI tradicional | Generative UI |
-|---|---|
-| El desarrollador decide qué mostrar | El agente decide qué mostrar |
-| UI estática, navegación manual | UI emergente, contexto-aware |
-| El modelo genera texto | El modelo genera componentes tipados |
-| "Chat con acceso a tools" | "Runtime donde el agente es el director de la interfaz" |
+Nadie configuró eso. El sistema detectó la urgencia desde el deadline y reorganizó la interfaz solo.
 
----
+### Los tres niveles de interfaces agénticas
 
-## El protocolo AG-UI
+Pensalo como un espectro de cuánta agencia tiene el agente sobre la UI:
 
-El [AG-UI Protocol](https://docs.ag-ui.com/introduction) es el estándar abierto que hace posible esto a escala. Fue creado por CopilotKit y es el corazón técnico del hackathon.
+**Nivel 1 — El agente genera contenido**
+El modelo produce texto, listas, código. La UI es fija; el contenido varía. La mayoría de apps de IA están aquí hoy.
 
-### ¿Qué hace?
+**Nivel 2 — El agente genera componentes**
+El agente emite mensajes tipados que el frontend mapea a componentes React específicos. La UI cambia según el agente decide qué panel mostrar, con qué datos, en qué zona. *Crew Companion opera aquí.*
 
-AG-UI estandariza cómo los agentes se comunican con el frontend. En lugar de responder con strings de texto, el agente emite **eventos JSON tipados** que fluyen sobre HTTP o WebSocket:
+**Nivel 3 — El agente genera la aplicación**
+El agente escribe código ejecutable que corre sandboxeado en el cliente. Pedís "visualizá este algoritmo" y el agente genera e instancia el componente en vivo. [OpenGenerativeUI de CopilotKit](https://github.com/CopilotKit/OpenGenerativeUI) explora este territorio.
 
-- `MESSAGE_START` / `MESSAGE_END` — texto del agente
-- `TOOL_CALL_START` / `TOOL_CALL_END` — el agente ejecuta una herramienta
-- `STATE_DELTA` — patch al estado compartido frontend/agente
-- `RUN_COMPLETED` — ciclo finalizado
+### ¿Para qué sirve en la práctica?
 
-Esto permite que el frontend reaccione a **intenciones del agente**, no solo a texto. Cuando el agente llama `renderSurface({ surface_id: "triage-war-room", payload: {...} })`, el frontend sabe exactamente qué componente montar, dónde, y con qué datos.
+Una agentic interface no es "un chatbot con botones lindos". Es un sistema donde el agente tiene información del contexto que el usuario no debería tener que expresar manualmente: quién sos en el equipo, qué tan urgente es la situación, qué está bloqueando el trabajo.
 
-### Por qué importa
-
-Antes de protocolos como AG-UI, cada app de agentes inventaba su propio protocolo de comunicación. Era imposible reutilizar componentes entre proyectos o integrar agentes de distintos proveedores. AG-UI es para los agentes lo que HTTP fue para la web — un contrato compartido que desacopla quién produce de quién consume.
+Cuando la interfaz responde a ese contexto automáticamente, el software deja de ser una herramienta que usás y empieza a comportarse como un colaborador que adapta cómo trabaja con vos.
 
 ---
 
-## A2UI — La propuesta de Google
+## Deep dive técnico
 
-[A2UI (Agent-to-User Interface)](https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/) es la propuesta paralela de Google DeepMind. Mientras AG-UI se enfoca en el protocolo de eventos, A2UI define una spec declarativa: el agente describe **qué UI quiere** (estructura, datos, acciones) y el frontend la renderiza.
+### El protocolo AG-UI
 
-La convergencia de AG-UI + A2UI representa la apuesta de la industria: los interfaces ya no serán diseñados una vez — serán compostos en tiempo real por agentes que conocen el contexto mejor que cualquier wireframe estático podría anticipar.
+[AG-UI](https://docs.ag-ui.com/introduction) (Agent-User Interaction Protocol) es el estándar abierto creado por CopilotKit que define cómo los agentes se comunican con el frontend. Es liviano, basado en eventos, y corre sobre HTTP estándar o WebSocket.
+
+En lugar de que el agente responda con strings de texto, emite una **secuencia de eventos JSON tipados**:
+
+```
+MESSAGE_START          → el agente empieza a escribir
+TEXT_MESSAGE_CONTENT   → chunk de texto (streaming)
+MESSAGE_END            → texto completo
+TOOL_CALL_START        → el agente va a ejecutar una tool
+TOOL_CALL_END          → tool ejecutada, resultado disponible
+STATE_DELTA            → patch al estado compartido agente/frontend
+RUN_COMPLETED          → ciclo terminado
+```
+
+El `STATE_DELTA` es el evento más importante para Generative UI. Cuando el agente llama una frontend tool como `renderSurface`, el delta de estado incluye qué superficie montar, con qué datos, y en qué zona del workspace. El frontend reacciona a ese delta sin necesitar lógica de parsing de texto.
+
+**¿Por qué un protocolo y no llamadas directas?**
+
+Sin un protocolo estándar, cada proyecto inventa su propia comunicación agente → UI. Eso significa:
+- Imposible reutilizar componentes entre proyectos
+- Imposible integrar agentes de distintos proveedores
+- Cada cambio de LLM requiere reescribir el glue code
+
+AG-UI es para los agentes lo que HTTP fue para la web: un contrato compartido que desacopla quién produce de quién consume.
+
+### A2UI — La propuesta complementaria de Google
+
+[A2UI (Agent-to-User Interface)](https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/) es la especificación abierta de Google DeepMind, anunciada en el hackathon. Donde AG-UI define el protocolo de eventos (el *cómo* fluye la información), A2UI define la declaración semántica (el *qué* quiere el agente mostrar).
+
+Con A2UI, el agente no dice "llama a esta función con estos parámetros". Dice "quiero mostrar un panel de tareas con estas propiedades" y el frontend decide la implementación visual. Esto separa la intención (agente) de la representación (frontend).
+
+La convergencia de AG-UI + A2UI representa la apuesta de la industria: que los interfaces ya no se diseñarán una vez para siempre, sino que serán compostos en tiempo real por agentes que conocen el contexto mejor que cualquier wireframe estático podría anticipar.
+
+### CopilotKit — La implementación de referencia
+
+[CopilotKit](https://www.copilotkit.ai/) implementa AG-UI en React/Next.js (frontend) y en Node/Python (servidor BFF). Sus primitivas centrales:
+
+**`useFrontendTool`** — registra una función que el agente puede invocar para modificar la UI:
+```typescript
+useFrontendTool({
+  name: 'renderSurface',
+  description: 'Monta un panel de UI en el workspace',
+  parameters: z.object({ envelope: AnyEnvelopeSchema }),
+  render: ({ args }) => {
+    // el agente llamó renderSurface → este código corre en el cliente
+    return <SurfaceHost envelope={args.envelope} />
+  },
+})
+```
+
+**`useAgent`** — sincroniza el estado del agente Python con el estado React en tiempo real. Cuando el agente ejecuta `setState({ mascotMood: 'panicking' })` en Python, el componente React re-renderiza con el nuevo estado via `STATE_DELTA`.
+
+**`CopilotRuntime`** — el servidor BFF que conecta el frontend con el agente LangGraph. Maneja el protocolo AG-UI, la autenticación de threads, y el streaming de eventos.
+
+### El protocolo de envelopes de Crew Companion
+
+Por encima de AG-UI, Crew Companion implementa su propio protocolo de envelopes para las instrucciones de render. Cada mensaje del agente al Surface Registry es un envelope tipado y validado por Zod:
+
+```typescript
+const FullEnvelopeSchema = z.object({
+  envelopeId:           z.string(),           // ID único por emisión
+  agentId:              z.string(),           // qué agente emitió
+  emittedAt:            z.number(),           // timestamp Unix ms
+  intent:               z.string(),           // intención semántica
+  priority:             z.enum(['low','medium','high','critical']),
+  surfaceId:            z.string(),           // qué componente montar
+  payload:              z.record(z.unknown()), // datos del componente
+  context:              z.object({
+    role:               z.string(),
+    phase:              z.string(),
+    hasActiveBlocker:   z.boolean(),
+    workspaceId:        z.string(),
+  }),
+  requiredCapabilities: z.array(z.string()),  // capabilities necesarias
+  hibernatable:         z.boolean(),          // ¿puede dormir?
+  pinnable:             z.boolean(),          // ¿puede el usuario fijarlo?
+  ephemeral:            z.number().optional(), // TTL en ms (si aplica)
+})
+```
+
+**¿Por qué Zod y no solo TypeScript?**
+
+TypeScript es verificación en compile-time. Zod es verificación en runtime. Los envelopes llegan por WebSocket desde un proceso Python separado — TypeScript no puede verificarlos porque ya no es tiempo de compilación. Zod valida el shape en el momento en que el mensaje llega al cliente. Si el agente emite un envelope malformado, se descarta antes de llegar al Surface Registry. La UI nunca renderiza output no verificado.
+
+### El Surface Registry — El mapeador de intenciones
+
+El Surface Registry es el módulo que convierte `surfaceId: "triage-war-room"` en el componente `TriageWarRoom` con su manifiesto. Cada superficie registra:
+
+```typescript
+// manifest.ts de TriageWarRoom
+export const manifest: SurfaceManifest = {
+  surfaceId: 'triage-war-room',
+  component:  TriageWarRoom,
+  region:     'primary-workzone',
+  phases:     ['panic'],               // solo válido en fase panic
+  capabilities: ['render_triage'],
+  pinnable:   false,
+  hibernatable: false,
+}
+```
+
+El flujo completo cuando el agente emite un envelope:
+
+```
+Agente Python emite envelope con surfaceId: "triage-war-room"
+           │
+           ▼ WebSocket (AG-UI STATE_DELTA)
+Zod valida el envelope
+           │ (descarte si inválido)
+           ▼
+Surface Registry busca manifest por surfaceId
+           │
+           ▼
+Policy Engine verifica requiredCapabilities
+           │ (bloquea si no tiene capabilities)
+           ▼
+Layout Engine asigna región y resuelve conflictos
+           │
+           ▼
+TriageWarRoom montado en primary-workzone
+```
+
+Ningún paso conoce los detalles del siguiente. El agente no sabe en qué zona vive la superficie. El Layout Engine no sabe qué decidió el agente. Cada capa tiene un contrato único.
+
+### Las frontend tools como API del agente
+
+Las frontend tools son el mecanismo por el cual el agente Python controla el estado del cliente React. Se declaran en el cliente (`useFrontendTool`) y el agente las llama como si fueran funciones Python:
+
+| Tool | Qué hace | Quién la usa |
+|---|---|---|
+| `renderSurface` | Monta un componente en el workspace | Todos los agentes |
+| `setMascotMood` | Cambia humor + habla del Companion | Todos los agentes |
+| `logActivity` | Agrega evento al activity stream | Todos los agentes |
+| `highlightTasks` | Resalta IDs de tasks en la UI | Planner |
+| `reportBlocker` | Crea bloqueador visible | Coach |
+| `updateTask` | Actualiza estado de task en tiempo real | Planner, Coach |
+| `setCrewState` | Patch directo al estado completo | Orchestrator |
+
+Este set de tools es el "vocabulario" del agente para hablar con la UI. Si una acción no está en este set, el agente no puede ejecutarla — por diseño.
 
 ---
 
-## CopilotKit — El SDK que conecta todo
+## Recursos y enlaces de interés
 
-[CopilotKit](https://www.copilotkit.ai/) es el "frontend stack for agents". Implementa AG-UI del lado del cliente (React/Next.js) y del servidor (Node/Python), y provee:
-
-- **`useFrontendTool`** — registra herramientas que el agente puede llamar para modificar la UI
-- **`useAgent`** — sincroniza el estado del agente con el estado React en tiempo real
-- **`CopilotRuntime`** — el servidor BFF que conecta el frontend con cualquier agente LangGraph/LangChain
-
-En Crew Companion, CopilotKit es la capa de transporte. Los agentes Python llaman frontend tools (`renderSurface`, `setMascotMood`, `logActivity`) y el cliente React los ejecuta instantáneamente via WebSocket. El estado del agente y el estado de la UI son **un solo objeto** sincronizado en tiempo real.
-
----
-
-## Agentic Interfaces — Más allá del chat
-
-Una agentic interface no es un chat con superpoderes. Es una interfaz donde el agente tiene **agencia sobre la UI misma**.
-
-Tres niveles:
-
-### Nivel 1 — El agente genera contenido
-El modelo produce texto, markdown, código. La UI es fija, el contenido varía. _La mayoría de las apps de IA hoy están aquí._
-
-### Nivel 2 — El agente genera componentes
-El modelo emite envelopes tipados. El frontend mapea cada envelope a un componente React. La UI cambia según el agente decide qué mostrar. _Crew Companion opera aquí._
-
-### Nivel 3 — El agente genera la aplicación entera
-El modelo produce código ejecutable que se sandboxea y corre en el cliente. [OpenGenerativeUI](https://github.com/CopilotKit/OpenGenerativeUI) de CopilotKit explora este territorio: pedís "visualizá este algoritmo" y el agente escribe y ejecuta el componente en vivo.
-
----
-
-## El rol del contexto
-
-Lo que hace poderosas a las agentic interfaces no es que el agente pueda "hacer cosas" — es que **sabe en qué contexto está**. En Crew Companion, el contexto tiene cuatro dimensiones:
-
-1. **Rol** — ¿sos líder o miembro del equipo?
-2. **Nivel técnico** — ¿querés el detalle técnico o la versión plain language?
-3. **Fase de urgencia** — ¿estás en modo normal, focus, urgent, panic, o expirado?
-4. **Bloqueadores activos** — ¿hay algo bloqueando al equipo ahora mismo?
-
-Esas 4 dimensiones producen un workspace diferente para cada persona en cada momento. No es personalización en el sentido de "tu color favorito" — es **adaptación semántica**: la interfaz responde al estado real del trabajo.
-
----
-
-## El hackathon
-
-El **Generative UI Global Hackathon** fue organizado por AI Tinkerers simultáneamente en 18 ciudades (incluyendo [Medellín](https://medellin.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-medellin)). 6 horas de build, prototipos funcionales (no slides). Los participantes aprendieron AG-UI, A2UI y MCP Apps hands-on y construyeron apps que demuestran el paradigma en acción.
-
-Crew Companion fue construido en el contexto de este hackathon como una exploración de hasta dónde se puede llevar el concepto de generative UI cuando se aplica no solo a componentes individuales sino a la arquitectura completa de un workspace de equipo.
-
----
-
-## Recursos
-
+### Protocolos y estándares
 - [AG-UI Protocol — Docs oficiales](https://docs.ag-ui.com/introduction)
-- [CopilotKit — Generative UI](https://www.copilotkit.ai/generative-ui)
-- [CopilotKit — AG-UI](https://www.copilotkit.ai/ag-ui)
-- [A2UI — Google](https://a2ui.org/)
-- [Generative UI Global Hackathon — AI Tinkerers SF](https://sf.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-sf)
-- [Hackathon Results](https://sf.aitinkerers.org/hackathons/h_FZX7ihFWcHA)
+- [AG-UI GitHub — ag-ui-protocol/ag-ui](https://github.com/ag-ui-protocol/ag-ui)
+- [Introducing AG-UI: The Protocol Where Agents Meet Users](https://webflow.copilotkit.ai/blog/introducing-ag-ui-the-protocol-where-agents-meet-users)
+- [AG-UI Overview — DataCamp Tutorial](https://www.datacamp.com/tutorial/ag-ui)
+- [A2UI — Sitio oficial](https://a2ui.org/)
+- [Introducing A2UI — Google Developers Blog](https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/)
+- [AG-UI Integration — Microsoft Learn](https://learn.microsoft.com/en-us/agent-framework/integrations/ag-ui/)
+
+### CopilotKit
+- [CopilotKit — Sitio oficial](https://www.copilotkit.ai/)
+- [CopilotKit — Generative UI explicado](https://www.copilotkit.ai/generative-ui)
+- [CopilotKit — AG-UI Protocol](https://www.copilotkit.ai/ag-ui)
+- [CopilotKit + LangGraph en minutos](https://www.copilotkit.ai/blog/easily-build-a-ui-for-your-ai-agent-in-minutes-langgraph-copilotkit)
+- [CopilotKit Docs — Generative UI con LangGraph](https://docs.copilotkit.ai/langgraph/generative-ui)
 - [OpenGenerativeUI — CopilotKit GitHub](https://github.com/CopilotKit/OpenGenerativeUI)
+- [CopilotKit GitHub](https://github.com/copilotkit/copilotkit)
 - [The Developer's Guide to Generative UI in 2026](https://www.copilotkit.ai/blog/the-developer-s-guide-to-generative-ui-in-2026)
-- [LangGraph — Agent Orchestration Framework](https://www.langchain.com/langgraph)
+
+### Hackathon
+- [Generative UI Global Hackathon — AI Tinkerers SF](https://sf.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-sf)
+- [Hackathon Results — AI Tinkerers](https://sf.aitinkerers.org/hackathons/h_FZX7ihFWcHA)
+- [AI Tinkerers — Generative UI en Medellín](https://medellin.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-medellin)
+- [AI Tinkerers — Generative UI en Hyderabad](https://hyderabad.aitinkerers.org/p/generative-ui-global-hackathon-agentic-interfaces-hyderabad)
+- [Generative UI Hackathon Hong Kong — YouTube](https://www.youtube.com/watch?v=vJZyF-6oB8w)
+- [AI Tinkerers — Todos los eventos](https://aitinkerers.org/events)
+
+### Frameworks y herramientas relacionadas
+- [LangGraph — Agent Orchestration](https://www.langchain.com/langgraph)
+- [Zod — TypeScript schema validation](https://zod.dev)
+- [Awesome LangGraph — índice del ecosistema](https://github.com/von-development/awesome-LangGraph)
+
+### Código del proyecto
+- [Crew Companion — GitHub](https://github.com/Miltondz/crew-companion)
