@@ -46,7 +46,7 @@ async function checkPostgres() {
         (SELECT count(*) FROM pg_stat_activity) AS total_connections`),
       db.query(`SELECT relname AS tablename, n_live_tup, n_dead_tup,
         pg_total_relation_size(schemaname||'.'||relname) AS size_bytes
-        FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 20`),
+        FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 40`),
     ])
     return {
       ok: true, configured: true, latencyMs: Date.now() - start,
