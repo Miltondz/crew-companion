@@ -83,8 +83,9 @@ function DocsCanvas() {
     },
   })
 
+  const actorRole = state.members.find(m => m.id === state.currentMemberId)?.role ?? 'leader'
   const runtimeContext = useRuntimeContext({
-    role: (state.actorRole as 'leader' | 'member') ?? 'leader',
+    role: actorRole,
     phase: state.urgencyPhase,
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
   })
