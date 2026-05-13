@@ -209,7 +209,7 @@ export const messages = {
 type Stringified<T> = T extends string
   ? string
   : T extends readonly (infer U)[]
-    ? Stringified<U>[]
+    ? readonly Stringified<U>[]
     : { [K in keyof T]: Stringified<T[K]> }
 
 export type Messages = Stringified<typeof messages.en>

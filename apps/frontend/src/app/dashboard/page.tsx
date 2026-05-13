@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { signOut } from 'next-auth/react'
+import { motion } from 'motion/react'
 import { Plus, ExternalLink, Link2, Eye, Users, Clock, CheckSquare, Sparkles, LogOut, Settings, X } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'motion/react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -27,7 +28,7 @@ interface Project {
   state_json: {
     milestones?: { title?: string; deadline?: string; taskIds?: string[] }[]
     activeMilestoneId?: string
-    tasks?: { status?: string }[]
+    tasks?: { id?: string; status?: string }[]
     members?: unknown[]
     blockers?: { resolved?: boolean }[]
     urgencyPhase?: string
@@ -72,7 +73,8 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
   const s = project.state_json
   const milestone = s.milestones?.[0]
   const totalTasks = milestone?.taskIds?.length ?? 0
-  const doneTasks = s.tasks?.filter(t => t.status === 'done').length ?? 0
+  const milestoneTaskIds = new Set(milestone?.taskIds ?? [])
+  const doneTasks = s.tasks?.filter(t => t.status === 'done' && milestoneTaskIds.has(t.id ?? '')).length ?? 0
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
   const memberCount = s.members?.length ?? 0
   const blockerCount = s.blockers?.filter(b => !b.resolved).length ?? 0
@@ -252,10 +254,11 @@ export default function DashboardPage() {
             <span className="font-bold text-sm">Crew Companion</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/api/auth/signout"
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
               className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
               <LogOut className="w-3.5 h-3.5" /> Salir
-            </Link>
+            </button>
           </div>
         </div>
       </nav>
