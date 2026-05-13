@@ -186,17 +186,23 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors">
             <ExternalLink className="w-3.5 h-3.5" /> Abrir workspace
           </button>
-          <button onClick={() => copyToClipboard(inviteUrl, 'Link de invitación')} title="Invitar miembro"
-            className="p-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
-            <Link2 className="w-4 h-4" />
+          <button onClick={() => copyToClipboard(inviteUrl, 'Link de invitación')}
+            title="Copiar link para que un miembro se una"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
+            <Link2 className="w-3.5 h-3.5" />
+            <span className="text-[9px] leading-none">Invitar</span>
           </button>
-          <button onClick={() => setShowConfig(s => !s)} title="Configurar vista pública"
-            className={cn('p-2 rounded-lg border transition-colors', showConfig ? 'border-indigo-500 text-indigo-400' : 'border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white')}>
-            <Settings className="w-4 h-4" />
+          <button onClick={() => setShowConfig(s => !s)}
+            title="Configurar qué muestra la vista pública de espectador"
+            className={cn('flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border transition-colors', showConfig ? 'border-indigo-500 text-indigo-400' : 'border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white')}>
+            <Settings className="w-3.5 h-3.5" />
+            <span className="text-[9px] leading-none">Público</span>
           </button>
-          <button onClick={() => copyToClipboard(shareUrl, 'Link de vista espectador')} title="Copiar link público"
-            className="p-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
-            <Eye className="w-4 h-4" />
+          <button onClick={() => copyToClipboard(shareUrl, 'Link de vista espectador')}
+            title="Copiar link de vista solo lectura para stakeholders externos"
+            className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
+            <Eye className="w-3.5 h-3.5" />
+            <span className="text-[9px] leading-none">Ver</span>
           </button>
         </div>
       </Card>
@@ -255,16 +261,30 @@ export default function DashboardPage() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-start justify-between mb-6 gap-6">
           <div>
             <h1 className="text-2xl font-bold">Mis proyectos</h1>
-            <p className="text-zinc-400 text-sm mt-1">Seleccioná un proyecto para continuar o crea uno nuevo.</p>
+            <p className="text-zinc-400 text-sm mt-1 max-w-xl">
+              Cada proyecto tiene un workspace con un agente de IA que se adapta a tu rol y fase de urgencia.
+              Liderés ven el tablero completo; miembros ven su vista personalizada.
+            </p>
           </div>
           <Link href="/onboarding"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors">
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors shrink-0">
             <Plus className="w-4 h-4" />
             Nuevo proyecto
           </Link>
+        </div>
+
+        {/* Phase legend */}
+        <div className="flex flex-wrap gap-2 mb-8 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/60">
+          <span className="text-xs text-zinc-500 self-center mr-1">Fases de urgencia:</span>
+          {Object.entries(PHASE_CONFIG).map(([, c]) => (
+            <span key={c.label} className={cn('text-[10px] px-2 py-0.5 rounded-full border', c.className)}>{c.label}</span>
+          ))}
+          <span className="text-xs text-zinc-600 self-center ml-auto hidden sm:block">
+            Calculadas automáticamente según el deadline del hito activo
+          </span>
         </div>
 
         {loading ? (
