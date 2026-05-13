@@ -44,8 +44,8 @@ async function checkPostgres() {
         pg_database_size(current_database()) AS size_bytes,
         (SELECT count(*) FROM pg_stat_activity WHERE state != 'idle') AS active_connections,
         (SELECT count(*) FROM pg_stat_activity) AS total_connections`),
-      db.query(`SELECT tablename, n_live_tup, n_dead_tup,
-        pg_total_relation_size(schemaname||'.'||tablename) AS size_bytes
+      db.query(`SELECT relname AS tablename, n_live_tup, n_dead_tup,
+        pg_total_relation_size(schemaname||'.'||relname) AS size_bytes
         FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 20`),
     ])
     return {
