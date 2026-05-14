@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lhci": "lhci autorun"
+    "lhci": "lhci autorun",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.2",
-    "@sentry/nextjs": "^8.0.0",
     "@copilotkit/react-core": "^1.57.1",
     "@copilotkit/react-ui": "^1.57.1",
     "@copilotkit/runtime": "^1.57.1",
@@ -44,6 +45,7 @@
     "@radix-ui/react-toggle": "1.1.10",
     "@radix-ui/react-toggle-group": "1.1.11",
     "@radix-ui/react-tooltip": "1.2.8",
+    "@sentry/nextjs": "^8.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/lodash": "^4.17.20",
     "@types/three": "^0.184.1",
@@ -88,7 +90,10 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^4.7.0",
     "tailwindcss": "^4.1.12",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.9"
   }
 }

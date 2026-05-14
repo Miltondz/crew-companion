@@ -180,7 +180,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   useEffect(() => {
     if (initialSurfacesMounted.current) return
     initialSurfacesMounted.current = true
-    getInitialSurfaces(state, memberId, runtimeContext).forEach(env => layoutEngine.mount(env))
+    getInitialSurfaces(state, memberId, runtimeContext).forEach(env => layoutEngine.mount(env, runtimeContext))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -195,7 +195,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      const result = layoutEngine.mount(fullEnvelope)
+      const result = layoutEngine.mount(fullEnvelope, runtimeContext)
       if (!result.ok) {
         return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
       }

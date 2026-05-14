@@ -101,7 +101,7 @@ function DocsCanvas() {
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
         : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      const result = layoutEngine.mount(fullEnvelope)
+      const result = layoutEngine.mount(fullEnvelope, runtimeContext)
       if (!result.ok) {
         return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
       }

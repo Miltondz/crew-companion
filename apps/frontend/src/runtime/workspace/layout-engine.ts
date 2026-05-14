@@ -1,6 +1,7 @@
 import { surfaceRegistry } from '@/runtime/surface-registry/registry'
-import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
+import type { SurfaceEnvelope, RuntimeContext } from '@/runtime/surface-registry/types'
 import type { UrgencyPhase } from '@/lib/crew/types'
+import { roleGrantsFor } from '@/runtime/capability/roleGrants'
 import {
   emptyLayoutState,
   REGION_SPECS,
@@ -40,9 +41,10 @@ export class LayoutEngine {
     for (const fn of this.listeners) fn()
   }
 
-  mount(envelope: SurfaceEnvelope, opts: { region?: RegionId; pinned?: boolean } = {}): MountResult {
-    const manifest = surfaceRegistry.get(envelope.surfaceId)
-    if (!manifest) return { ok: false, reason: `unknown_surface:${envelope.surfaceId}` }
+  mount(envelope: SurfaceEnvelope, context: RuntimeContext, opts: { region?: RegionId; pinned?: boolean } = {}): MountResult {
+    const resolved = surfaceRegistry.resolve('render_surface', envelope.surfaceId, context, [], roleGrantsFor(context.role))
+    if (!resolved.ok) return { ok: false, reason: `resolve_failed:${resolved.failure.reason}` }
+    const manifest = resolved.manifest
 
     const regionId: RegionId = opts.region ?? manifest.preferredZone
     const region = this.state[regionId]
