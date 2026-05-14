@@ -22,6 +22,8 @@ import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-regi
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
+import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import type { CrewState } from '@/lib/crew/types'
 
@@ -37,6 +39,7 @@ function MarkdownContent({ content }: { content: string }) {
 function DocsCanvas() {
   const router = useRouter()
   const { state, setState } = useCrewAgent()
+  const layout = useLayoutEngine()
   const [selectedDocId, setSelectedDocId] = useState<string | null>(
     state.openDocumentIds[0] ?? state.sharedDocuments[0]?.id ?? null
   )
@@ -218,6 +221,7 @@ function DocsCanvas() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
             >
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
           {selectedDoc ? (
             <div className="mx-auto max-w-3xl">
               <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">

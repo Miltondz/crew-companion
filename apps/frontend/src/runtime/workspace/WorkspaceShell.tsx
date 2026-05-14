@@ -5,7 +5,6 @@ import { useLayoutEngine } from './useLayoutEngine'
 import { usePhaseSync } from './usePhaseSync'
 import { pinningStore } from './pinning'
 import { CommandSurfaceRegion } from './regions/CommandSurfaceRegion'
-import { PrimaryWorkzoneRegion } from './regions/PrimaryWorkzoneRegion'
 import { ContextRailRegion } from './regions/ContextRailRegion'
 import { AgentRailRegion } from './regions/AgentRailRegion'
 import { ActivityStreamRegion } from './regions/ActivityStreamRegion'
@@ -34,7 +33,6 @@ export function WorkspaceShell({ phase, agentRail, children, habitat, onNewChat 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 overflow-hidden">
           <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-            <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
             <div className="flex flex-1 overflow-hidden">
               {children}
             </div>

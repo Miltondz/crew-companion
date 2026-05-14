@@ -36,6 +36,8 @@ import { useActivityStream } from '@/lib/useActivityStream'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
+import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 
@@ -50,10 +52,18 @@ function LeaderCanvas() {
   const router = useRouter()
   const { state, setState } = useCrewAgent()
 
+  const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [showAddTask, setShowAddTask] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
   const [inviteCode, setInviteCode] = useState<string>('')
+  const [milestoneSectionCollapsed, setMilestoneSectionCollapsed] = useState(false)
+  const [taskBoardCollapsed, setTaskBoardCollapsed] = useState(false)
+
+  const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
+  const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
+  const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+  const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
   const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
@@ -346,6 +356,7 @@ function LeaderCanvas() {
             activeBlockers={activeBlockers.length}
             minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
             progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+            tasks={state.tasks}
           />
         }
       >
@@ -368,7 +379,7 @@ function LeaderCanvas() {
 
             {/* Nav links to members */}
             <div className="flex items-center gap-2 flex-wrap">
-              {state.members.map(m => (
+              {hasRealMembers && state.members.map(m => (
                 <button
                   key={m.id}
                   onClick={() => router.push(`/member/${m.id}`)}
@@ -383,6 +394,11 @@ function LeaderCanvas() {
                   )}
                 </button>
               ))}
+              {!hasRealMembers && (
+                <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-indigo-200/60 ring-1 ring-white/10">
+                  Sin miembros — invita tu equipo
+                </span>
+              )}
               <button
                 onClick={() => router.push('/docs')}
                 className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
@@ -433,67 +449,92 @@ function LeaderCanvas() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
+
           {/* Milestone + Team */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              {activeMilestone ? (
-                <MilestonePanel
-                  milestone={activeMilestone}
-                  tasks={state.tasks}
-                  urgencyPhase={urgencyPhase}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/80 p-8">
-                  <EmptyState icon="🏁" title="Sin milestone activo" description="Pedile al asistente que cree uno" />
-                </div>
-              )}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Milestone & Equipo</span>
+              <button
+                onClick={() => setMilestoneSectionCollapsed(c => !c)}
+                className="rounded p-0.5 text-slate-400 hover:text-slate-600"
+                aria-label={milestoneSectionCollapsed ? 'expand' : 'minimize'}
+              >
+                {milestoneSectionCollapsed ? '▲' : '▼'}
+              </button>
             </div>
-            <div className="flex flex-col gap-3">
-              <TeamOverview
-                members={state.members}
-                tasks={state.tasks}
-                blockers={state.blockers}
-              />
-              {/* Blockers — resolve button */}
-              {activeBlockers.length > 0 && (
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-orange-500">Blockers activos</p>
-                  <div className="space-y-2">
-                    {activeBlockers.map(b => {
-                      const member = state.members.find(m => m.id === b.memberId)
-                      return (
-                        <div key={b.id} className="rounded-lg bg-white p-2.5 ring-1 ring-orange-200">
-                          <p className="text-xs font-semibold text-slate-700">{member?.name}</p>
-                          <p className="mt-0.5 text-[11px] italic text-slate-500">"{b.description}"</p>
-                          <button
-                            onClick={() => handleResolveBlocker(b.id)}
-                            className="mt-1.5 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition"
-                          >
-                            ✓ Resolver
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
+            {!milestoneSectionCollapsed && (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  {activeMilestone ? (
+                    <MilestonePanel
+                      milestone={activeMilestone}
+                      tasks={state.tasks}
+                      urgencyPhase={urgencyPhase}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/80 p-8">
+                      <EmptyState icon="🏁" title="Sin milestone activo" description="Pedile al asistente que cree uno" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+                <div className="flex flex-col gap-3">
+                  <TeamOverview
+                    members={hasRealMembers ? state.members : []}
+                    tasks={state.tasks}
+                    blockers={state.blockers}
+                  />
+                  {/* Blockers — resolve button */}
+                  {activeBlockers.length > 0 && (
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-orange-500">Blockers activos</p>
+                      <div className="space-y-2">
+                        {activeBlockers.map(b => {
+                          const member = state.members.find(m => m.id === b.memberId)
+                          return (
+                            <div key={b.id} className="rounded-lg bg-white p-2.5 ring-1 ring-orange-200">
+                              <p className="text-xs font-semibold text-slate-700">{member?.name}</p>
+                              <p className="mt-0.5 text-[11px] italic text-slate-500">"{b.description}"</p>
+                              <button
+                                onClick={() => handleResolveBlocker(b.id)}
+                                className="mt-1.5 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition"
+                              >
+                                ✓ Resolver
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Kanban board */}
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Task Board</h2>
-              <button
-                onClick={() => setShowAddTask(v => !v)}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition"
-              >
-                {showAddTask ? '✕ Cancelar' : '＋ Nueva tarea'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setTaskBoardCollapsed(c => !c)}
+                  className="rounded p-0.5 text-slate-400 hover:text-slate-600"
+                  aria-label={taskBoardCollapsed ? 'expand' : 'minimize'}
+                >
+                  {taskBoardCollapsed ? '▲' : '▼'}
+                </button>
+                <button
+                  onClick={() => setShowAddTask(v => !v)}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition"
+                >
+                  {showAddTask ? '✕ Cancelar' : '＋ Nueva tarea'}
+                </button>
+              </div>
             </div>
 
             {/* Add Task form */}
-            {showAddTask && (
+            {showAddTask && !taskBoardCollapsed && (
               <motion.div
                 className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm"
                 initial={{ opacity: 0, height: 0 }}
@@ -558,37 +599,41 @@ function LeaderCanvas() {
               </motion.div>
             )}
 
-            <div className="grid grid-cols-3 gap-4">
-              {kanbanColumns.map(({ status, label, accent, countColor }) => {
-                const tasks = state.tasks.filter(t => t.status === status)
-                return (
-                  <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white/90 shadow-sm backdrop-blur-sm`}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countColor}`}>
-                        {tasks.length}
-                      </span>
+            {!taskBoardCollapsed && (
+              <div className="grid grid-cols-3 gap-4">
+                {kanbanColumns.map(({ status, label, accent, countColor }) => {
+                  const tasks = state.tasks.filter(t => t.status === status)
+                  return (
+                    <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white/90 shadow-sm backdrop-blur-sm`}>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</span>
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countColor}`}>
+                          {tasks.length}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2 px-3 pb-3">
+                        {hasRealTasks ? tasks.map(t => (
+                          <TaskCard
+                            key={t.id}
+                            task={{
+                              ...t,
+                              assignedTo: state.members.find(m => m.id === t.assignedTo)?.name ?? t.assignedTo,
+                            }}
+                            isHighlighted={state.highlightedTaskIds.includes(t.id)}
+                            onStatusChange={handleTaskStatusChange}
+                          />
+                        )) : (
+                          <div className="py-4 text-center text-xs text-slate-400">Sin tareas</div>
+                        )}
+                        {hasRealTasks && tasks.length === 0 && (
+                          <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2 px-3 pb-3">
-                      {tasks.map(t => (
-                        <TaskCard
-                          key={t.id}
-                          task={{
-                            ...t,
-                            assignedTo: state.members.find(m => m.id === t.assignedTo)?.name ?? t.assignedTo,
-                          }}
-                          isHighlighted={state.highlightedTaskIds.includes(t.id)}
-                          onStatusChange={handleTaskStatusChange}
-                        />
-                      ))}
-                      {tasks.length === 0 && (
-                        <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </motion.div>
 

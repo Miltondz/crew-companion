@@ -19,6 +19,7 @@ interface Props {
   minutesLeft?: number | null
   progress?: number
   techLevel?: 'low-tech' | 'high-tech'
+  tasks?: Array<{ id: string; title: string; description?: string; status: string }>
 }
 
 export function Habitat({
@@ -28,6 +29,7 @@ export function Habitat({
   minutesLeft = null,
   progress = 0,
   techLevel = 'low-tech',
+  tasks,
 }: Props) {
   const [state, send] = useMachine(companionMachine)
   const ctx = state.context
@@ -152,6 +154,7 @@ export function Habitat({
         open={ctx.panelOpen}
         onClose={() => send({ type: 'CLOSE_PANEL' })}
         techLevel={techLevel}
+        tasks={tasks}
         status={{
           pendingTasks,
           activeBlockers,

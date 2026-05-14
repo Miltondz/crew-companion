@@ -26,6 +26,8 @@ import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
 import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
+import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { useCrewAgent } from '@/lib/useCrewAgent'
@@ -39,6 +41,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   const router = useRouter()
   const { state, setState } = useCrewAgent()
 
+  const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [blockerText, setBlockerText] = useState('')
   const [showBlockerForm, setShowBlockerForm] = useState(false)
@@ -278,6 +281,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
             activeBlockers={myBlocker ? 1 : 0}
             minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
             progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+            tasks={state.tasks.filter(t => t.assignedTo === memberId)}
           />
         }
       >
@@ -343,6 +347,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
           {/* Active task + countdown row */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">

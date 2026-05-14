@@ -28,6 +28,7 @@ interface Props {
   status: QuickStatus
   techLevel?: 'low-tech' | 'high-tech'
   suggestedActions?: SuggestedAction[]
+  tasks?: Array<{ id: string; title: string; description?: string; status: string }>
 }
 
 const INTENT_OPTIONS = [
@@ -49,15 +50,17 @@ function formatTime(minutes: number | null): string {
 async function fetchFlow(
   intent: string,
   techLevel: string,
-  status: QuickStatus
+  status: QuickStatus,
+  extraContext?: string
 ): Promise<TechFlow> {
-  const context = [
+  const baseContext = [
     `fase: ${status.phase}`,
     `${status.pendingTasks} tareas pendientes`,
     status.activeBlockers > 0 ? `${status.activeBlockers} blockers activos` : 'sin blockers',
     status.minutesLeft !== null ? `${status.minutesLeft} minutos restantes` : '',
     `progreso: ${status.progress}%`,
   ].filter(Boolean).join(', ')
+  const context = extraContext ? `${baseContext}. ${extraContext}` : baseContext
 
   const res = await fetch('/api/coach/flow', {
     method: 'POST',
@@ -80,8 +83,9 @@ export function CompanionPanel({
   status,
   techLevel = 'low-tech',
   suggestedActions = [],
+  tasks,
 }: Props) {
-  const [view, setView] = useState<'main' | 'loading' | 'stepper' | 'error'>('main')
+  const [view, setView] = useState<'main' | 'loading' | 'stepper' | 'error' | 'task-picker'>('main')
   const [activeFlow, setActiveFlow] = useState<TechFlow | null>(null)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
@@ -95,10 +99,34 @@ export function CompanionPanel({
   }
 
   const handleIntent = useCallback(async (intentId: string, label: string) => {
+    if (intentId === 'understand_task' && tasks && tasks.length > 0) {
+      setView('task-picker')
+      return
+    }
     setLoadingLabel(label)
     setView('loading')
     try {
       const flow = await fetchFlow(intentId, techLevel, status)
+      setActiveFlow(flow)
+      setView('stepper')
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Error desconocido')
+      setView('error')
+    }
+  }, [techLevel, status, tasks])
+
+  const handleTaskPick = useCallback(async (task: { title: string; description?: string }) => {
+    setLoadingLabel(`Analizando: ${task.title}`)
+    setView('loading')
+    const taskContext = [
+      `Tarea: "${task.title}"`,
+      task.description ? `Descripción: ${task.description}` : '',
+      `Fase del equipo: ${status.phase}`,
+      `${status.pendingTasks} tareas pendientes en total`,
+      status.minutesLeft !== null ? `${status.minutesLeft} minutos restantes` : '',
+    ].filter(Boolean).join('. ')
+    try {
+      const flow = await fetchFlow('understand_task', techLevel, status, taskContext)
       setActiveFlow(flow)
       setView('stepper')
     } catch (e) {
@@ -138,7 +166,7 @@ export function CompanionPanel({
             {/* header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
               <div className="flex items-center gap-2">
-                {(view === 'stepper' || view === 'loading') && (
+                {(view === 'stepper' || view === 'loading' || view === 'task-picker') && (
                   <button
                     onClick={handleStepperDone}
                     className="text-zinc-500 hover:text-zinc-300 transition-colors text-[10px]"
@@ -149,7 +177,8 @@ export function CompanionPanel({
                 <span className="text-xs font-bold text-zinc-200">
                   {view === 'loading' ? 'Coach preparando flujo…' :
                    view === 'stepper' && activeFlow ? activeFlow.taskLabel :
-                   view === 'error' ? 'Error' : 'Companion'}
+                   view === 'error' ? 'Error' :
+                   view === 'task-picker' ? 'Elegí una tarea' : 'Companion'}
                 </span>
               </div>
               <button onClick={handleClose} className="text-zinc-500 hover:text-zinc-300 transition-colors">
@@ -192,6 +221,28 @@ export function CompanionPanel({
                   onComplete={handleStepperDone}
                   onClose={handleStepperDone}
                 />
+              )}
+
+              {/* task picker */}
+              {view === 'task-picker' && tasks && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">¿Qué tarea querés entender?</p>
+                  {tasks.filter(t => t.status !== 'done').map(task => (
+                    <button
+                      key={task.id}
+                      onClick={() => handleTaskPick(task)}
+                      className="flex flex-col rounded-lg bg-zinc-800 px-3 py-2 text-left hover:bg-zinc-700 transition-colors"
+                    >
+                      <span className="text-xs font-semibold text-zinc-200">{task.title}</span>
+                      {task.description && (
+                        <span className="mt-0.5 text-[10px] text-zinc-500 line-clamp-2">{task.description}</span>
+                      )}
+                    </button>
+                  ))}
+                  {tasks.filter(t => t.status !== 'done').length === 0 && (
+                    <p className="text-xs text-zinc-500">No hay tareas pendientes.</p>
+                  )}
+                </div>
               )}
 
               {/* main */}
