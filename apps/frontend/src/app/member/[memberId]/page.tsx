@@ -444,7 +444,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         </div>
       </WorkspaceShell>
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 md:right-[400px]">
         <Habitat
           phase={urgencyPhase}
           techLevel={currentMember?.technicalLevel ?? 'low-tech'}

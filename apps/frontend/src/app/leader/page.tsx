@@ -53,6 +53,7 @@ function LeaderCanvas() {
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [showAddTask, setShowAddTask] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
+  const [inviteCode, setInviteCode] = useState<string>('')
   const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
@@ -70,6 +71,13 @@ function LeaderCanvas() {
           return
         }
         setState(prev => ({ ...prev, actorRole: 'leader' }))
+      })
+      .catch(() => {})
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then((d: { projects?: Array<{ invite_code?: string }> }) => {
+        const code = d.projects?.[0]?.invite_code
+        if (code) setInviteCode(code)
       })
       .catch(() => {})
   }, [router])
@@ -377,6 +385,19 @@ function LeaderCanvas() {
                   {activeBlockers.length} blocker{activeBlockers.length > 1 ? 's' : ''}
                 </span>
               )}
+              {inviteCode && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteCode}`)
+                      .then(() => toast.success('Link de invitación copiado'))
+                      .catch(() => toast.info(`Código: ${inviteCode}`))
+                  }}
+                  className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
+                  title={`Copiar link de invitación`}
+                >
+                  🔗 Invitar
+                </button>
+              )}
               <DarkModeToggle />
               <button
                 onClick={() => {
@@ -594,7 +615,7 @@ function LeaderCanvas() {
         </div>
       </WorkspaceShell>
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 md:right-[400px]">
         <Habitat
           phase={urgencyPhase}
           techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
