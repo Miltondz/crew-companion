@@ -31,7 +31,7 @@ export default function TriageWarRoom({ payload }: SurfaceProps<TriageWarRoomPay
   }
 
   return (
-    <Card className="w-full max-w-lg shadow-lg">
+    <Card className="w-full shadow-lg">
       <CardHeader className="py-3 px-4 border-b bg-slate-50">
         <div className="flex items-center gap-2 flex-wrap">
           <CardTitle className="text-sm font-bold">Triage War Room</CardTitle>
