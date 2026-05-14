@@ -33,19 +33,24 @@ export function CopilotKitProviderShell({
         headers={headers}
         onError={(event) => {
           const msg = (event as { error?: { message?: string } })?.error?.message ?? String(event);
-          const isColdStart =
+          // "Cannot read properties of undefined (reading 'name')" is CopilotKit
+          // crashing in onRunErrorEvent when it receives a non-SSE error response
+          // (our 503 AGENT_COLD_START or a raw 502 from LangGraph). Any stream
+          // error that reaches this handler means the agent or BFF is down.
+          const isAgentDown =
             msg.includes("AGENT_COLD_START") ||
-            msg.includes("warming up") ||
             msg.includes("INCOMPLETE_STREAM") ||
+            msg.includes("Cannot read properties") ||
+            msg.includes("Failed to retrieve assistant") ||
             msg.includes("502") ||
             msg.includes("503");
           toast.error(
-            isColdStart ? "Agent warming up" : "Chat error",
+            isAgentDown ? "Agent temporarily unavailable" : "Chat error",
             {
-              description: isColdStart
-                ? "Free tier cold start — wait 30 seconds and retry your message."
+              description: isAgentDown
+                ? "The agent is warming up (free tier cold start). Wait 30 seconds and retry."
                 : msg.slice(0, 120),
-              duration: 10_000,
+              duration: 12_000,
             },
           );
         }}
