@@ -16,9 +16,11 @@ interface Props {
   phase: UrgencyPhase
   agentRail: ReactNode
   children: ReactNode
+  habitat?: ReactNode
+  onNewChat?: () => void
 }
 
-export function WorkspaceShell({ phase, agentRail, children }: Props) {
+export function WorkspaceShell({ phase, agentRail, children, habitat, onNewChat }: Props) {
   const layout = useLayoutEngine()
   usePhaseSync(phase)
 
@@ -39,7 +41,7 @@ export function WorkspaceShell({ phase, agentRail, children }: Props) {
           </div>
           <ContextRailRegion mounts={layout['context-rail'].mounts} />
         </div>
-        <AgentRailRegion>{agentRail}</AgentRailRegion>
+        <AgentRailRegion habitat={habitat} onNewChat={onNewChat}>{agentRail}</AgentRailRegion>
       </div>
       <ActivityStreamRegion mounts={layout['activity-stream'].mounts} />
       <AmbientOverlayRegion mounts={layout['ambient-overlay'].mounts} />

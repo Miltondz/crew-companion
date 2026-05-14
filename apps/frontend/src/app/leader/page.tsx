@@ -335,7 +335,20 @@ function LeaderCanvas() {
 
   return (
     <>
-      <WorkspaceShell phase={urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+      <WorkspaceShell
+        phase={urgencyPhase}
+        agentRail={<CopilotChat className="h-full" />}
+        habitat={
+          <Habitat
+            phase={urgencyPhase}
+            techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
+            pendingTasks={activeMilestone ? state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
+            activeBlockers={activeBlockers.length}
+            minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+            progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+          />
+        }
+      >
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <UsageBanner />
           <UrgencyBanner phase={urgencyPhase} />
@@ -614,17 +627,6 @@ function LeaderCanvas() {
         )}
         </div>
       </WorkspaceShell>
-
-      <div className="fixed bottom-6 right-6 z-50 md:right-[400px]">
-        <Habitat
-          phase={urgencyPhase}
-          techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
-          pendingTasks={activeMilestone ? state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
-          activeBlockers={activeBlockers.length}
-          minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-          progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
-        />
-      </div>
 
       <MobileChatDrawer accentClass="from-indigo-600 to-violet-600" label="AI Leader Assistant" />
       <CommandPalette state={state} />

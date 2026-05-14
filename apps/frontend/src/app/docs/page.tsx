@@ -122,7 +122,11 @@ function DocsCanvas() {
 
   return (
     <>
-      <WorkspaceShell phase={state.urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+      <WorkspaceShell
+        phase={state.urgencyPhase}
+        agentRail={<CopilotChat className="h-full" />}
+        habitat={<MascotSVG mood={state.mascotMood} mode={state.mascotMode} />}
+      >
         <div className="flex flex-1 overflow-hidden bg-slate-100">
 
           {/* Doc list sidebar — keep as-is */}
@@ -242,10 +246,6 @@ function DocsCanvas() {
 
         </div>
       </WorkspaceShell>
-
-      <div className="fixed bottom-6 right-6 z-50">
-        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
-      </div>
 
       <MobileChatDrawer accentClass="from-violet-600 to-purple-600" label="AI Doc Assistant" />
     </>

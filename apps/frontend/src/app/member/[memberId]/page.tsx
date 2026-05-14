@@ -267,7 +267,20 @@ function MemberCanvas({ memberId }: { memberId: string }) {
 
   return (
     <>
-      <WorkspaceShell phase={urgencyPhase} agentRail={<CopilotChat className="h-full" />}>
+      <WorkspaceShell
+        phase={urgencyPhase}
+        agentRail={<CopilotChat className="h-full" />}
+        habitat={
+          <Habitat
+            phase={urgencyPhase}
+            techLevel={currentMember?.technicalLevel ?? 'low-tech'}
+            pendingTasks={myTasks.filter(t => t.status !== 'done').length}
+            activeBlockers={myBlocker ? 1 : 0}
+            minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+            progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+          />
+        }
+      >
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <UrgencyBanner phase={urgencyPhase} milestoneTitle={activeMilestone?.title} />
 
@@ -443,17 +456,6 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         </motion.div>
         </div>
       </WorkspaceShell>
-
-      <div className="fixed bottom-6 right-6 z-50 md:right-[400px]">
-        <Habitat
-          phase={urgencyPhase}
-          techLevel={currentMember?.technicalLevel ?? 'low-tech'}
-          pendingTasks={myTasks.filter(t => t.status !== 'done').length}
-          activeBlockers={myBlocker ? 1 : 0}
-          minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-          progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
-        />
-      </div>
 
       <MobileChatDrawer accentClass="from-emerald-600 to-teal-600" label="Asistente Personal" />
     </>
