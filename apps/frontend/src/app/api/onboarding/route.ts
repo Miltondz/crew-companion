@@ -102,9 +102,8 @@ export async function POST(req: Request) {
       [session.user.id, workspaceId]
     )
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[onboarding] DB error:', msg)
-    return NextResponse.json({ error: 'Error al guardar, intenta de nuevo', _db: msg }, { status: 500 })
+    console.error('[onboarding] DB error:', err instanceof Error ? err.message : String(err))
+    return NextResponse.json({ error: 'Error al guardar, intentá de nuevo' }, { status: 500 })
   }
 
   const cookieStore = await cookies()
