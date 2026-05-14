@@ -64,6 +64,7 @@ function LeaderCanvas() {
   const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
   const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
+  const effectiveTasks = state.tasks.filter(t => !SEED_TASK_IDS.has(t.id))
   const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
@@ -257,6 +258,7 @@ function LeaderCanvas() {
   })
 
   const activeMilestone = state.milestones.find(m => m.id === state.activeMilestoneId)
+  const effectiveMilestone = (activeMilestone?.id === 'ms1' && !hasRealTasks) ? null : activeMilestone
   const activeBlockers = state.blockers.filter(b => !b.resolved)
 
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
@@ -352,11 +354,11 @@ function LeaderCanvas() {
           <Habitat
             phase={urgencyPhase}
             techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
-            pendingTasks={activeMilestone ? state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
+            pendingTasks={effectiveMilestone ? effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
             activeBlockers={activeBlockers.length}
-            minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-            progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((state.tasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
-            tasks={state.tasks}
+            minutesLeft={effectiveMilestone ? Math.max(0, Math.floor((new Date(effectiveMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+            progress={effectiveMilestone && effectiveMilestone.taskIds.length > 0 ? Math.round((effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length / effectiveMilestone.taskIds.length) * 100) : 0}
+            tasks={effectiveTasks}
           />
         }
       >
@@ -371,8 +373,8 @@ function LeaderCanvas() {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 text-xl shadow-inner">⚡</div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-white">Leader Dashboard</h1>
-                {activeMilestone && (
-                  <p className="text-xs text-indigo-200">{activeMilestone.title}</p>
+                {effectiveMilestone && (
+                  <p className="text-xs text-indigo-200">{effectiveMilestone.title}</p>
                 )}
               </div>
             </div>
@@ -466,10 +468,10 @@ function LeaderCanvas() {
             {!milestoneSectionCollapsed && (
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
-                  {activeMilestone ? (
+                  {effectiveMilestone ? (
                     <MilestonePanel
-                      milestone={activeMilestone}
-                      tasks={state.tasks}
+                      milestone={effectiveMilestone}
+                      tasks={effectiveTasks}
                       urgencyPhase={urgencyPhase}
                     />
                   ) : (
@@ -481,7 +483,7 @@ function LeaderCanvas() {
                 <div className="flex flex-col gap-3">
                   <TeamOverview
                     members={hasRealMembers ? state.members : []}
-                    tasks={state.tasks}
+                    tasks={effectiveTasks}
                     blockers={state.blockers}
                   />
                   {/* Blockers — resolve button */}
@@ -602,7 +604,7 @@ function LeaderCanvas() {
             {!taskBoardCollapsed && (
               <div className="grid grid-cols-3 gap-4">
                 {kanbanColumns.map(({ status, label, accent, countColor }) => {
-                  const tasks = state.tasks.filter(t => t.status === status)
+                  const tasks = effectiveTasks.filter(t => t.status === status)
                   return (
                     <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white/90 shadow-sm backdrop-blur-sm`}>
                       <div className="flex items-center justify-between px-4 py-3">
