@@ -605,7 +605,7 @@ The project follows a three-phase execution plan. **Phase A (Kernel)** built the
 - [x] Test coverage: Vitest 7 tests + pytest 31 tests — all green
 - [x] `sync:capabilities` upgraded to full code generator (Python → TS atomic write)
 - [x] Full CRUD on all entities (delete/update for milestone, blocker, member)
-- [ ] BFF_URL env var confirmed in Vercel production
+- [x] BFF_URL env var confirmed in Vercel production
 - [ ] Cold-start smoke test (Render sleep ≤ 45s wake)
 - [ ] 0 Sentry errors over 24h baseline
 - [ ] Lighthouse ≥ 90 all metrics (config at `.lighthouserc.js`)
