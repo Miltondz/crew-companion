@@ -6,18 +6,43 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+---
+
+## [0.11.0] — 2026-05-14 — Observability, tests, full CRUD, capability enforcement
+
 ### Added
+
+- **Sentry error monitoring** — `@sentry/nextjs` v8 integrated; `sentry.client/server/edge.config.ts` created; `global-error.tsx` calls `Sentry.captureException`; `withSentryConfig` wraps `next.config.ts`; `NEXT_PUBLIC_SENTRY_DSN` env var wired
+- **Vitest test suite** — `vitest.config.ts` with `@/` path alias + PostCSS override; `npm run test` script; 7 layout-engine tests (mount, dedup, eviction, pinning, role-block, unmount, force-unmount) — all passing
+- **pytest test suite** — `apps/agent/tests/test_tools.py` with 31 unit tests covering all 16 tools (create/update/delete for tasks, milestones, blockers, members, plus `get_documents` and `reset_workspace`); `uv run pytest -v` passes 31/31
+- **Full CRUD for all entities** — 5 new `@guarded_tool` functions added to `tools.py`:
+  - `delete_milestone` — removes milestone, clears `activeMilestoneId` if it was the active one
+  - `update_blocker` — patches blocker description
+  - `delete_blocker` — removes blocker, clears `activeBlockerId` on any member referencing it
+  - `update_member` — patches name/role/technicalLevel
+  - `delete_member` — removes member and all their blockers atomically
+- **Lighthouse CI config** — `.lighthouserc.js` at repo root; `npm run lhci` script; asserts ≥0.85 performance, ≥0.9 accessibility/best-practices/SEO on 3 production URLs
+- **Error boundaries for all protected routes** — `dashboard/error.tsx`, `onboarding/error.tsx` created; `leader/error.tsx` and `member/[memberId]/error.tsx` updated to dark theme matching workspace palette; all in Spanish
 - **i18n (English + Spanish)** — Custom locale context with cookie persistence; language switcher in navigation; dynamic `lang` attribute on `<html>`; all key UI strings translated
 - **`/api/health` endpoint** — Unauthenticated `GET` returns `{ ok: true, ts }` for Render keepalive and smoke tests
 - **OG / Twitter metadata** — `og:title`, `og:description`, `og:image`, `twitter:card` added to root `layout.tsx`
 - **Chat daily cap enforcement** — `/api/copilotkit` proxy now checks `chat_usage` before forwarding; returns HTTP 429 with `{ error, remaining: 0 }` when workspace exceeds 200 turns/day
 
 ### Changed
+
+- **`sync:capabilities` upgraded to code generator** — `scripts/sync-capabilities.ts` now parses Python `Capability` enum + `role_grants.json` and writes `capabilities.ts` + `roleGrants.ts` atomically (tmp → rename); was previously a validator stub
+- **Layout Engine `mount()` enforces real capability check** — `LayoutEngine.mount()` now calls `surfaceRegistry.resolve()` with `roleGrantsFor(context.role)` instead of `surfaceRegistry.get()` (which bypassed all capability/role/phase checks for non-pinned surfaces); all 5 callers updated to pass `RuntimeContext`
+- **SurfaceHost fixed self-grant bug** — `SurfaceHost` was passing `envelope.requiredCapabilities` as the granted capabilities; fixed to pass `roleGrantsFor(context.role)` — any surface always passed its own check before this fix
+- **`registry.ts` comment updated** — Stale note about layout-engine bypassing `resolve()` replaced with accurate description of current behavior
+- **Cross-platform `postinstall` script** — Replaced bash one-liner (`command -v uv && uv sync`) with `scripts/postinstall.js` (Node.js `spawnSync`); works on Windows, macOS, and Linux without shell differences
 - **Demo banner gated to development** — Banner now renders only when `NODE_ENV === 'development'`; removed from production build
 - **Shared `useCrewAgent` hook** — Extracted `mergeCrewState` + `useCrewAgent` from `leader/page.tsx`, `member/[memberId]/page.tsx`, and `docs/page.tsx` into `@/lib/useCrewAgent.ts`
 - **Shared Zod envelope schemas** — `LegacyEnvelopeSchema` + `FullEnvelopeSchema` extracted from page files into `@/runtime/surface-registry/envelope-schema.ts`
+- **Agent tool lists updated** — `PLANNER_TOOLS` now includes all 5 new tools; `ORCHESTRATOR_TOOLS` includes `delete_milestone`, `update_blocker`, `delete_blocker`, `update_member`, `delete_member`; `agents/tools.py` fully synced
+- **Agent prompts updated** — PLANNER_PROMPT and COACH_PROMPT routing tables updated with `tech_stack_panel`; PLANNER_PROMPT tool table updated with new CRUD tools
 
 ### Fixed
+
 - Deleted orphan `apps/frontend/src/components/surfaces/TaskSuggestionPanel.tsx` root file (canonical component lives in `TaskSuggestionPanel/TaskSuggestionPanel.tsx`)
 
 ---

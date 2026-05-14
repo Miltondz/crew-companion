@@ -493,6 +493,14 @@ All production services run on free tier: Vercel (frontend), Render (BFF + agent
   │  PostgreSQL (Neon) · Redis (Upstash)                │
   │  i18n: English + Spanish, cookie-persisted          │
   ├──────────────────────────────────────────────────────┤
+  │  OBSERVABILITY                                       │
+  │  Sentry (@sentry/nextjs v8) — error capture          │
+  │  Lighthouse CI — performance budgets (≥90)          │
+  ├──────────────────────────────────────────────────────┤
+  │  TESTING                                             │
+  │  Vitest (frontend unit tests, @/ alias)             │
+  │  pytest (Python tool unit tests, uv --group dev)    │
+  ├──────────────────────────────────────────────────────┤
   │  DEPLOY                                              │
   │  Vercel (frontend) · Render (BFF + agent)           │
   │  Neon (DB) · Upstash (Redis) — all free tier        │
@@ -582,9 +590,9 @@ The project follows a three-phase execution plan. **Phase A (Kernel)** built the
   │✅ Capab. │  │✅ 24 surfaces │  │   Habitat        │  │✅ i18n     │
   │  Engine  │  │✅ Dashboard   │  │✅ Specialization │  │✅ Token    │
   │✅ Persist│  │✅ Onboarding  │  │   4-axis model   │  │   caps     │
-  │  (Pgres) │  │✅ Invite flow │  │✅ initial-       │  │🔄 Smoke    │
-  │✅ Envel. │  │✅ Observer    │  │   surfaces loader│  │   test     │
-  │  Protocol│  │   share link  │  │✅ Security fixes │  │            │
+  │  (Pgres) │  │✅ Invite flow │  │✅ initial-       │  │✅ Sentry   │
+  │✅ Envel. │  │✅ Observer    │  │   surfaces loader│  │✅ Tests    │
+  │  Protocol│  │   share link  │  │✅ Security fixes │  │🔄 Smoke    │
   └──────────┘  └───────────────┘  └──────────────────┘  └────────────┘
      COMPLETE         COMPLETE              COMPLETE        IN PROGRESS
 ```
@@ -592,10 +600,15 @@ The project follows a three-phase execution plan. **Phase A (Kernel)** built the
 ### Phase Gate Checklist
 
 **Phase C — Ship Readiness:**
+- [x] Sentry wired (`@sentry/nextjs` v8, DSN set, `global-error.tsx` captures)
+- [x] Error boundaries on all protected routes (dark theme, Spanish)
+- [x] Test coverage: Vitest 7 tests + pytest 31 tests — all green
+- [x] `sync:capabilities` upgraded to full code generator (Python → TS atomic write)
+- [x] Full CRUD on all entities (delete/update for milestone, blocker, member)
 - [ ] BFF_URL env var confirmed in Vercel production
 - [ ] Cold-start smoke test (Render sleep ≤ 45s wake)
 - [ ] 0 Sentry errors over 24h baseline
-- [ ] Lighthouse ≥ 90 all metrics
+- [ ] Lighthouse ≥ 90 all metrics (config at `.lighthouserc.js`)
 - [ ] 5 test workspaces survive 7 days
 - [ ] $0 actual cost confirmed
 
@@ -649,6 +662,19 @@ npm run dev:bff     # BFF only       ── :4000
 npm run dev:agent   # Python agent   ── :8123
 npm run dev:infra   # Docker only
 npm run kill-ports  # Free all ports before restart
+```
+
+### Run Tests
+
+```bash
+# TypeScript (Vitest) — 7 layout-engine tests
+cd apps/frontend && npm run test
+
+# Python (pytest) — 31 tool unit tests
+cd apps/agent && uv run pytest -v
+
+# Sync capabilities from Python → TypeScript (run after editing capabilities.py or role_grants.json)
+npm run sync:capabilities
 ```
 
 ### Service Ports
