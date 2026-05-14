@@ -2,8 +2,21 @@ import type { CrewState } from './types'
 
 type SeedState = Omit<CrewState, 'urgencyPhase' | 'mascotMood' | 'mascotMode' | 'highlightedTaskIds'>
 
+const DEADLINE_KEY = 'crew_demo_deadline'
+
+function getSeedDeadline(): string {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(DEADLINE_KEY)
+    if (stored && new Date(stored).getTime() > Date.now()) return stored
+    const fresh = new Date(Date.now() + 45 * 60 * 1000).toISOString()
+    localStorage.setItem(DEADLINE_KEY, fresh)
+    return fresh
+  }
+  return new Date(Date.now() + 45 * 60 * 1000).toISOString()
+}
+
 export function makeSeedState(): SeedState {
-  const deadline = new Date(Date.now() + 45 * 60 * 1000).toISOString()
+  const deadline = getSeedDeadline()
   return {
     members: [
       { id: 'm1', name: 'Alex', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' },
