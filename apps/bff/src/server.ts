@@ -32,6 +32,23 @@ const agent        = makeAgent("default");
 const plannerAgent = makeAgent("planner");
 const coachAgent   = makeAgent("coach");
 
+// In-memory agent health cache — avoids a ping on every warm request
+let agentLastOk = 0
+const AGENT_HEALTH_TTL_MS = 5 * 60 * 1000
+
+async function ensureAgentAlive(lgUrl: string): Promise<{ ok: boolean }> {
+  if (Date.now() - agentLastOk < AGENT_HEALTH_TTL_MS) return { ok: true }
+  try {
+    const r = await fetch(`${lgUrl}/info`, { signal: AbortSignal.timeout(3000) })
+    if (r.ok) { agentLastOk = Date.now(); return { ok: true } }
+    console.warn(`[agent-health] ${lgUrl}/info → HTTP ${r.status}`)
+    return { ok: false }
+  } catch (e) {
+    console.warn(`[agent-health] ${lgUrl}/info unreachable: ${(e as Error).message}`)
+    return { ok: false }
+  }
+}
+
 const copilotHandler = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
@@ -206,8 +223,21 @@ app.post("/api/approvals/:envelopeId/reject", async (c) => {
   return c.json({ ok: true, envelopeId, decision: "rejected" });
 });
 
-// CopilotKit — delegate to the low-level fetch handler (bypasses basePath scope issue)
-app.all("/api/copilotkit/*", (c) => copilotHandler(c.req.raw));
+// CopilotKit — preflight checks agent is alive, then delegates
+app.all("/api/copilotkit/*", async (c) => {
+  const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123";
+  const health = await ensureAgentAlive(lgUrl);
+  if (!health.ok) {
+    return c.json(
+      {
+        error: "Agent is warming up (free tier cold start). Wait 30 seconds and retry.",
+        code: "AGENT_COLD_START",
+      },
+      503,
+    );
+  }
+  return copilotHandler(c.req.raw);
+});
 
 const port = Number(process.env.PORT) || 4000;
 
