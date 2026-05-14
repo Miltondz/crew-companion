@@ -88,18 +88,23 @@ export async function POST(req: Request) {
     observerConfig: { showTasks: true, showTeamNames: true, showBlockerCount: true, customMessage: '' },
   }
 
-  await getPool().query(
-    `INSERT INTO workspace_state (workspace_id, state_json, thread_id, observer_token, invite_code, created_at)
-     VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
-     ON CONFLICT (workspace_id) DO UPDATE
-       SET state_json = $2::jsonb, observer_token = $4, invite_code = $5`,
-    [workspaceId, JSON.stringify(state), `thread-${workspaceId}`, observerToken, inviteCode]
-  )
+  try {
+    await getPool().query(
+      `INSERT INTO workspace_state (workspace_id, state_json, thread_id, observer_token, invite_code, created_at)
+       VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
+       ON CONFLICT (workspace_id) DO UPDATE
+         SET state_json = $2::jsonb, observer_token = $4, invite_code = $5`,
+      [workspaceId, JSON.stringify(state), `thread-${workspaceId}`, observerToken, inviteCode]
+    )
 
-  await getPool().query(
-    `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, 'leader') ON CONFLICT DO NOTHING`,
-    [session.user.id, workspaceId]
-  )
+    await getPool().query(
+      `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, 'leader') ON CONFLICT DO NOTHING`,
+      [session.user.id, workspaceId]
+    )
+  } catch (err) {
+    console.error('[onboarding] DB error:', err)
+    return NextResponse.json({ error: 'Error al guardar, intenta de nuevo' }, { status: 500 })
+  }
 
   const cookieStore = await cookies()
   const cookieOpts = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 30, secure: IS_PROD }
