@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from deepagents import AgentMiddleware
+from ._middleware_base import AgentMiddleware
 from langgraph.graph.message import add_messages
 from langgraph.runtime import Runtime
 from typing_extensions import Annotated, TypedDict

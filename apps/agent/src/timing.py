@@ -31,7 +31,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from deepagents import (
+from ._middleware_base import (
     AgentMiddleware,
     ModelRequest,
     ModelResponse,
