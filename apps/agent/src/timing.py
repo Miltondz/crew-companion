@@ -31,13 +31,14 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from deepagents import SubAgentMiddleware as AgentMiddleware
+from deepagents import (
+    AgentMiddleware,
+    ModelRequest,
+    ModelResponse,
+    ToolCallRequest,
+)
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
-
-ModelRequest = Any
-ModelResponse = Any
-ToolCallRequest = Any
 
 
 # Per-thread turn counter, scoped to the agent process. Resets when the
