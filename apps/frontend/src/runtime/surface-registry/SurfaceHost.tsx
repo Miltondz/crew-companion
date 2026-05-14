@@ -10,6 +10,7 @@ import type {
   ValidationResult,
 } from './types'
 import { RuntimeFlowChannel } from '@/runtime/flow-channel/RuntimeFlowChannel'
+import { roleGrantsFor } from '@/runtime/capability/roleGrants'
 
 interface SurfaceHostProps {
   envelope: SurfaceEnvelope
@@ -18,7 +19,7 @@ interface SurfaceHostProps {
 
 /**
  * Decision tree:
- *  1. registry.mount(envelope, context, envelope.requiredCapabilities)
+ *  1. registry.mount(envelope, context, roleGrantsFor(context.role))
  *  2. resolve_failed    → <UnsupportedSurfaceCard>
  *  3. validation_failed → <InvalidEnvelopeCard>  (load() never called)
  *  4. ready → <Suspense><SurfaceLazyMount use(promise) /></Suspense>
@@ -28,12 +29,11 @@ interface SurfaceHostProps {
  * per-region boundaries.
  */
 export function SurfaceHost({ envelope, context }: SurfaceHostProps) {
-  // TODO(3.3): replace envelope.requiredCapabilities with real session grants from CapabilityEngine.
   // useMemo must be called unconditionally before any early return (hooks rules).
   const result = useMemo(
     () =>
       envelope.intent === 'render_surface'
-        ? surfaceRegistry.mount(envelope, context, envelope.requiredCapabilities)
+        ? surfaceRegistry.mount(envelope, context, roleGrantsFor(context.role))
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [envelope.envelopeId, envelope.surfaceId, envelope.intent, context.role, context.phase],

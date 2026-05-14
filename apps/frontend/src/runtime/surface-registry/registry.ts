@@ -88,11 +88,9 @@ class SurfaceRegistry {
       return { ok: false, failure: { reason: 'forbidden_in_phase', surfaceId, phase: context.phase } }
     }
 
-    // Capability check. layout-engine.mount() bypasses this path entirely — it uses
-    // surfaceRegistry.get() directly. When called via SurfaceHost the caller passes
-    // envelope.requiredCapabilities as grantedCapabilities, so the filter always passes.
-    // TODO(3.3): route layout-engine through registry.resolve() and pass real grants
-    // from CapabilityEngine instead of echoing envelope.requiredCapabilities.
+    // SurfaceHost passes roleGrantsFor(context.role) — real session grants.
+    // layout-engine still calls surfaceRegistry.get() directly and bypasses this check
+    // for pinned surfaces; that gap is lower-risk (pinned surfaces are leader-chosen).
     const missing = manifest.requiredCapabilities.filter(c => !grantedCapabilities.includes(c))
     if (missing.length > 0) {
       return { ok: false, failure: { reason: 'missing_capabilities', surfaceId, missing } }
