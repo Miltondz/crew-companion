@@ -22,7 +22,15 @@ from .tools import ORCHESTRATOR_TOOLS, PLANNER_TOOLS, COACH_TOOLS
 
 def _runtime() -> str:
     rt = os.getenv("AGENT_RUNTIME", "gemini-flash-deep")
-    return rt if rt in _VALID_RUNTIMES else "gemini-flash-deep"
+    if rt not in _VALID_RUNTIMES:
+        rt = "gemini-flash-deep"
+    # Fall back to noop when no API key is available — prevents an auth crash
+    # on the first chat turn that causes CopilotKit to emit agent_run_error_event.
+    if rt.startswith("gemini") and not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
+        return "noop"
+    if rt.startswith("claude") and not os.getenv("ANTHROPIC_API_KEY"):
+        return "noop"
+    return rt
 
 
 def build_orchestrator_graph() -> CompiledStateGraph:
