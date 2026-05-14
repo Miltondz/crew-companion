@@ -29,7 +29,7 @@ import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
-import { DarkModeToggle } from '@/components/shared/DarkModeToggle'
+import { UserMenu } from '@/components/shared/UserMenu'
 import { ActivityStream } from '@/components/shared/ActivityStream'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
@@ -427,7 +427,6 @@ function LeaderCanvas() {
                   🔗 Invitar
                 </button>
               )}
-              <DarkModeToggle />
               <button
                 onClick={() => {
                   const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
@@ -438,6 +437,7 @@ function LeaderCanvas() {
               >
                 ⌘K
               </button>
+              <UserMenu />
             </div>
           </div>
         </header>

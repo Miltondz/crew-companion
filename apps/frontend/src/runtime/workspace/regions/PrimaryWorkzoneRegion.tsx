@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Maximize2, Minimize2, Minus, Plus } from 'lucide-react'
+import { Maximize2, Minimize2, Minus, ChevronDown, Pin, X } from 'lucide-react'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { layoutEngine } from '../layout-engine'
 import { usePinning } from '../usePinning'
@@ -43,54 +43,56 @@ function MountFrame({
   const [minimized, setMinimized] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
+  const displayName = mount.envelope.surfaceId.replace(/_/g, ' ')
+
   return (
     <div
       className={[
-        'relative rounded-xl bg-white shadow-sm ring-1 ring-slate-200',
+        'rounded-xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden',
         expanded ? 'md:col-span-2' : '',
         mount.hibernated ? 'opacity-50' : '',
       ].filter(Boolean).join(' ')}
     >
-      <div className="absolute right-2 top-2 z-10 flex gap-1">
-        <button
-          onClick={() => setMinimized(m => !m)}
-          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-          aria-label={minimized ? 'expand' : 'minimize'}
-          title={minimized ? 'Expandir' : 'Minimizar'}
-        >
-          {minimized ? <Plus size={12} /> : <Minus size={12} />}
-        </button>
-        <button
-          onClick={() => setExpanded(e => !e)}
-          className="rounded bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-          aria-label={expanded ? 'compact' : 'full width'}
-          title={expanded ? 'Compacto' : 'Ancho completo'}
-        >
-          {expanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-        </button>
-        <button
-          onClick={mount.pinned ? onUnpin : onPin}
-          className="rounded bg-slate-100 px-1.5 py-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700 text-[10px]"
-          aria-label={mount.pinned ? 'unpin' : 'pin'}
-          title={mount.pinned ? 'Desfijar' : 'Fijar'}
-        >
-          {mount.pinned ? '📌' : '📍'}
-        </button>
-        {!mount.pinned && (
+      {/* Visible header bar with controls */}
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 truncate">
+          {displayName}
+        </span>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
-            onClick={onClose}
-            className="rounded bg-slate-100 px-1.5 py-1 text-slate-500 hover:bg-red-100 hover:text-red-600 text-[10px]"
-            aria-label="close"
-            title="Cerrar"
+            onClick={() => setMinimized(m => !m)}
+            className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            title={minimized ? 'Expandir' : 'Minimizar'}
           >
-            ✕
+            {minimized ? <ChevronDown size={11} /> : <Minus size={11} />}
           </button>
-        )}
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            title={expanded ? 'Compacto' : 'Ancho completo'}
+          >
+            {expanded ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+          </button>
+          <button
+            onClick={mount.pinned ? onUnpin : onPin}
+            className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            title={mount.pinned ? 'Desfijar' : 'Fijar'}
+          >
+            <Pin size={11} className={mount.pinned ? 'fill-current text-indigo-500' : ''} />
+          </button>
+          {!mount.pinned && (
+            <button
+              onClick={onClose}
+              className="rounded p-1 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+              title="Cerrar"
+            >
+              <X size={11} />
+            </button>
+          )}
+        </div>
       </div>
       {!minimized && (
-        <div className="p-1">
-          <SurfaceHost envelope={mount.envelope} context={mount.envelope.context} />
-        </div>
+        <SurfaceHost envelope={mount.envelope} context={mount.envelope.context} />
       )}
     </div>
   )

@@ -15,6 +15,7 @@ import {
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
+import { UserMenu } from '@/components/shared/UserMenu'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TaskCard } from '@/components/shared/TaskCard'
 import { ActiveTaskView } from '@/components/member/ActiveTaskView'
@@ -337,6 +338,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                 Blocker activo
               </span>
             )}
+            <UserMenu />
           </div>
         </header>
 
