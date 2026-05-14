@@ -32,7 +32,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from deepagents import (
-    AgentMiddleware,
+    SubAgentMiddleware as AgentMiddleware,
     ModelRequest,
     ModelResponse,
     ToolCallRequest,
