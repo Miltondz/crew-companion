@@ -68,12 +68,31 @@ class SurfaceRegistry {
       return { ok: false, failure: { reason: 'tech_level_mismatch', surfaceId } }
     }
 
+    if (
+      manifest.visibleToSpecializations &&
+      manifest.visibleToSpecializations.length > 0 &&
+      (!context.specialization || !manifest.visibleToSpecializations.includes(context.specialization))
+    ) {
+      return {
+        ok: false,
+        failure: {
+          reason: 'specialization_mismatch',
+          surfaceId,
+          required: manifest.visibleToSpecializations,
+          got: context.specialization,
+        },
+      }
+    }
+
     if (manifest.forbiddenInPhases && manifest.forbiddenInPhases.includes(context.phase)) {
       return { ok: false, failure: { reason: 'forbidden_in_phase', surfaceId, phase: context.phase } }
     }
 
-    // Capability check — in 3.1 grantedCapabilities == requiredCapabilities so this never fails.
-    // TODO(3.3): replace grantedCapabilities with real session grants from CapabilityEngine.
+    // Capability check. layout-engine.mount() bypasses this path entirely — it uses
+    // surfaceRegistry.get() directly. When called via SurfaceHost the caller passes
+    // envelope.requiredCapabilities as grantedCapabilities, so the filter always passes.
+    // TODO(3.3): route layout-engine through registry.resolve() and pass real grants
+    // from CapabilityEngine instead of echoing envelope.requiredCapabilities.
     const missing = manifest.requiredCapabilities.filter(c => !grantedCapabilities.includes(c))
     if (missing.length > 0) {
       return { ok: false, failure: { reason: 'missing_capabilities', surfaceId, missing } }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Eye, Users, AlertTriangle, CheckSquare, RefreshCw, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,7 +42,7 @@ interface State {
   activeMilestoneId?: string
   tasks?: { id?: string; status?: string; title?: string; priority?: string }[]
   members?: { id?: string; name?: string; role?: string }[]
-  blockers?: { id?: string; resolved?: boolean; text?: string }[]
+  blockers?: { id?: string; resolved?: boolean; description?: string }[]
   urgencyPhase?: string
   projectConfig?: { type?: string; isDevProject?: boolean }
   observerConfig?: { showTasks?: boolean; showTeamNames?: boolean; showBlockerCount?: boolean; customMessage?: string }
@@ -204,7 +204,7 @@ export default function SharePage() {
                   <span className={cn('flex-1', t.status === 'done' ? 'text-zinc-500 line-through' : 'text-zinc-200')}>
                     {t.title ?? t.id}
                   </span>
-                  {t.priority === 'critical' && <span className="text-[10px] text-red-400 font-semibold">CRÍTICO</span>}
+                  {t.priority === 'high' && <span className="text-[10px] text-red-400 font-semibold">ALTA</span>}
                 </div>
               ))}
             </div>

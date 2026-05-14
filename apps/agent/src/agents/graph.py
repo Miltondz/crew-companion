@@ -20,10 +20,6 @@ from .prompts import ORCHESTRATOR_PROMPT, PLANNER_PROMPT, COACH_PROMPT
 from .tools import ORCHESTRATOR_TOOLS, PLANNER_TOOLS, COACH_TOOLS
 
 
-def _middleware() -> list:
-    return [TimingMiddleware(), CrewStateMiddleware(), CopilotKitMiddleware(expose_state=True)]
-
-
 def _runtime() -> str:
     rt = os.getenv("AGENT_RUNTIME", "gemini-flash-deep")
     return rt if rt in _VALID_RUNTIMES else "gemini-flash-deep"

@@ -6,7 +6,7 @@ export function adaptLegacyEnvelope(
   context: RuntimeContext,
 ): SurfaceEnvelope {
   return {
-    envelopeId: crypto.randomUUID(),
+    envelopeId: `legacy-${legacy.type}`,
     agentId: 'legacy',
     emittedAt: Date.now(),
     intent: 'render_surface',

@@ -1,7 +1,7 @@
 // Zod v3 — if bumped to v4, ZodTypeAny import path changes. Audit here first.
 import type { ComponentType } from 'react'
 import type { ZodTypeAny } from 'zod'
-import type { Role, TechnicalLevel, UrgencyPhase } from '@/lib/crew/types'
+import type { Role, TechnicalLevel, Specialization, UrgencyPhase } from '@/lib/crew/types'
 
 // ── Region IDs ── placeholder union; 3.2 owns the canonical copy in
 // apps/frontend/src/runtime/workspace/regions.ts and will re-export from there.
@@ -32,6 +32,7 @@ export type EnvelopePriority = 'low' | 'medium' | 'high' | 'critical'
 export interface RuntimeContext {
   role: Role
   techLevel: TechnicalLevel
+  specialization?: Specialization
   phase: UrgencyPhase
   hasActiveBlocker: boolean
   workspaceId: string
@@ -87,6 +88,7 @@ export interface SurfaceManifest<TSchema extends ZodTypeAny = ZodTypeAny> {
   // ── Visibility filters ───────────────────────────────────────────────
   visibleToRoles: Role[]
   visibleToTechLevels?: TechnicalLevel[]
+  visibleToSpecializations?: Specialization[]
   forbiddenInPhases?: UrgencyPhase[]
 
   // ── Input contract ───────────────────────────────────────────────────
@@ -122,5 +124,6 @@ export type ResolveFailure =
   | { reason: 'unknown_surface'; surfaceId: string }
   | { reason: 'role_mismatch'; surfaceId: string; required: Role[]; got: Role }
   | { reason: 'tech_level_mismatch'; surfaceId: string }
+  | { reason: 'specialization_mismatch'; surfaceId: string; required: Specialization[]; got: Specialization | undefined }
   | { reason: 'forbidden_in_phase'; surfaceId: string; phase: UrgencyPhase }
   | { reason: 'missing_capabilities'; surfaceId: string; missing: Capability[] }

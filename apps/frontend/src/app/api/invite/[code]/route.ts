@@ -16,6 +16,7 @@ interface StateJson {
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const session = await auth()
   const { code } = await params
   try {
     const { rows } = await getPool().query(
@@ -24,6 +25,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
     )
     if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const s = rows[0].state_json as StateJson
+
+    // Unauthenticated: reveal only project name + member count to confirm the invite is valid.
+    // Member names/IDs are only visible after login to prevent enumeration.
+    if (!session?.user?.id) {
+      return NextResponse.json({
+        projectName: s?.milestones?.[0]?.title ?? 'Proyecto',
+        memberCount: s?.members?.length ?? 0,
+        projectType: s?.projectConfig?.type ?? 'other',
+        unclaimedMembers: [],
+      })
+    }
+
     const unclaimedMembers = (s?.members ?? [])
       .filter(m => !m.userId)
       .map(m => ({ id: m.id, name: m.name, role: m.role ?? 'member' }))
@@ -59,18 +72,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
     const members = state_json?.members ?? []
     const slot = members.find(m => m.id === memberId)
     if (!slot) return NextResponse.json({ error: 'Member slot not found' }, { status: 400 })
-    if (slot.userId && slot.userId !== session.user!.id) {
-      return NextResponse.json({ error: 'Member slot already claimed' }, { status: 409 })
-    }
     const role = slot.role ?? 'member'
 
-    const updatedMembers = members.map(m =>
-      m.id === memberId ? { ...m, userId: session.user!.id } : m
+    // Atomic: update only the target slot's userId, only when it is NULL.
+    // Avoids TOCTOU and prevents concurrent joins from clobbering each other's claims.
+    const { rowCount } = await getPool().query(
+      `UPDATE workspace_state
+       SET state_json = jsonb_set(
+         state_json,
+         '{members}',
+         (SELECT jsonb_agg(
+            CASE WHEN (elem->>'id') = $2
+              THEN elem || jsonb_build_object('userId', $3)
+              ELSE elem
+            END
+          )
+          FROM jsonb_array_elements(state_json->'members') AS elem)
+       )
+       WHERE workspace_id = $1
+         AND EXISTS (
+           SELECT 1 FROM jsonb_array_elements(state_json->'members') AS elem
+           WHERE (elem->>'id') = $2
+             AND (elem->>'userId') IS NULL
+         )`,
+      [workspace_id, memberId, session.user.id]
     )
-    await getPool().query(
-      `UPDATE workspace_state SET state_json = jsonb_set(state_json, '{members}', $2::jsonb) WHERE workspace_id = $1`,
-      [workspace_id, JSON.stringify(updatedMembers)]
-    )
+    if (rowCount === 0) {
+      return NextResponse.json({ error: 'Member slot already claimed' }, { status: 409 })
+    }
 
     await getPool().query(
       `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, $3) ON CONFLICT (user_id, workspace_id) DO UPDATE SET role = $3`,

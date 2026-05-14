@@ -6,9 +6,9 @@ export function makeSeedState(): SeedState {
   const deadline = new Date(Date.now() + 45 * 60 * 1000).toISOString()
   return {
     members: [
-      { id: 'm1', name: 'Alex', role: 'leader', technicalLevel: 'high-tech' },
-      { id: 'm2', name: 'Sam', role: 'member', technicalLevel: 'low-tech' },
-      { id: 'm3', name: 'Jordan', role: 'member', technicalLevel: 'high-tech' },
+      { id: 'm1', name: 'Alex', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' },
+      { id: 'm2', name: 'Sam', role: 'member', technicalLevel: 'low-tech', specialization: 'designer' },
+      { id: 'm3', name: 'Jordan', role: 'member', technicalLevel: 'high-tech', specialization: 'developer' },
     ],
     currentMemberId: 'm1',
     tasks: [

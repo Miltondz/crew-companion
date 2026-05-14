@@ -12,6 +12,7 @@ services:
         value: production
       # Set these in Render dashboard:
       # DATABASE_URL        — Neon connection string
+      # REDIS_URL           — Upstash Redis URL
       # COPILOTKIT_LICENSE_TOKEN
       # INTELLIGENCE_API_URL
       # INTELLIGENCE_GATEWAY_WS_URL
@@ -24,7 +25,7 @@ services:
     runtime: python
     rootDir: apps/agent
     buildCommand: pip install uv && uv sync --no-dev
-    startCommand: uv run langgraph dev --port $PORT --host 0.0.0.0 --no-browser
+    startCommand: uv run langgraph serve --port $PORT --host 0.0.0.0
     plan: free
     envVars:
       - key: PYTHONUNBUFFERED

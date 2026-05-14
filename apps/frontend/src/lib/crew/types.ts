@@ -1,5 +1,6 @@
 export type Role = 'leader' | 'member'
 export type TechnicalLevel = 'low-tech' | 'high-tech'
+export type Specialization = 'developer' | 'designer' | 'qa' | 'manager' | 'writer' | 'other'
 export type UrgencyPhase = 'normal' | 'focus' | 'urgent' | 'panic' | 'expired'
 export type TaskStatus = 'todo' | 'in-progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high'
@@ -11,6 +12,7 @@ export interface TeamMember {
   name: string
   role: Role
   technicalLevel: TechnicalLevel
+  specialization?: Specialization
   activeBlockerId?: string
 }
 
@@ -63,4 +65,5 @@ export interface CrewState {
   mascotMode: MascotMode
   highlightedTaskIds: string[]
   activeMilestoneId?: string
+  actorRole?: string
 }

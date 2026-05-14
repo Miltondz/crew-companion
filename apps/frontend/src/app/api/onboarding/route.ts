@@ -25,7 +25,7 @@ export async function GET() {
   }
 }
 
-type MemberInput = { name: string; role: string; technicalLevel: string }
+type MemberInput = { name: string; role: string; technicalLevel: string; specialization?: string }
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -53,11 +53,13 @@ export async function POST(req: Request) {
   const observerToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
   const inviteCode = crypto.randomUUID().replace(/-/g, '').slice(0, 16)
 
+  const VALID_SPECIALIZATIONS = ['developer', 'designer', 'qa', 'manager', 'writer', 'other']
   const builtMembers = rawMembers.map((m) => ({
     id: crypto.randomUUID(),
     name: (m.name ?? '').trim().slice(0, 100),
     role: ['leader', 'member'].includes(m.role) ? m.role : 'member',
     technicalLevel: m.technicalLevel === 'high-tech' ? 'high-tech' : 'low-tech',
+    specialization: VALID_SPECIALIZATIONS.includes(m.specialization ?? '') ? m.specialization : 'other',
     activeBlockerId: null,
   }))
 

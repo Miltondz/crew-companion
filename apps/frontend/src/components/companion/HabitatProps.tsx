@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useSyncExternalStore } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { habitatPropRegistry } from '@/runtime/companion'
 import type { ActiveProp } from '@/runtime/companion'
 import type { HabitatPropProps } from '@/runtime/companion'

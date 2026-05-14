@@ -1,24 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence, useAnimate } from 'framer-motion'
+import { motion, AnimatePresence, useAnimate } from 'motion/react'
 import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Scissors } from 'lucide-react'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { CountdownCriticalPayload } from './manifest'
+import { computeCountdown } from '@/lib/crew/derive'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function computeCountdown(deadline: string): string {
-  const diff = new Date(deadline).getTime() - Date.now()
-  if (diff <= 0) return '00:00:00'
-  const totalSec = Math.floor(diff / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':')
-}
 
 function minutesRemaining(deadline: string): number {
   return (new Date(deadline).getTime() - Date.now()) / 60000
@@ -97,12 +88,15 @@ function SlideDigit({ value }: { value: string }) {
   const prev = useRef(value)
   useEffect(() => {
     if (value !== prev.current) {
+      let cancelled = false
       const run = async () => {
         await animate(ref.current, { y: ['0%', '-50%'], opacity: [1, 0] }, { duration: 0.22 })
+        if (cancelled) return
         prev.current = value
         await animate(ref.current, { y: ['50%', '0%'], opacity: [0, 1] }, { duration: 0.22 })
       }
       run()
+      return () => { cancelled = true }
     }
   }, [value, animate])
   return (

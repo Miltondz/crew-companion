@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence, useAnimate } from 'framer-motion'
+import { motion, AnimatePresence, useAnimate } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { computeCountdown, getUrgencyPhase } from '@/lib/crew/derive'
 
 type UrgencyPhase = 'normal' | 'focus' | 'urgent' | 'panic' | 'expired'
 
@@ -10,25 +11,6 @@ interface MilestoneCountdownProps {
   deadline: string
   milestoneTitle?: string
   compact?: boolean
-}
-
-function computeCountdown(deadline: string): string {
-  const diff = new Date(deadline).getTime() - Date.now()
-  if (diff <= 0) return '00:00:00'
-  const totalSec = Math.floor(diff / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':')
-}
-
-function getPhase(deadline: string): UrgencyPhase {
-  const mins = (new Date(deadline).getTime() - Date.now()) / 60000
-  if (mins <= 0) return 'expired'
-  if (mins <= 5) return 'panic'
-  if (mins <= 15) return 'urgent'
-  if (mins <= 30) return 'focus'
-  return 'normal'
 }
 
 const phaseGlow: Record<UrgencyPhase, string> = {
@@ -80,12 +62,15 @@ function SlideDigit({ value, phase }: { value: string; phase: UrgencyPhase }) {
 
   useEffect(() => {
     if (value !== prev.current) {
+      let cancelled = false
       const run = async () => {
         await animate(ref.current, { y: ['0%', '-50%'], opacity: [1, 0] }, { duration: 0.22 })
+        if (cancelled) return
         prev.current = value
         await animate(ref.current, { y: ['50%', '0%'], opacity: [0, 1] }, { duration: 0.22 })
       }
       run()
+      return () => { cancelled = true }
     }
   }, [value, animate])
 
@@ -109,12 +94,12 @@ function SlideDigit({ value, phase }: { value: string; phase: UrgencyPhase }) {
 
 export function MilestoneCountdown({ deadline, milestoneTitle, compact = false }: MilestoneCountdownProps) {
   const [countdown, setCountdown] = useState(() => computeCountdown(deadline))
-  const [phase, setPhase] = useState<UrgencyPhase>(() => getPhase(deadline))
+  const [phase, setPhase] = useState<UrgencyPhase>(() => getUrgencyPhase(deadline))
 
   useEffect(() => {
     const id = setInterval(() => {
       setCountdown(computeCountdown(deadline))
-      setPhase(getPhase(deadline))
+      setPhase(getUrgencyPhase(deadline))
     }, 1000)
     return () => clearInterval(id)
   }, [deadline])

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 from uuid import uuid4
 
 from langgraph.prebuilt import InjectedState
@@ -155,23 +155,23 @@ def add_member(
 def update_task(
     task_id: str,
     state: Annotated[dict, InjectedState],
-    title: str = "",
-    description: str = "",
-    assigned_to: str = "",
-    priority: str = "",
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    priority: Optional[str] = None,
 ) -> Command:
     """Update a task's title, description, assignee, or priority. Pass only fields to change."""
     def patch(t: dict) -> dict:
         if t["id"] != task_id:
             return t
         updates: dict = {}
-        if title:
+        if title is not None:
             updates["title"] = title
-        if description:
+        if description is not None:
             updates["description"] = description
-        if assigned_to:
+        if assigned_to is not None:
             updates["assignedTo"] = assigned_to
-        if priority:
+        if priority is not None:
             updates["priority"] = priority
         return {**t, **updates}
     return Command(update={"tasks": [patch(t) for t in state.get("tasks", [])]})
@@ -184,17 +184,17 @@ def update_task(
 def update_milestone(
     milestone_id: str,
     state: Annotated[dict, InjectedState],
-    title: str = "",
-    deadline_iso: str = "",
+    title: Optional[str] = None,
+    deadline_iso: Optional[str] = None,
 ) -> Command:
     """Update a milestone's title or deadline ISO string. Pass only fields to change."""
     def patch(m: dict) -> dict:
         if m["id"] != milestone_id:
             return m
         updates: dict = {}
-        if title:
+        if title is not None:
             updates["title"] = title
-        if deadline_iso:
+        if deadline_iso is not None:
             updates["deadline"] = deadline_iso
         return {**m, **updates}
     return Command(update={"milestones": [patch(m) for m in state.get("milestones", [])]})
@@ -203,6 +203,7 @@ def update_milestone(
 @guarded_tool(
     capabilities=[Capability.TASKS_DELETE, Capability.STATE_WRITE],
     risk_level=RiskLevel.HIGH,
+    requires_approval=True,
 )
 def delete_task(
     task_id: str,
@@ -220,6 +221,7 @@ def delete_task(
 @guarded_tool(
     capabilities=[Capability.TASKS_DELETE, Capability.STATE_WRITE],
     risk_level=RiskLevel.HIGH,
+    requires_approval=True,
 )
 def reset_workspace(
     confirm: bool,

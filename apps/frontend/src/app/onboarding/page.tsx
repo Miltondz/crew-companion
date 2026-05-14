@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { ChevronRight, ChevronLeft, Plus, X, Check, Link, FileText, Users, Rocket, ArrowLeft, Zap, Clock, Brain } from 'lucide-react'
 import NextLink from 'next/link'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils'
 // ─── types ───────────────────────────────────────────────────────────────────
 
 type ProjectTypeId = 'hackathon' | 'sprint' | 'remote-team' | 'launch' | 'consulting' | 'other'
-type Member = { name: string; role: 'leader' | 'member'; technicalLevel: 'low-tech' | 'high-tech' }
+type Specialization = 'developer' | 'designer' | 'qa' | 'manager' | 'writer' | 'other'
+type Member = { id: string; name: string; role: 'leader' | 'member'; technicalLevel: 'low-tech' | 'high-tech'; specialization: Specialization }
 type ContextMode = 'url' | 'text' | 'skip'
 
 interface WizardState {
@@ -260,7 +261,7 @@ function StepContext({
 function StepTeam({ members, update }: { members: Member[]; update: (members: Member[]) => void }) {
   const set = (i: number, field: keyof Member, value: string) =>
     update(members.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
-  const add = () => update([...members, { name: '', role: 'member', technicalLevel: 'low-tech' }])
+  const add = () => update([...members, { id: crypto.randomUUID(), name: '', role: 'member', technicalLevel: 'low-tech', specialization: 'other' }])
   const remove = (i: number) => update(members.filter((_, idx) => idx !== i))
 
   return (
@@ -280,7 +281,7 @@ function StepTeam({ members, update }: { members: Member[]; update: (members: Me
       <div className="space-y-2.5">
         {members.map((m, i) => (
           <motion.div
-            key={i}
+            key={m.id}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex gap-2 items-center bg-zinc-900 border border-zinc-800 rounded-xl p-2.5"
@@ -310,6 +311,18 @@ function StepTeam({ members, update }: { members: Member[]; update: (members: Me
             >
               <option value="high-tech">Técnico</option>
               <option value="low-tech">No-técnico</option>
+            </select>
+            <select
+              value={m.specialization}
+              onChange={e => set(i, 'specialization', e.target.value as Member['specialization'])}
+              className="rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1.5 text-xs focus:outline-none"
+            >
+              <option value="developer">💻 Dev</option>
+              <option value="designer">🎨 Diseño</option>
+              <option value="qa">🧪 QA</option>
+              <option value="manager">📊 Manager</option>
+              <option value="writer">✍️ Writer</option>
+              <option value="other">⚙️ Otro</option>
             </select>
             {members.length > 1 && (
               <button type="button" onClick={() => remove(i)}
@@ -410,7 +423,7 @@ export default function OnboardingPage() {
     contextMode: 'skip',
     contextUrl: '',
     contextText: '',
-    members: [{ name: '', role: 'leader', technicalLevel: 'high-tech' }],
+    members: [{ id: crypto.randomUUID(), name: '', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' }],
   })
 
   const update = (k: keyof WizardState, v: unknown) =>
@@ -446,7 +459,10 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectName: state.projectName,
-          deadline: new Date(state.deadline).toISOString(),
+          deadline: (() => {
+            const d = new Date(state.deadline)
+            return isNaN(d.getTime()) ? state.deadline : d.toISOString()
+          })(),
           members: state.members,
           projectType: state.projectType,
           isDevProject: state.isDevProject,

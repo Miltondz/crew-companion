@@ -142,17 +142,13 @@ def _build_noop(message: str) -> CompiledStateGraph:
 # --------------------------------------------------------------------- gemini
 
 def _gemini_llm():
-    """Build the configured Gemini Flash-Lite chat model.
-
-    Default: `gemini-3.1-flash-lite` — the high-volume workhorse in the
-    Gemini 3 family. Verified against `langchain-google-genai` 2.x;
-    swap the id here if you want `gemini-3-flash` or a future tier.
-    """
+    """Build the configured Gemini Flash-Lite chat model."""
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "stub"
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
     return ChatGoogleGenerativeAI(
-        model="gemini-3.1-flash-lite",
+        model=model,
         temperature=0,
         api_key=api_key,
     )
@@ -187,12 +183,8 @@ def _build_gemini_deep(
 def _build_gemini_react(
     tools: list, system_prompt: str, middleware: list
 ) -> CompiledStateGraph:
-    """Plain `create_agent` (the new react agent factory) on Gemini Flash-Lite.
-
-    Skips deepagents' planner / virtual-fs / TODO-loop — we want to know how
-    much of the per-turn latency is the planner versus the model itself.
-    """
-    from langchain.agents import create_agent
+    """Plain react agent on Gemini Flash-Lite (no deepagents planner)."""
+    from deepagents import create_agent
 
     llm = _gemini_llm()
     return create_agent(
@@ -210,9 +202,7 @@ def _build_claude_react(
     tools: list, system_prompt: str, middleware: list
 ) -> CompiledStateGraph:
     """Claude Sonnet 4.6 (latest) on the same react factory."""
-    # Lazy import so a missing langchain-anthropic install only surfaces
-    # when this runtime is actually selected.
-    from langchain.agents import create_agent
+    from deepagents import create_agent
     from langchain_anthropic import ChatAnthropic
 
     api_key = os.getenv("ANTHROPIC_API_KEY") or ""

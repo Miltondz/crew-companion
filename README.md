@@ -62,11 +62,12 @@ The key shift is from navigation to emergence — users don't click through menu
 | Typical AI tool | Crew Companion |
 |---|---|
 | Static layouts with AI widgets | Generative UI surfaces triggered by agent intent |
-| Same UI for everyone | Role × TechLevel × UrgencyPhase → unique workspace |
+| Same UI for everyone | Role × TechLevel × UrgencyPhase × Specialization → unique workspace |
 | Manual status updates | State machine drives mascot, colors, surface routing |
 | One project per account | Multi-project dashboard, invite-link team sharing |
 | Chat-first interface | Spatial grammar: 6 zones, pinning, ambient overlays |
 | AI suggests, user configures | Agent emits typed envelopes; runtime composes layout |
+| Generic chat help | Specialization-aware coaching (dev/designer/QA/manager/writer) |
 
 ---
 
@@ -256,6 +257,37 @@ The pipeline separates concerns cleanly: the agent doesn't know how its output w
 
 ---
 
+## Context Dimensions — The 4-Axis Model
+
+Every surface selection, agent tone, and initial workspace load is governed by four independent dimensions derived from the current user and workspace state.
+
+```
+  Role            leader | member
+  TechLevel       high-tech | low-tech
+  UrgencyPhase    normal | focus | urgent | panic | expired  (always derived)
+  Specialization  developer | designer | qa | manager | writer | other
+```
+
+These four axes form the context that is evaluated at every decision point:
+
+- The **Surface Registry** checks `visibleToRoles`, `visibleToTechLevels`, and `visibleToSpecializations` before mounting any surface. A surface that doesn't match the current context is silently skipped.
+- **`getInitialSurfaces()`** selects and mounts the appropriate opening surface on workspace load — without any agent interaction. A developer sees a task checklist or debug session; a designer sees their deliverable brief; a QA engineer sees their test case board; a manager-leader sees the team velocity panel.
+- **Agent prompts** use specialization for tone-matching: developers get code examples and terminal commands, designers get UX framing, QA members get acceptance criteria steps, writers get content structure guidance.
+- **Onboarding** captures specialization as the 4th step in the wizard, alongside role and technical level.
+
+```
+  Specialization → surface routing                  Specialization → agent tone
+  ─────────────────────────────────                 ─────────────────────────────
+  developer     → DebugSession / TechStack          "Check the error in line 42 of..."
+  designer      → DesignBriefPanel                  "The user flow for this screen..."
+  qa            → TestCaseBoard / DebugSession       "Acceptance criteria: given X, when Y..."
+  manager       → TeamVelocityPanel (leader too)    "3 members are below 30% velocity..."
+  writer        → WritingChecklist / ContentOutline  "Your draft structure: intro → body..."
+  other/low-tech → BeginnerGuide / Checklist        "Step 1: Open the task and read..."
+```
+
+---
+
 ## Multi-Agent Topology
 
 The agent system uses a hub-and-spoke delegation model. The **Orchestrator** is the entry point for every user message. It classifies intent, handles generic routing, and manages workspace resets. For specialized work, it delegates to sub-agents rather than handling everything inline — this keeps each agent's context focused and its tool surface minimal.
@@ -304,29 +336,41 @@ This pattern means adding a new surface requires zero changes to routing logic. 
   { surface_id: "task-suggestion-panel", payload: {...} }
            │
            ▼
-  Surface Registry lookup
+  Surface Registry lookup  (also checks role, techLevel, specialization filters)
            │
-  ┌────────▼──────────────────────────────────────────────┐
-  │  Surface           │ Zone              │ Phase        │
-  ├────────────────────┼───────────────────┼──────────────┤
-  │ TaskSuggestionPanel│ primary-workzone  │ normal/focus │
-  │ FocusedTaskPanel   │ primary-workzone  │ any          │
-  │ TriageWarRoom      │ primary-workzone  │ panic only   │
-  │ ForceGraph         │ primary-workzone  │ normal/focus │
-  │ IdeaMatrix         │ primary-workzone  │ normal       │
-  │ ChecklistPanel     │ primary-workzone  │ any          │
-  │ TroubleshootingWzd │ primary-workzone  │ any          │
-  ├────────────────────┼───────────────────┼──────────────┤
-  │ MilestoneSummary   │ context-rail      │ any          │
-  │ BlockerInsight     │ context-rail      │ any          │
-  │ DocumentSummary    │ context-rail      │ any          │
-  │ BeginnerGuide      │ context-rail      │ any          │
-  │ MemberAction       │ context-rail      │ any          │
-  ├────────────────────┼───────────────────┼──────────────┤
-  │ CountdownCritical  │ ambient-overlay   │ focus+       │
-  │ AmbientOverlay     │ ambient-overlay   │ focus+       │
-  └────────────────────┴───────────────────┴──────────────┘
+  ┌────────▼──────────────────────────────────────────────────────────────┐
+  │  Surface                │ Zone              │ Specialization          │
+  ├─────────────────────────┼───────────────────┼─────────────────────────┤
+  │ TaskSuggestionPanel     │ primary-workzone  │ any                     │
+  │ FocusedTaskPanel        │ primary-workzone  │ any                     │
+  │ TriageWarRoom           │ primary-workzone  │ any (panic only)        │
+  │ ForceGraph              │ primary-workzone  │ any                     │
+  │ IdeaMatrix              │ primary-workzone  │ any                     │
+  │ ChecklistPanel          │ primary-workzone  │ any                     │
+  │ TroubleshootingWizard   │ primary-workzone  │ any                     │
+  │ DebugSession            │ primary-workzone  │ developer · qa          │
+  │ TechStackPanel          │ primary-workzone  │ developer (high-tech)   │
+  │ DesignBriefPanel        │ primary-workzone  │ designer                │
+  │ ComponentChecklist      │ primary-workzone  │ designer                │
+  │ TestCaseBoard           │ primary-workzone  │ qa                      │
+  │ BugReportForm           │ primary-workzone  │ qa · developer          │
+  │ TeamVelocityPanel       │ primary-workzone  │ manager                 │
+  │ StakeholderUpdate       │ primary-workzone  │ manager                 │
+  │ WritingChecklist        │ primary-workzone  │ writer                  │
+  │ ContentOutlinePanel     │ primary-workzone  │ writer                  │
+  ├─────────────────────────┼───────────────────┼─────────────────────────┤
+  │ MilestoneSummary        │ context-rail      │ any                     │
+  │ BlockerInsight          │ context-rail      │ any                     │
+  │ DocumentSummary         │ context-rail      │ any                     │
+  │ BeginnerGuide           │ context-rail      │ any (low-tech)          │
+  │ MemberAction            │ context-rail      │ any                     │
+  ├─────────────────────────┼───────────────────┼─────────────────────────┤
+  │ CountdownCritical       │ ambient-overlay   │ any (focus+)            │
+  │ AmbientOverlayWidget    │ ambient-overlay   │ any (focus+)            │
+  └─────────────────────────┴───────────────────┴─────────────────────────┘
 ```
+
+24 surfaces total. `visibleToSpecializations` is enforced by the Surface Registry at resolve time — a surface targeting `designer` will not mount in a developer's context even if the agent emits it.
 
 `CountdownCritical` supports `variant: 'compact' | 'full'` and `orientation: 'vertical' | 'horizontal'`.  
 `FocusedTaskPanel` is routed by both Planner (task spotlight) and Coach (with `coachNote`).  
@@ -487,9 +531,14 @@ crew-companion/
 │   │       │   └── pet/               Pet · xstate machine · speak
 │   │       │
 │   │       └── components/
-│   │           ├── surfaces/      14 generative UI surfaces (each with manifest.ts)
+│   │           ├── surfaces/      24 generative UI surfaces (each with manifest.ts)
 │   │           ├── marketing/     MarketingLayout (nav + footer)
 │   │           └── ui/            shadcn/ui primitives
+│       │
+│       └── runtime/
+│           ├── surface-registry/  types · registry (specialization enforcement) · bootstrap
+│           ├── workspace/         Layout Engine · initial-surfaces.ts (4-axis loader)
+│           └── companion/         EventBus · Habitat · xstate machine
 │   │
 │   ├── bff/                       Hono BFF (:4000)
 │   │   └── src/
@@ -502,7 +551,7 @@ crew-companion/
 │       │   ├── runtime/           capabilities · policy · audit · envelope
 │       │   ├── tools.py           @guarded_tool declarations
 │       │   └── types.py           Python TypedDicts (sync with TS types.ts)
-│       └── migrations/            001–008 SQL migrations (idempotent)
+│       └── migrations/            001–014 SQL migrations (idempotent)
 │
 ├── project-docs/
 │   ├── MASTER_WORK_PLAN.md        7.5-week execution plan + invariants
@@ -530,12 +579,12 @@ The project follows a three-phase execution plan. **Phase A (Kernel)** built the
   │  Registry│  │   magic-link  │  │   Orchestrator   │  │   live     │
   │✅ Layout │  │✅ Workspace   │  │   Planner Coach  │  │✅ Error    │
   │  Engine  │  │   Shell       │  │✅ Companion      │  │   pages    │
-  │✅ Capab. │  │✅ 14 surfaces │  │   Habitat        │  │✅ i18n     │
-  │  Engine  │  │✅ Dashboard   │  │✅ Member slot    │  │✅ Token    │
-  │✅ Persist│  │✅ Onboarding  │  │   identity       │  │   caps     │
-  │  (Pgres) │  │✅ Invite flow │  │✅ Security       │  │🔄 Smoke    │
-  │✅ Envel. │  │✅ Observer    │  │   audit fixes    │  │   test     │
-  │  Protocol│  │   share link  │  │                  │  │            │
+  │✅ Capab. │  │✅ 24 surfaces │  │   Habitat        │  │✅ i18n     │
+  │  Engine  │  │✅ Dashboard   │  │✅ Specialization │  │✅ Token    │
+  │✅ Persist│  │✅ Onboarding  │  │   4-axis model   │  │   caps     │
+  │  (Pgres) │  │✅ Invite flow │  │✅ initial-       │  │🔄 Smoke    │
+  │✅ Envel. │  │✅ Observer    │  │   surfaces loader│  │   test     │
+  │  Protocol│  │   share link  │  │✅ Security fixes │  │            │
   └──────────┘  └───────────────┘  └──────────────────┘  └────────────┘
      COMPLETE         COMPLETE              COMPLETE        IN PROGRESS
 ```

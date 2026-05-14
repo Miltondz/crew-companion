@@ -7,6 +7,15 @@ from typing import Optional, Union
 
 _REDIS_URL = os.environ.get("REDIS_URL")
 _TOOL_RATE_LIMIT = 120  # tool calls per workspace per hour
+_redis_client = None
+
+
+def _get_redis():
+    global _redis_client
+    if _redis_client is None and _REDIS_URL:
+        import redis  # type: ignore[import]
+        _redis_client = redis.from_url(_REDIS_URL, decode_responses=True)
+    return _redis_client
 
 from .capabilities import Capability, RiskLevel
 
@@ -89,18 +98,15 @@ class PolicyEngine:
     def _phase_block_reason(self, tool: "ToolMeta", phase: str) -> Optional[str]:  # type: ignore[name-defined]
         if phase == "panic" and tool.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL):
             return "blocked_in_phase:panic"
-        if phase == "expired" and tool.risk_level in (
-            RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL
-        ):
+        if phase == "expired" and tool.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL):
             return "blocked_in_phase:expired"
         return None
 
     def _rate_limit_exceeded(self, workspace_id: str, tool_id: str) -> bool:
-        if not _REDIS_URL:
+        r = _get_redis()
+        if r is None:
             return False
         try:
-            import redis  # type: ignore[import]
-            r = redis.from_url(_REDIS_URL, decode_responses=True)
             hour_bucket = int(time.time()) // 3600
             key = f"crew:rl:{workspace_id}:{hour_bucket}"
             count = r.incr(key)

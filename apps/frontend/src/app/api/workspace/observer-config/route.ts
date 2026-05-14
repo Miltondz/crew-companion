@@ -13,11 +13,17 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const workspaceId = await getWorkspaceId(session.user.id)
-  const config = await req.json() as {
+  const raw = await req.json() as {
     showTasks?: boolean
     showTeamNames?: boolean
     showBlockerCount?: boolean
     customMessage?: string
+  }
+  const config = {
+    showTasks: !!raw.showTasks,
+    showTeamNames: !!raw.showTeamNames,
+    showBlockerCount: !!raw.showBlockerCount,
+    customMessage: (raw.customMessage ?? '').slice(0, 120),
   }
 
   try {

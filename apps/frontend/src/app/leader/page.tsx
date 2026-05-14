@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion } from 'motion/react'
@@ -34,6 +34,7 @@ import { ActivityStream } from '@/components/shared/ActivityStream'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
+import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
@@ -152,6 +153,7 @@ function LeaderCanvas() {
     parameters: z.object({ memberId: z.string(), description: z.string() }),
     handler: async ({ memberId: targetMemberId, description }) => {
       let memberName = targetMemberId
+      const blockerId = crypto.randomUUID()
       setState(prev => {
         memberName = prev.members.find(m => m.id === targetMemberId)?.name ?? targetMemberId
         return {
@@ -159,7 +161,7 @@ function LeaderCanvas() {
           blockers: [
             ...prev.blockers,
             {
-              id: crypto.randomUUID(),
+              id: blockerId,
               memberId: targetMemberId,
               description,
               reportedAt: new Date().toISOString(),
@@ -168,6 +170,7 @@ function LeaderCanvas() {
           ],
         }
       })
+      companionBus.emit({ type: 'BLOCKER_CREATED', blockerId, memberId: targetMemberId })
       pushActivity('blocker_reported', `Blocker reportado para ${memberName}`, '⚠️')
       toast.warning(`Blocker: ${memberName}`, { description })
       return 'blocker registrado'
@@ -189,12 +192,21 @@ function LeaderCanvas() {
     },
   })
 
+  const currentLeader = state.members.find(m => m.id === state.currentMemberId)
   const runtimeContext = useRuntimeContext({
     role: 'leader',
+    specialization: currentLeader?.specialization,
     phase: urgencyPhase,
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
   })
 
+  const initialSurfacesMounted = useRef(false)
+  useEffect(() => {
+    if (initialSurfacesMounted.current) return
+    initialSurfacesMounted.current = true
+    getInitialSurfaces(state, state.currentMemberId, runtimeContext).forEach(env => layoutEngine.mount(env))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useFrontendTool({
     name: 'renderSurface',

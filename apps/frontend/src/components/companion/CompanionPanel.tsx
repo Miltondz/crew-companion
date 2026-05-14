@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { X, Zap, Users, Clock, AlertTriangle, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { companionBus } from '@/runtime/companion'

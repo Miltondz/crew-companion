@@ -17,6 +17,7 @@ _TTL_MS = _TTL_SECONDS * 1000
 
 _REDIS_URL = os.environ.get("REDIS_URL")
 _REDIS_KEY_PREFIX = "crew:approval:"
+_redis_client = None
 
 
 class _TokenRecord(TypedDict):
@@ -27,9 +28,12 @@ class _TokenRecord(TypedDict):
 
 # ── Redis backend ────────────────────────────────────────────────────────────
 
-def _redis_client():  # type: ignore[return]
-    import redis  # type: ignore[import]
-    return redis.from_url(_REDIS_URL, decode_responses=True)  # type: ignore[arg-type]
+def _get_redis():
+    global _redis_client
+    if _redis_client is None and _REDIS_URL:
+        import redis  # type: ignore[import]
+        _redis_client = redis.from_url(_REDIS_URL, decode_responses=True)  # type: ignore[arg-type]
+    return _redis_client
 
 
 def _redis_issue(*, workspace_id: str, tool_id: str) -> str:
@@ -39,7 +43,7 @@ def _redis_issue(*, workspace_id: str, tool_id: str) -> str:
         "tool_id": tool_id,
         "expires_at": int(time.time() * 1000) + _TTL_MS,
     }
-    _redis_client().setex(
+    _get_redis().setex(
         f"{_REDIS_KEY_PREFIX}{token}",
         _TTL_SECONDS,
         json.dumps(record),
@@ -48,14 +52,14 @@ def _redis_issue(*, workspace_id: str, tool_id: str) -> str:
 
 
 def _redis_consume(token: str) -> Optional[_TokenRecord]:
-    r = _redis_client()
+    r = _get_redis()
     key = f"{_REDIS_KEY_PREFIX}{token}"
     raw = r.getdel(key)
     return json.loads(raw) if raw else None
 
 
 def _redis_peek(token: str) -> Optional[_TokenRecord]:
-    raw = _redis_client().get(f"{_REDIS_KEY_PREFIX}{token}")
+    raw = _get_redis().get(f"{_REDIS_KEY_PREFIX}{token}")
     return json.loads(raw) if raw else None
 
 

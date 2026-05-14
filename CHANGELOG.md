@@ -22,6 +22,65 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.10.0] — 2026-05-13 — Specialization dimension + 10 new surfaces
+
+### Added — 4-axis context model
+
+- **Specialization** as 4th context dimension: `developer | designer | qa | manager | writer | other`
+  - Added to `TeamMember` in `types.ts`; synced to `types.py` (TS↔Python invariant maintained)
+  - Captured in onboarding wizard — new specialization select added per team member
+  - Accepted and stored by `/api/onboarding` route
+  - Seeded in `seed.ts` for all demo members
+
+- **`visibleToSpecializations`** manifest field now enforced in `registry.resolve()`
+  - `specialization_mismatch` added to `ResolveFailure` union
+  - `RuntimeContext` now carries `specialization?: Specialization`
+  - `useRuntimeContext` accepts `specialization` option; both pages pass it from member state
+
+- **`getInitialSurfaces()`** — `runtime/workspace/initial-surfaces.ts`
+  - Mounts the contextually appropriate surface on workspace load — no agent round-trip required
+  - Covers full matrix: role × phase × techLevel × specialization × hasBlocker
+  - leader + manager → `team_velocity_panel`; leader + other → `milestone_summary` or `triage_war_room`
+  - developer + blocker → `debug_session`; low-tech + blocker → `troubleshooting_wizard`
+  - designer → `design_brief_panel`; qa → `test_case_board`; manager → `team_velocity_panel`; writer → `writing_checklist`
+  - Mounted exactly once via `useRef` guard in both leader and member pages
+
+- **10 new specialization-specific surfaces** (each with `manifest.ts` + component):
+
+  | Surface ID | Specialization | Highlights |
+  |---|---|---|
+  | `debug_session` | developer · qa | step-by-step debug flow, hypothesis list |
+  | `tech_stack_panel` | developer (high-tech) | tech stack grid, CLI commands, port map |
+  | `design_brief_panel` | designer | deliverables list, objective, color direction |
+  | `component_checklist` | designer | component review with status cycle |
+  | `test_case_board` | qa | pass / fail / blocked / skip state machine |
+  | `bug_report_form` | qa · developer | severity levels, repro steps, env info |
+  | `team_velocity_panel` | manager | per-member progress bars, blocker count |
+  | `stakeholder_update` | manager | highlights list, next steps, update text |
+  | `writing_checklist` | writer | phase-aware (research → outline → draft → review → publish) |
+  | `content_outline_panel` | writer | section-by-section outline with status |
+
+- **Companion Habitat** wired to both workspace pages via `companionBus`
+  - Leader page: `BLOCKER_CREATED` emitted from `reportBlocker` frontend tool handler
+  - Member page: `BLOCKER_CREATED`, `BLOCKER_RESOLVED`, `TASK_COMPLETED` from UI actions
+  - Member page: `MascotSVG` replaced with full `Habitat` component
+
+- **Agent prompts** updated for all three agents
+  - `ORCHESTRATOR_PROMPT`: specialization added to injected context description
+  - `PLANNER_PROMPT`: `team_velocity_panel` + `stakeholder_update` in routing table
+  - `COACH_PROMPT`: specialization column in routing table + per-specialization tone rules
+
+### Fixed — registry and initial-surface audit
+
+- `registry.resolve()` never checked `visibleToSpecializations` — declared but dead code; now enforced
+- `RuntimeContext` was missing `specialization`; blocked enforce path from ever working
+- `design_brief_panel` could emit `deliverables: []` when all tasks done → Zod `.min(1)` silent failure; fixed with fallback placeholder
+- `test_case_board` could emit `cases: []` when no pending tasks → guarded with `qaPending.length > 0`
+- `specialization` re-declared inside member `else` block (inner shadow of outer `const`) → hoisted to top of function
+- Manager-leader always received `milestone_summary` instead of `team_velocity_panel` → added specialization branch before milestone check
+
+---
+
 ## [0.9.0] — 2026-05-10
 
 ### Fixed — Round 9

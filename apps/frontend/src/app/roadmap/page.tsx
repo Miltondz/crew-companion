@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MarketingLayout } from '@/components/marketing/MarketingLayout'

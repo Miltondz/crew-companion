@@ -5,6 +5,7 @@ from typing_extensions import TypedDict, Literal
 
 Role = Literal["leader", "member"]
 TechnicalLevel = Literal["low-tech", "high-tech"]
+Specialization = Literal["developer", "designer", "qa", "manager", "writer", "other"]
 UrgencyPhase = Literal["normal", "focus", "urgent", "panic", "expired"]
 TaskStatus = Literal["todo", "in-progress", "done"]
 TaskPriority = Literal["low", "medium", "high"]
@@ -17,6 +18,7 @@ class TeamMember(TypedDict):
     name: str
     role: Role
     technicalLevel: TechnicalLevel
+    specialization: Optional[Specialization]
     activeBlockerId: Optional[str]
 
 

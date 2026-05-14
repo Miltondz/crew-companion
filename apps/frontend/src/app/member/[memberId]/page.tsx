@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
@@ -23,9 +23,11 @@ import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registr
 import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
-import { MascotSVG } from '@/components/mascot/MascotSVG'
+import { Habitat } from '@/components/companion/Habitat'
+import { companionBus } from '@/runtime/companion/EventBus'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
+import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
@@ -109,12 +111,13 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     description: 'Registra un blocker para el miembro actual',
     parameters: z.object({ description: z.string() }),
     handler: async ({ description }) => {
+      const blockerId = crypto.randomUUID()
       setState(prev => ({
         ...prev,
         blockers: [
           ...prev.blockers,
           {
-            id: crypto.randomUUID(),
+            id: blockerId,
             memberId,
             description,
             reportedAt: new Date().toISOString(),
@@ -122,6 +125,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
           },
         ],
       }))
+      companionBus.emit({ type: 'BLOCKER_CREATED', blockerId, memberId })
       toast.warning('Blocker reportado al líder', { description })
       return 'blocker registrado'
     },
@@ -167,10 +171,18 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   const runtimeContext = useRuntimeContext({
     role: 'member',
     techLevel: currentMember?.technicalLevel,
+    specialization: currentMember?.specialization,
     phase: urgencyPhase,
     hasActiveBlocker: !!myBlocker,
   })
 
+  const initialSurfacesMounted = useRef(false)
+  useEffect(() => {
+    if (initialSurfacesMounted.current) return
+    initialSurfacesMounted.current = true
+    getInitialSurfaces(state, memberId, runtimeContext).forEach(env => layoutEngine.mount(env))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useFrontendTool({
     name: 'renderSurface',
@@ -215,6 +227,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       ...prev,
       tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, status: 'done' as TaskStatus } : t)),
     }))
+    companionBus.emit({ type: 'TASK_COMPLETED', taskId })
     toast.success('¡Tarea completada! 🎉')
     fireCelebration()
   }
@@ -226,17 +239,19 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         b.id === blockerId ? { ...b, resolved: true, resolvedAt: new Date().toISOString() } : b
       ),
     }))
+    companionBus.emit({ type: 'BLOCKER_RESOLVED', blockerId })
     toast.success('Blocker resuelto ✓')
   }
 
   const handleReportBlocker = () => {
     if (!blockerText.trim()) return
+    const blockerId = crypto.randomUUID()
     setState(prev => ({
       ...prev,
       blockers: [
         ...prev.blockers,
         {
-          id: crypto.randomUUID(),
+          id: blockerId,
           memberId,
           description: blockerText.trim(),
           reportedAt: new Date().toISOString(),
@@ -244,6 +259,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         },
       ],
     }))
+    companionBus.emit({ type: 'BLOCKER_CREATED', blockerId, memberId })
     toast.warning('Blocker reportado al líder')
     setBlockerText('')
     setShowBlockerForm(false)
@@ -429,7 +445,14 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       </WorkspaceShell>
 
       <div className="fixed bottom-6 right-6 z-50">
-        <MascotSVG mood={state.mascotMood} mode={state.mascotMode} />
+        <Habitat
+          phase={urgencyPhase}
+          techLevel={currentMember?.technicalLevel ?? 'low-tech'}
+          pendingTasks={myTasks.filter(t => t.status !== 'done').length}
+          activeBlockers={myBlocker ? 1 : 0}
+          minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+          progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
+        />
       </div>
 
       <MobileChatDrawer accentClass="from-emerald-600 to-teal-600" label="Asistente Personal" />

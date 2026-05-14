@@ -18,6 +18,16 @@ import { manifest as ideaMatrix } from '@/components/surfaces/IdeaMatrix/manifes
 import { manifest as triageWarRoom } from '@/components/surfaces/TriageWarRoom/manifest'
 import { manifest as ambientOverlayWidget } from '@/components/surfaces/AmbientOverlayWidget/manifest'
 import { manifest as focusedTask } from '@/components/surfaces/FocusedTaskPanel/manifest'
+import { manifest as techStack } from '@/components/surfaces/TechStackPanel/manifest'
+import { manifest as debugSession } from '@/components/surfaces/DebugSession/manifest'
+import { manifest as designBrief } from '@/components/surfaces/DesignBriefPanel/manifest'
+import { manifest as componentChecklist } from '@/components/surfaces/ComponentChecklist/manifest'
+import { manifest as testCaseBoard } from '@/components/surfaces/TestCaseBoard/manifest'
+import { manifest as bugReport } from '@/components/surfaces/BugReportForm/manifest'
+import { manifest as teamVelocity } from '@/components/surfaces/TeamVelocityPanel/manifest'
+import { manifest as stakeholderUpdate } from '@/components/surfaces/StakeholderUpdate/manifest'
+import { manifest as contentOutline } from '@/components/surfaces/ContentOutlinePanel/manifest'
+import { manifest as writingChecklist } from '@/components/surfaces/WritingChecklist/manifest'
 
 let bootstrapped = false
 
@@ -40,5 +50,15 @@ export function bootstrapRegistry(): void {
     triageWarRoom,
     ambientOverlayWidget,
     focusedTask,
+    techStack,
+    debugSession,
+    designBrief,
+    componentChecklist,
+    testCaseBoard,
+    bugReport,
+    teamVelocity,
+    stakeholderUpdate,
+    contentOutline,
+    writingChecklist,
   ].forEach(m => surfaceRegistry.register(m))
 }

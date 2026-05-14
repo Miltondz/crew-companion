@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from langchain.agents.middleware import AgentMiddleware
+from deepagents import AgentMiddleware
 from langgraph.graph.message import add_messages
 from langgraph.runtime import Runtime
 from typing_extensions import Annotated, TypedDict
@@ -38,6 +38,10 @@ class CrewCanvasState(TypedDict):
     mascotMode: MascotMode
     highlightedTaskIds: list[str]
     activeMilestoneId: Optional[str]
+    actorRole: Optional[str]
+    projectConfig: Optional[dict]
+    onboarded: Optional[bool]
+    observerConfig: Optional[dict]
 
 
 def load_crew_seed() -> dict:
