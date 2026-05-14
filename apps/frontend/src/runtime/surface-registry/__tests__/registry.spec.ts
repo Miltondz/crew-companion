@@ -1,7 +1,3 @@
-// @ts-nocheck
-// Vitest not yet wired — all tests use it.skip so they don't break dev.
-// Remove it.skip (and @ts-nocheck) when Vitest is added:
-//   npm i -D vitest @vitejs/plugin-react, add vitest.config.ts.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { surfaceRegistry } from '../registry'
 import { fixtureOkManifest } from './fixtures/fixture.ok'
@@ -23,26 +19,26 @@ describe('SurfaceRegistry', () => {
 
   // ── register ──────────────────────────────────────────────────────────────
 
-  it.skip('register accepts a valid manifest', () => {
+  it('register accepts a valid manifest', () => {
     expect(() => surfaceRegistry.register(fixtureOkManifest)).not.toThrow()
     expect(surfaceRegistry.listIds()).toContain('__fixture_ok')
   })
 
-  it.skip('register throws on duplicate id with different object', () => {
+  it('register throws on duplicate id with different object', () => {
     surfaceRegistry.register(fixtureOkManifest)
     expect(() =>
       surfaceRegistry.register({ ...fixtureOkManifest }),
     ).toThrow(/duplicate manifest id/)
   })
 
-  it.skip('register is idempotent for the same object reference', () => {
+  it('register is idempotent for the same object reference', () => {
     surfaceRegistry.register(fixtureOkManifest)
     expect(() => surfaceRegistry.register(fixtureOkManifest)).not.toThrow()
   })
 
   // ── resolve ───────────────────────────────────────────────────────────────
 
-  it.skip('resolve returns manifest for matching context', () => {
+  it('resolve returns manifest for matching context', () => {
     surfaceRegistry.register(fixtureOkManifest)
     const result = surfaceRegistry.resolve(
       'render_surface',
@@ -55,13 +51,13 @@ describe('SurfaceRegistry', () => {
     if (result.ok) expect(result.manifest.id).toBe('__fixture_ok')
   })
 
-  it.skip('resolve returns unknown_surface for unregistered id', () => {
+  it('resolve returns unknown_surface for unregistered id', () => {
     const result = surfaceRegistry.resolve('render_surface', 'not_registered', baseContext, [], [])
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.failure.reason).toBe('unknown_surface')
   })
 
-  it.skip('resolve returns role_mismatch when role not in visibleToRoles', () => {
+  it('resolve returns role_mismatch when role not in visibleToRoles', () => {
     const leaderOnly = { ...fixtureOkManifest, id: '__leader_only', visibleToRoles: ['leader'] as const }
     surfaceRegistry.register(leaderOnly)
     const result = surfaceRegistry.resolve(
@@ -75,7 +71,7 @@ describe('SurfaceRegistry', () => {
     if (!result.ok) expect(result.failure.reason).toBe('role_mismatch')
   })
 
-  it.skip('resolve returns forbidden_in_phase when phase is forbidden', () => {
+  it('resolve returns forbidden_in_phase when phase is forbidden', () => {
     const noPanic = {
       ...fixtureOkManifest,
       id: '__no_panic',
@@ -95,14 +91,14 @@ describe('SurfaceRegistry', () => {
 
   // ── validate ──────────────────────────────────────────────────────────────
 
-  it.skip('validate passes for correct payload', () => {
+  it('validate passes for correct payload', () => {
     surfaceRegistry.register(fixtureOkManifest)
     const result = surfaceRegistry.validate({ message: 'hello', count: 3 }, fixtureOkManifest)
     expect(result.success).toBe(true)
     if (result.success) expect(result.data).toEqual({ message: 'hello', count: 3 })
   })
 
-  it.skip('validate fails for wrong-typed payload', () => {
+  it('validate fails for wrong-typed payload', () => {
     surfaceRegistry.register(fixtureBadManifest)
     const result = surfaceRegistry.validate(fixtureBadPayload, fixtureBadManifest)
     expect(result.success).toBe(false)
@@ -111,7 +107,7 @@ describe('SurfaceRegistry', () => {
 
   // ── mount ─────────────────────────────────────────────────────────────────
 
-  it.skip('mount returns ready for valid envelope', () => {
+  it('mount returns ready for valid envelope', () => {
     surfaceRegistry.register(fixtureOkManifest)
     const result = surfaceRegistry.mount(
       {
@@ -133,7 +129,7 @@ describe('SurfaceRegistry', () => {
     expect(result.status).toBe('ready')
   })
 
-  it.skip('mount returns validation_failed for invalid payload', () => {
+  it('mount returns validation_failed for invalid payload', () => {
     surfaceRegistry.register(fixtureBadManifest)
     const result = surfaceRegistry.mount(
       {
@@ -155,7 +151,7 @@ describe('SurfaceRegistry', () => {
     expect(result.status).toBe('validation_failed')
   })
 
-  it.skip('mount returns resolve_failed for unregistered surface', () => {
+  it('mount returns resolve_failed for unregistered surface', () => {
     const result = surfaceRegistry.mount(
       {
         envelopeId: 'test-3',

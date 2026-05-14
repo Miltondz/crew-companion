@@ -1,359 +1,487 @@
 # Crew Companion
 
-> **Aplicación de coordinación con Generative UI para equipos de hackathon.**
-> La interfaz se adapta en tiempo real según quién sos, qué tan técnico sos, y qué tan cerca está el deadline.
+<div align="center">
+
+```
+  ██████╗██████╗ ███████╗██╗    ██╗     ██████╗ ██████╗ ███╗   ███╗██████╗  █████╗ ███╗   ██╗██╗ ██████╗ ███╗   ██╗
+ ██╔════╝██╔══██╗██╔════╝██║    ██║    ██╔════╝██╔═══██╗████╗ ████║██╔══██╗██╔══██╗████╗  ██║██║██╔═══██╗████╗  ██║
+ ██║     ██████╔╝█████╗  ██║ █╗ ██║    ██║     ██║   ██║██╔████╔██║██████╔╝███████║██╔██╗ ██║██║██║   ██║██╔██╗ ██║
+ ██║     ██╔══██╗██╔══╝  ██║███╗██║    ██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ██╔══██║██║╚██╗██║██║██║   ██║██║╚██╗██║
+ ╚██████╗██║  ██║███████╗╚███╔███╔╝    ╚██████╗╚██████╔╝██║ ╚═╝ ██║██║     ██║  ██║██║ ╚████║██║╚██████╔╝██║ ╚████║
+  ╚═════╝╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝      ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+```
+
+**Runtime Cognitivo Operacional para equipos de proyecto.**
+
+> La interfaz se transforma según quién sos, qué tan urgente es la situación y qué te está bloqueando — no al revés.
+
+[![Next.js](https://img.shields.io/badge/Next.js_15-black?logo=next.js)](https://nextjs.org)
+[![Python](https://img.shields.io/badge/Python_3.11-3776AB?logo=python&logoColor=white)](https://python.org)
+[![LangGraph](https://img.shields.io/badge/LangGraph-orange)](https://langchain-ai.github.io/langgraph)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 [English](./README.md)
 
----
-
-## ¿Qué es Crew Companion?
-
-Crew Companion es una aplicación web agéntica construida para equipos de hackathon. A diferencia de los dashboards tradicionales con un chat al costado, **el chat ES la interfaz**. Un agente de AI observa el contexto del equipo — rol, nivel técnico, fase de urgencia y bloqueadores activos — y renderiza dinámicamente componentes UI tipados directamente en la conversación.
-
-El resultado: el líder ve paneles de sugerencias de tareas y resúmenes de milestones. Un miembro del equipo sin experiencia técnica recibe wizards guiados paso a paso. Cada uno obtiene una interfaz diferente, manejada por el mismo agente, actualizada en tiempo real.
+</div>
 
 ---
 
-## Concepto Central: Generative UI
+## Qué es
 
-La app opera sobre 4 variables de contexto que el agente evalúa en cada interacción:
+Crew Companion **no es un dashboard con IA agregada**. Es un runtime donde la interfaz *emerge* del contexto en lugar de ser navegada. Cuatro capas gobiernan cada interacción:
 
-| Variable | Opciones | Efecto |
-|----------|---------|--------|
-| **Rol** | `leader` / `member` | Determina qué datos y acciones están disponibles |
-| **Nivel técnico** | `low-tech` / `high-tech` | Controla el tono, nivel de detalle y tipo de surface |
-| **Fase de urgencia** | `normal` → `focus` → `urgent` → `panic` → `expired` | Define la intensidad visual y prioridad de acciones |
-| **Estado de blocker** | activo / ninguno | Orienta al agente hacia surfaces de troubleshooting |
-
----
-
-## Stack Tecnológico
-
-### Infraestructura (basada en [Generative-UI Global Hackathon Starter Kit](https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit))
-
-| Servicio | Tecnología | Puerto |
-|---------|-----------|--------|
-| **Frontend** | Next.js 15 + React 19 + Tailwind CSS 4 | 3010 |
-| **BFF** | Hono + TypeScript + CopilotRuntime v2 | 4000 |
-| **Agente** | Python + LangGraph + LangChain | 8123 |
-| **Servidor MCP** | TypeScript + mcp-use | 3001 |
-| **Base de datos** | PostgreSQL (Docker) | 5433 |
-| **Caché** | Redis (Docker) | 6381 |
-
-### Librerías Principales
-
-- **[CopilotKit](https://copilotkit.ai)** — Runtime de Generative UI, threads persistentes, sincronización de estado frontend↔agente
-- **LangGraph** — Orquestación agéntica con estado y cadena de middlewares
-- **Zustand** — Store de estado frontend para el dominio crew (tareas, milestones, miembros, blockers)
-- **shadcn/ui** — Librería de componentes (Radix UI + Tailwind)
-- **LLM** — Google Gemini Flash (por defecto) / Anthropic Claude Sonnet 4.6 (configurable)
-
----
-
-## Rutas de la Aplicación
-
-| Ruta | Usuario | Descripción |
-|------|---------|-------------|
-| `/leader` | Líder del equipo | Dashboard: tablero de tareas, panel de milestone, vista del equipo, chat |
-| `/member/[memberId]` | Miembro del equipo | Workspace personal: tarea activa, countdown, reporte de blocker, chat |
-| `/docs` | Todos | Workspace de documentos compartidos con Q&A impulsado por AI |
-| `/` | — | Redirige a `/leader` |
-
----
-
-## Sistema de Fases de Urgencia
-
-Crew Companion monitorea continuamente el deadline del milestone más cercano y actualiza la fase de UI de forma automática:
+La **Capa Agente** decide la intención semántica: qué surface se necesita y qué datos poblarla. La **Capa Runtime** resuelve el workspace físico: qué zona, qué ciclo de vida, qué sucede cuando dos surfaces compiten por la misma región. La **Capa de Política** actúa como firewall de capacidades: verifica si una herramienta puede ejecutarse, registra cada decisión e intercepta operaciones de alto riesgo antes de llegar al usuario. La **Capa Usuario** siempre tiene la última palabra: confirmaciones, paneles fijados y ApprovalGates para acciones destructivas.
 
 ```
-> 30 min  →  normal   — interfaz tranquila, colores estándar
-15–30 min  →  focus    — acento amarillo, señales de atención
- 5–14 min  →  urgent   — naranja, banner visible
-  0–4 min  →  panic    — rojo, elementos pulsantes, mascota preocupada
-    < 0    →  expired  — rojo total, surfaces de acción inmediata
-```
-
-Cada componente, surface y estado de la mascota responde a la fase actual de forma automática.
-
----
-
-## Las 12 UI Surfaces
-
-El agente selecciona y renderiza uno de estos componentes tipados según el contexto (ver `project-docs/agent/04-surface-matrix.md` para la matriz de decisión completa):
-
-| Surface | Audiencia | Disparador |
-|---------|----------|-----------|
-| `task_suggestion_panel` | Líder | Solicitudes de gestión de tareas |
-| `milestone_summary_panel` | Líder | Revisión de milestone o fase pánico |
-| `blocker_insight_panel` | Líder | Blocker activo reportado por miembro |
-| `member_action_panel` | Cualquiera | Coordinación de equipo o fase pánico |
-| `role_assignment_panel` | Líder | Consultas de roles/asignaciones |
-| `beginner_guide_panel` | Miembro (low-tech) | Solicitud de ayuda, sin blocker activo |
-| `guided_setup_panel` | Miembro (low-tech) | Guía de ejecución de tareas |
-| `troubleshooting_wizard` | Miembro (low-tech) | Blocker activo |
-| `commands_panel` | Miembro (high-tech) | Solicitudes de ayuda o tareas |
-| `checklist_panel` | Miembro (high-tech) | Tareas paso a paso |
-| `comparison_panel` | Miembro (high-tech) | Solicitudes de comparación de opciones |
-| `document_summary_panel` | Cualquiera | Preguntas sobre documentos |
-
----
-
-## La Mascota
-
-Un compañero persistente en la esquina inferior derecha que refleja el estado del equipo de un vistazo:
-
-| Mood | Disparador |
-|------|-----------|
-| `calm` 😊 | Fase: normal, sin blockers |
-| `focus` 🎯 | Fase: focus |
-| `worried` 😰 | Fase: urgent o blocker activo |
-| `panic` 🚨 | Fase: panic o expired |
-| `celebrate` 🎉 | Tarea completada o milestone alcanzado |
-
----
-
-## Modelo de Dominio
-
-### Entidades
-
-```typescript
-TeamMember     { id, name, role, technicalLevel, activeBlockerId? }
-Task           { id, title, description, assignedTo, status, priority, milestoneId? }
-Milestone      { id, title, deadline (ISO), taskIds[] }
-Blocker        { id, memberId, description, reportedAt, resolved }
-SharedDocument { id, title, content (markdown), sharedBy, sharedAt }
-```
-
-### Cálculo de Urgencia
-
-```typescript
-function getUrgencyPhase(deadlineISO: string): UrgencyPhase {
-  const minutesLeft = (new Date(deadlineISO).getTime() - Date.now()) / 60000
-  if (minutesLeft > 30) return 'normal'
-  if (minutesLeft > 15) return 'focus'
-  if (minutesLeft > 5)  return 'urgent'
-  if (minutesLeft > 0)  return 'panic'
-  return 'expired'
-}
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   CAPA AGENTE        decide la intención                │
+│   "¿Qué surface y datos se necesitan semánticamente?"   │
+│                          │                              │
+│                          ▼                              │
+│   CAPA RUNTIME       decide la composición              │
+│   "Layout, densidad, ciclo de vida, conflictos"         │
+│                          │                              │
+│                          ▼                              │
+│   CAPA POLÍTICA      decide la viabilidad               │
+│   "Capacidades, auditoría, puertas de aprobación"       │
+│                          │                              │
+│                          ▼                              │
+│   CAPA USUARIO       decide la autoridad                │
+│   "Confirmaciones, fijado de paneles, veto final"       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Fases del Proyecto
+## El Diferenciador Central
 
-### ✅ Fase 0 — Planificación y Documentación
-*Completada*
+La mayoría de herramientas con IA tratan la interfaz como estática y agregan inteligencia encima. Crew Companion invierte esto: el agente decide *qué* mostrar, el runtime decide *dónde y cómo*, y el resultado es un workspace diferente para un líder en pánico a las 11pm versus un miembro sin experiencia técnica haciendo onboarding un lunes tranquilo.
 
-Especificación completa del proyecto, decisiones de arquitectura, modelo de dominio, contratos de surfaces y guías para desarrolladores establecidos.
-
-- [x] Especificaciones originales en `base-docs/` analizadas y validadas
-- [x] Gaps identificados: inconsistencias de terminología, matriz de decisión faltante, Document Workspace no integrado en specs principales
-- [x] `project-docs/` creado con 17 documentos consolidados y accionables
-- [x] Roadmap para agentes (`project-docs/agent/`) — 6 archivos: overview, modelo de dominio, arquitectura, matriz de surfaces, prompts & tools, MVP scope
-- [x] Guía del desarrollador principal (`project-docs/dev-milton/`) — tareas por fase + prompts copy-paste para Claude Code y Gemini CLI
-- [x] Guía de la colaboradora (`project-docs/dev-companion/`) — specs de componentes con wireframes visuales, style guide
-
----
-
-### ✅ Fase 1 — Setup: Copiar Starter Kit y Limpiar Dominio
-*Completada*
-
-Se copió la estructura del Generative-UI Hackathon Starter Kit, se eliminó el dominio de leads/Notion y se crearon páginas placeholder para las rutas nuevas.
-
-- [x] Copiar `apps/`, `deployment/`, `scripts/` del starter kit
-- [x] Eliminar dominio de leads (componentes, páginas, módulos Python)
-- [x] Crear páginas placeholder para `/leader`, `/member/[memberId]`, `/docs`
-- [x] Configurar `.env` con las API keys
-- [x] Verificar que `npm run dev` levanta sin errores
-
-**Señal de completitud:** `http://localhost:3010` carga y redirige a `/leader`
+| Herramienta típica con IA | Crew Companion |
+|---|---|
+| Layouts estáticos con widgets de IA | Surfaces de UI generativa disparadas por intención del agente |
+| Misma UI para todos | Rol × NivelTécnico × FaseUrgencia × Especialización → workspace único |
+| Actualizaciones manuales de estado | Máquina de estado impulsa mascota, colores y routing de surfaces |
+| Un proyecto por cuenta | Dashboard multi-proyecto, invitaciones por link |
+| Interfaz chat primero | Gramática espacial: 6 zonas, fijado, overlays ambientales |
+| IA sugiere, usuario configura | El agente emite envelopes tipados; el runtime compone el layout |
+| Ayuda genérica por chat | Coaching con conciencia de especialización (dev/diseño/QA/manager/escritor) |
 
 ---
 
-### ✅ Fase 2 — Dominio: Store Zustand + Tipos + Seed Data
-*Completada*
+## Arquitectura del Sistema
 
-Se construyó la capa de estado completa del frontend para el dominio crew.
+El sistema está dividido en tres tiers independientemente desplegables. El **frontend** (Next.js 15, Vercel) maneja todo el rendering, ciclo de vida de surfaces e interacción del usuario. Comunica exclusivamente a través del **BFF** (Backend-for-Frontend, Hono en Render), que actúa como gateway de CopilotKit, aplica rate limits y gestiona el estado con scope de workspace. El **agente** (Python LangGraph, sidecar en Render) contiene toda la lógica de IA: herramientas, routing, política y estado de conversación con checkpoints. El frontend nunca llama al agente directamente — esa separación es un invariante arquitectónico duro.
 
-- [x] `apps/frontend/src/lib/crew/types.ts` — todas las interfaces TypeScript
-- [x] `apps/frontend/src/lib/crew/derive.ts` — funciones puras `getUrgencyPhase`, `getMascotMood`
-- [x] `apps/frontend/src/lib/crew/seed.ts` — datos demo con deadline dinámico
-- [x] `apps/frontend/src/lib/crew/store.ts` — Zustand store con todas las actions incluyendo `simulateUrgency`
-- [x] `apps/frontend/src/hooks/use-urgency-phase.ts` — sincronización reactiva de fase (intervalo 30s)
-
-**Señal de completitud:** `useCrewStore.getState().simulateUrgency(8)` en la consola del browser cambia `urgencyPhase` a `'urgent'`
-
----
-
-### ✅ Fase 3 — Frontend: Rutas /leader, /member, /docs
-*Completada*
-
-Se implementaron las tres vistas principales con integración CopilotKit v2 y UI con conciencia de urgencia.
-
-- [x] `CopilotKitProviderShell` adaptado para crew-companion (agentId: `crew_agent`)
-- [x] `/leader` — TaskBoard, MilestonePanel, TeamOverview, todas las frontend tools registradas
-- [x] `/member/[memberId]` — ActiveTaskView, MilestoneCountdown, reporte de blockers, frontend tools
-- [x] `/docs` — DocumentTabs con shadcn/ui Tabs, visor de documentos, acciones abrir/cerrar
-- [x] Componente `UrgencyBanner` (sistema de colores por fase con `animate-pulse` en pánico)
-- [x] Stub `SurfaceRenderer` registrado como tool `renderSurface` en todas las páginas
-- [x] Todas las frontend tools registradas: `setCrewState`, `updateTask`, `setMascotMood`, `highlightTasks`, `renderSurface`, `reportBlocker`, `openDocument`
-- [x] Botones de simulación de urgencia solo en dev (Normal/Focus/Urgent/Panic) en `/leader`
-
-**Señal de completitud:** Las tres rutas cargan, el chat es visible, el banner de urgencia cambia de color con los botones de simulación
-
----
-
-### ✅ Fase 4 — UI Surfaces + Countdown + Mascota
-*Completada — generada por Gemini CLI*
-
-Implementar las 8 surfaces del MVP, el timer de countdown en vivo, y la mascota compañera.
-
-- [x] Stub `SurfaceRenderer` (registrado como tool `renderSurface`)
-- [x] `renderSurface` registrado en todas las páginas
-- [x] 8 surfaces del MVP implementadas:
-  - [x] `TaskSuggestionPanel`
-  - [x] `MilestoneSummaryPanel`
-  - [x] `BlockerInsightPanel`
-  - [x] `MemberActionPanel`
-  - [x] `BeginnerGuidePanel`
-  - [x] `ChecklistPanel`
-  - [x] `TroubleshootingWizard`
-  - [x] `DocumentSummaryPanel`
-- [x] `MilestoneCountdown` — countdown en vivo (1 segundo) con estilo por fase
-- [x] `CompanionMascot` — componente de mascota reactivo al mood (`MascotSVG`)
-
-**Señal de completitud:** `simulateUrgency(3)` → el countdown pulsa en rojo, la mascota muestra estado pánico
-
----
-
-### ✅ Fase 5 — Agente Python: Prompts + Tools + Estado
-*Completada*
-
-Adaptar el agente LangGraph para el dominio crew con el sistema completo de selección de surfaces.
-
-- [x] `apps/agent/src/types.py` — TypedDicts Python alineados con el modelo de dominio TypeScript
-- [x] `apps/agent/src/crew_state.py` — TypedDict `CrewCanvasState` + `CrewStateMiddleware` (hidratación desde seed)
-- [x] `apps/agent/src/tools.py` — `create_task`, `update_task_status`, `create_milestone`, `resolve_blocker`, `get_documents` (con `InjectedState`)
-- [x] `apps/agent/src/prompts.py` — system prompt con tabla de decisión por role/technicalLevel/phase
-- [x] `apps/agent/src/runtime.py` — cadena de middleware: `TimingMiddleware → CrewStateMiddleware → CopilotKitMiddleware(expose_state=True)`
-- [x] `apps/agent/crew.seed.json` — datos seed (deadline calculado dinámicamente al arrancar el agente)
-
-**Señal de completitud:** El agente renderiza `task_suggestion_panel` cuando el líder pregunta "qué tareas faltan" y `troubleshooting_wizard` cuando un miembro low-tech reporta un blocker
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        CLIENTE (Browser)                             │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    Next.js 15 Frontend                       │    │
+│  │                                                              │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐ │    │
+│  │  │ Surface      │  │ Layout       │  │ Validador Envelope │ │    │
+│  │  │ Registry     │  │ Engine       │  │ (Zod)             │ │    │
+│  │  │              │  │ (6 regiones) │  │                   │ │    │
+│  │  └──────┬───────┘  └──────┬───────┘  └────────┬──────────┘ │    │
+│  │         └─────────────────┴──────────────────┘            │    │
+│  │                           │                                │    │
+│  │              ┌────────────▼───────────┐                   │    │
+│  │              │    WorkspaceShell       │                   │    │
+│  │              │  (layout por rol)       │                   │    │
+│  │              └────────────────────────┘                   │    │
+│  └────────────────────────┬─────────────────────────────────┘    │
+│                           │  CopilotKit v2 / WebSocket            │
+└───────────────────────────┼──────────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────────┐
+│                      BFF — Hono :4000                             │
+│                                                                   │
+│   TimingMiddleware → CrewStateMiddleware → CopilotKitMiddleware   │
+│                                                                   │
+│   /api/copilotkit ──► CopilotRuntime v2 ──► LangGraphAgent(s)    │
+│   /status         ──► Diagnósticos de salud + DB                 │
+└───────────────────────────┬──────────────────────────────────────┘
+                            │  HTTP / protocolo LangGraph
+┌───────────────────────────▼──────────────────────────────────────┐
+│                   Agente Python :8123                             │
+│                                                                   │
+│   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐           │
+│   │ Orchestrator│   │   Planner   │   │    Coach    │           │
+│   │             │──►│             │   │             │           │
+│   │  routing +  │   │  tareas +   │   │  guía +     │           │
+│   │  resets     │   │  milestones │   │  docs       │           │
+│   └─────────────┘   └─────────────┘   └─────────────┘           │
+│                                                                   │
+│   @guarded_tool ──► PolicyEngine ──► AuditLog                    │
+│   AsyncPostgresSaver (checkpoints)                                │
+└───────────────────────────┬──────────────────────────────────────┘
+                            │
+          ┌─────────────────┴─────────────────┐
+          │                                   │
+    ┌─────▼──────┐                    ┌───────▼──────┐
+    │ PostgreSQL │                    │    Redis      │
+    │   (Neon)   │                    │  (Upstash)    │
+    │            │                    │               │
+    │ workspace  │                    │ caché sesión  │
+    │ estado     │                    │ rate limiting │
+    │ audit log  │                    │               │
+    └────────────┘                    └───────────────┘
+```
 
 ---
 
-### ⬜ Fase 6 — Integración, QA y Demo
-*Pendiente*
+## Motor de Urgencia
 
-Integración completa del sistema, corrección de bugs y preparación para la demo.
+El motor de urgencia es el driver comportamental central de toda la aplicación. Cada workspace tiene al menos un milestone con deadline. La función `getUrgencyPhase(deadline)` calcula la fase actual en tiempo real — nunca se almacena en la base de datos, nunca se establece manualmente y nunca se pasa como prop. Cualquier código que lea `state.urgencyPhase` está consumiendo un valor derivado.
 
-- [ ] `npm run dev` (stack completo) corre sin errores
-- [ ] La persistencia de threads funciona al refrescar el browser (CopilotKit Intelligence)
-- [ ] Las 4 escenas de demo validadas (ver `project-docs/agent/06-mvp-scope.md`)
-- [ ] Botón de simulación de urgencia disponible en modo dev
-- [ ] La mascota sincroniza con las respuestas del agente
-- [ ] El workspace de documentos renderiza markdown de forma segura
-- [ ] Demo de 2 minutos ensayada
+Los cambios de fase no son solo visuales. Disparan re-routing automático de surfaces (TriageWarRoom reemplaza paneles normales en `panic`), actualizaciones de humor de la mascota, compresión de densidad del layout y activación del overlay de countdown.
 
-**Escenas de la demo:**
-1. `/leader` — tablero de tareas + milestone en fase `normal`
-2. Chat: "¿qué tareas faltan?" → `task_suggestion_panel` renderizado
-3. Simular 8 minutos → UI cambia a `urgent`, mascota a `worried`, el agente renderiza `milestone_summary_panel` proactivamente
-4. `/member/m2` (Sam, low-tech) → chat: "no entiendo cómo correr el proyecto" → `troubleshooting_wizard`
+```
+Línea de tiempo ───────────────────────────────────────────────────────► deadline
+         │                                                                  │
+         │   NORMAL      FOCUS       URGENTE     PÁNICO     EXPIRADO       │
+         │  ─────────── ─────────── ─────────── ─────────── ──────────    │
+         │  UI relajada  Señales     Countdown   War room    Archivado     │
+         │  Layout       sutiles     Comprimido  Blocker     bloqueado     │
+         │  completo     Prioridades superficie  forzado     modo          │
+         │               destacadas  routing                               │
+```
+
+---
+
+## Gramática Espacial — Layout del Workspace
+
+El workspace usa una gramática espacial fija de 6 regiones nombradas. Cada surface declara a qué región pertenece en su manifest. El Layout Engine resuelve conflictos, gestiona el ciclo de vida (mount, hibernate, evict) y respeta los paneles fijados por el usuario (guardados en localStorage).
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  COMMAND SURFACE (barra superior)                │
+│         selector proyecto · fase urgencia · nav · usuario        │
+├────────────────────────────┬────────────────────────────────────┤
+│                            │                                    │
+│    PRIMARY WORKZONE        │        CONTEXT RAIL (derecha)      │
+│                            │                                    │
+│    Surface principal del   │   MilestoneSummaryPanel            │
+│    agente:                 │   BlockerInsightPanel              │
+│                            │   DocumentSummaryPanel             │
+│    • TaskSuggestionPanel   │   BeginnerGuidePanel               │
+│    • FocusedTaskPanel      │   MemberActionPanel                │
+│    • TriageWarRoom         │                                    │
+│    • ForceGraph            ├────────────────────────────────────┤
+│    • IdeaMatrix            │                                    │
+│    • ChecklistPanel        │        AGENT RAIL (derecha)        │
+│    • TroubleshootingWizard │                                    │
+│                            │   Companion Habitat                │
+│                            │   (mascota + humor + diálogo)      │
+│                            │                                    │
+├────────────────────────────┴────────────────────────────────────┤
+│                   ACTIVITY STREAM (inferior)                     │
+│              log de eventos en vivo · acciones del agente        │
+└─────────────────────────────────────────────────────────────────┘
+         ┌──────────────────────────────────────────────┐
+         │          AMBIENT OVERLAY (capa z-top)         │
+         │   CountdownCritical · AmbientOverlayWidget    │
+         └──────────────────────────────────────────────┘
+```
+
+---
+
+## Modelo de Contexto de 4 Ejes
+
+Cada selección de surface, tono del agente y carga inicial del workspace está gobernada por cuatro dimensiones independientes:
+
+```
+  Rol             leader | member
+  NivelTécnico    high-tech | low-tech
+  FaseUrgencia    normal | focus | urgente | pánico | expirado  (siempre derivada)
+  Especialización developer | designer | qa | manager | writer | other
+```
+
+- El **Surface Registry** verifica `visibleToRoles`, `visibleToTechLevels` y `visibleToSpecializations` antes de montar cualquier surface
+- **`getInitialSurfaces()`** selecciona y monta la surface apropiada al cargar el workspace, sin interacción con el agente
+- Los **prompts del agente** usan la especialización para adaptar el tono: desarrolladores reciben ejemplos de código, diseñadores reciben framing UX, QA recibe criterios de aceptación
+
+```
+  Especialización → routing de surfaces               Especialización → tono del agente
+  ─────────────────────────────────────               ─────────────────────────────────
+  developer     → DebugSession / TechStack            "Revisá el error en la línea 42..."
+  designer      → DesignBriefPanel                   "El flujo de usuario para esta pantalla..."
+  qa            → TestCaseBoard / DebugSession        "Criterios: dado X, cuando Y..."
+  manager       → TeamVelocityPanel                  "3 miembros están por debajo del 30%..."
+  writer        → WritingChecklist / ContentOutline   "Tu estructura: intro → cuerpo..."
+  other/low-tech → BeginnerGuide / Checklist         "Paso 1: Abrí la tarea y leé..."
+```
+
+---
+
+## Topología Multi-Agente
+
+El sistema agente usa un modelo hub-and-spoke. El **Orchestrator** es el punto de entrada para cada mensaje del usuario. Clasifica la intención y delega a sub-agentes especializados para mantener el contexto enfocado.
+
+```
+                    ┌─────────────────────┐
+                    │     Orchestrator     │
+                    │                     │
+                    │  • Routing general  │
+                    │  • Reset workspace  │
+                    │  • Todas las tools  │
+                    └────────┬────────────┘
+                             │ delega
+              ┌──────────────┴──────────────┐
+              │                             │
+   ┌──────────▼──────────┐     ┌────────────▼────────────┐
+   │       Planner        │     │         Coach            │
+   │                      │     │                          │
+   │  create/update/      │     │  get_documents           │
+   │  delete task         │     │  create_blocker          │
+   │  create/update/      │     │  update_task_status      │
+   │  delete milestone    │     │  TechnicalStepper        │
+   │  update/delete       │     │  BeginnerGuidePanel      │
+   │  blocker/member      │     │                          │
+   └──────────────────────┘     └──────────────────────────┘
+
+   Herramientas frontend compartidas:
+   renderSurface · setMascotMood · logActivity
+   reportBlocker · highlightTasks · updateTask · setCrewState
+```
+
+---
+
+## Surfaces — Paneles de UI Generativa
+
+Cada surface es un componente React con un `manifest.ts` que declara su ID, región destino, capacidades requeridas y fases de urgencia compatibles. 24 surfaces en total.
+
+```
+  Surface                  │ Zona              │ Especialización
+  ─────────────────────────┼───────────────────┼─────────────────────────
+  TaskSuggestionPanel      │ primary-workzone  │ cualquiera
+  FocusedTaskPanel         │ primary-workzone  │ cualquiera
+  TriageWarRoom            │ primary-workzone  │ cualquiera (solo pánico)
+  ForceGraph               │ primary-workzone  │ cualquiera
+  IdeaMatrix               │ primary-workzone  │ cualquiera
+  ChecklistPanel           │ primary-workzone  │ cualquiera
+  TroubleshootingWizard    │ primary-workzone  │ cualquiera
+  DebugSession             │ primary-workzone  │ developer · qa
+  TechStackPanel           │ primary-workzone  │ developer (high-tech)
+  DesignBriefPanel         │ primary-workzone  │ designer
+  ComponentChecklist       │ primary-workzone  │ designer
+  TestCaseBoard            │ primary-workzone  │ qa
+  BugReportForm            │ primary-workzone  │ qa · developer
+  TeamVelocityPanel        │ primary-workzone  │ manager
+  StakeholderUpdate        │ primary-workzone  │ manager
+  WritingChecklist         │ primary-workzone  │ writer
+  ContentOutlinePanel      │ primary-workzone  │ writer
+  ─────────────────────────┼───────────────────┼─────────────────────────
+  MilestoneSummary         │ context-rail      │ cualquiera
+  BlockerInsight           │ context-rail      │ cualquiera
+  DocumentSummary          │ context-rail      │ cualquiera
+  BeginnerGuide            │ context-rail      │ cualquiera (low-tech)
+  MemberAction             │ context-rail      │ cualquiera
+  ─────────────────────────┼───────────────────┼─────────────────────────
+  CountdownCritical        │ ambient-overlay   │ cualquiera (focus+)
+  AmbientOverlayWidget     │ ambient-overlay   │ cualquiera (focus+)
+```
+
+---
+
+## Companion Habitat
+
+Un mini-habitat estilo Tamagotchi (240×180px) embebido en el workspace. No es un widget de estado — es una presencia del agente encarnada que reacciona a eventos del equipo en tiempo real.
+
+El Companion está manejado por una máquina xstate con 6 estados comportamentales. Sus props visuales (roca, trofeo, llama) son añadidos y removidos dinámicamente por el agente vía la herramienta frontend `setMascotMood`.
+
+```
+  Estados de clima (5):   soleado → nublado → lluvia → tormenta → noche
+  Humores (8):            calm · focused · worried · panicking
+                          celebrating · sleeping · thinking · guiding
+  Máquina xstate (6):     idle · alert · celebrating · thinking
+                          sleeping · guiding
+
+  Señales del Event Bus:
+    BLOCKER_CREATED      → worried / props: roca añadida
+    BLOCKER_RESOLVED     → calm    / props: roca removida
+    MILESTONE_COMPLETE   → celebrating / props: trofeo
+    PHASE_CHANGE(panic)  → panicking / props: llama
+    AGENT_TOOL_CALL      → thinking
+```
+
+---
+
+## Motor de Capacidades y Política
+
+Cada herramienta Python está decorada con `@guarded_tool`, que declara las capacidades requeridas, nivel de riesgo e impacto esperado antes de poder registrarse. Esto se verifica al arrancar — una herramienta sin declaración de capacidades no puede agregarse a ninguna lista de tools del agente.
+
+En runtime, cada llamada a una herramienta pasa por el PolicyEngine sincrónicamente. Las llamadas permitidas se ejecutan de inmediato y se registran en el audit log. Las llamadas marcadas `pending` — típicamente operaciones de alto riesgo — son interceptadas y se renderiza una surface ApprovalGate en el frontend.
+
+---
+
+## Stack
+
+```
+  ┌──────────────────────────────────────────────────────┐
+  │  FRONTEND                                            │
+  │  Next.js 15 · React 19 · Tailwind CSS 4             │
+  │  shadcn/ui · Framer Motion · xstate · Rive          │
+  │  CopilotKit v2 · Zod                                │
+  ├──────────────────────────────────────────────────────┤
+  │  BFF                                                 │
+  │  Hono (Node 20) · CopilotKit Runtime v2             │
+  │  LangGraphAgent bridge · TimingMiddleware            │
+  ├──────────────────────────────────────────────────────┤
+  │  AGENTE                                              │
+  │  Python 3.11 · LangGraph · Pydantic                 │
+  │  Gemini Flash (default) · Claude Sonnet (alternativo)│
+  │  AsyncPostgresSaver · @guarded_tool                  │
+  ├──────────────────────────────────────────────────────┤
+  │  AUTH & COMUNICACIONES                               │
+  │  NextAuth v5 · Resend magic-link                    │
+  ├──────────────────────────────────────────────────────┤
+  │  DATOS                                               │
+  │  PostgreSQL (Neon) · Redis (Upstash)                │
+  │  i18n: Español + Inglés, persistido por cookie      │
+  ├──────────────────────────────────────────────────────┤
+  │  OBSERVABILIDAD                                      │
+  │  Sentry (@sentry/nextjs v8)                         │
+  │  Lighthouse CI (presupuesto de performance ≥90)     │
+  ├──────────────────────────────────────────────────────┤
+  │  TESTING                                             │
+  │  Vitest (tests unitarios frontend)                  │
+  │  pytest (tests unitarios Python, uv --group dev)    │
+  ├──────────────────────────────────────────────────────┤
+  │  DEPLOY                                              │
+  │  Vercel (frontend) · Render (BFF + agente)          │
+  │  Neon (DB) · Upstash (Redis) — todo tier gratuito   │
+  └──────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Inicio Rápido
 
-### Prerrequisitos
+### Prerequisitos
 
-- Node.js 18+
-- Python 3.11+ con el gestor de paquetes `uv`
-- Docker Desktop
-- Una API key de Gemini (o Anthropic)
-- Una cuenta de CopilotKit (para threads de Intelligence)
+```
+Node.js 20+
+Python 3.11+ con uv
+Docker Desktop
+```
 
-### Instalación
+### Setup Local
 
 ```bash
-# Clonar el repositorio
+# 1. Clonar
 git clone https://github.com/Miltondz/crew-companion.git
 cd crew-companion
 
-# Configurar el entorno
+# 2. Variables de entorno
 cp .env.example .env
-# Editar .env con tus API keys
+# Requeridas: GEMINI_API_KEY, AUTH_SECRET, DATABASE_URL, RESEND_API_KEY
 
-# Instalar todas las dependencias (workspaces Node + Python via uv)
+# 3. Instalar dependencias
 npm install
+cd apps/agent && uv sync && cd ../..
 
-# Levantar infraestructura (Postgres + Redis)
+# 4. Levantar infraestructura (Postgres + Redis vía Docker)
 npm run dev:infra
 
-# Levantar todos los servicios
+# 5. Ejecutar migraciones
+bash scripts/migrate.sh up
+
+# 6. Seed del workspace demo
+npm run seed
+
+# 7. Levantar todo
 npm run dev
 ```
+
+Abrir `http://localhost:3010`
 
 ### Servicios Individuales
 
 ```bash
-npm run dev:ui       # Next.js frontend  → http://localhost:3010
-npm run dev:bff      # Hono BFF          → http://localhost:4000
-npm run dev:agent    # Agente LangGraph  → http://localhost:8123
-npm run dev:infra    # Solo stack Docker
+npm run dev:ui      # Solo frontend  ── :3010
+npm run dev:bff     # Solo BFF       ── :4000
+npm run dev:agent   # Agente Python  ── :8123
+npm run dev:infra   # Solo Docker
+npm run kill-ports  # Liberar puertos antes de reiniciar
 ```
 
-### Variables de Entorno
+### Ejecutar Tests
+
+```bash
+# TypeScript (Vitest) — 19 tests (registry + layout-engine)
+cd apps/frontend && npm run test
+
+# Python (pytest) — 31 tests de herramientas
+cd apps/agent && uv run pytest -v
+
+# Sincronizar capacidades Python → TypeScript
+npm run sync:capabilities
+```
+
+---
+
+## Variables de Entorno
 
 | Variable | Requerida | Descripción |
-|----------|----------|-------------|
-| `GEMINI_API_KEY` | Sí (o Anthropic) | API key de Google Gemini |
-| `ANTHROPIC_API_KEY` | Opcional | Solo si se usa runtime `claude-sonnet-react` |
-| `AGENT_RUNTIME` | No | `gemini-flash-deep` (default) o `claude-sonnet-react` |
-| `COPILOTKIT_LICENSE_TOKEN` | Sí | Licencia de CopilotKit |
-| `INTELLIGENCE_API_URL` | Sí | URL de la API de CopilotKit Intelligence |
-| `INTELLIGENCE_GATEWAY_WS_URL` | Sí | URL WebSocket de CopilotKit Intelligence |
-| `INTELLIGENCE_API_KEY` | Sí | Clave de auth de CopilotKit Intelligence |
+|---|---|---|
+| `GEMINI_API_KEY` | Sí | [Google AI Studio](https://aistudio.google.com) — LLM por defecto |
+| `AUTH_SECRET` | Sí | `openssl rand -base64 32` |
+| `DATABASE_URL` | Sí | Neon (prod) o Docker `localhost:5433` (local) |
+| `RESEND_API_KEY` | Sí | [Resend](https://resend.com) — emails magic-link |
+| `NEXTAUTH_URL` | Sí | URL pública de la app |
+| `BFF_URL` | Sí (prod) | URL del servicio BFF en Render |
+| `ANTHROPIC_API_KEY` | No | LLM alternativo (Claude Sonnet) |
+| `COPILOTKIT_API_KEY` | No | CopilotKit Intelligence — persistencia de threads |
 
 ---
 
-## Documentación del Proyecto
-
-Toda la documentación operativa vive en `project-docs/` (no se sube a GitHub — ver `.gitignore`):
+## Invariantes Arquitectónicos
 
 ```
-project-docs/
-├── agent/              # Contexto para agentes de código (Claude Code, Gemini CLI)
-│   ├── 01-overview.md
-│   ├── 02-domain-model.md
-│   ├── 03-architecture.md
-│   ├── 04-surface-matrix.md     ← tabla de decisión de surfaces
-│   ├── 05-prompts-and-tools.md  ← system prompt + todas las acciones
-│   └── 06-mvp-scope.md          ← qué está en/fuera del MVP + criterio de demo
-├── dev-milton/         # Tareas del desarrollador principal y prompts de AI
-│   ├── 00-roadmap.md
-│   ├── 01-phase1-setup.md  hasta  05-phase5-agent.md
-│   └── PROMPTS.md           ← prompts copy-paste para Claude Code / Gemini CLI
-└── dev-companion/      # Guía de la colaboradora frontend
-    ├── 00-intro.md
-    ├── 01-components.md    ← 12 componentes con specs visuales
-    └── 02-style-guide.md   ← tokens de diseño Tailwind
+  1. Separación Frontend/BFF/Agente
+     El frontend nunca llama al agente directamente.
+
+  2. Sincronización de tipos TS ↔ Python
+     Cualquier campo agregado a types.ts debe agregarse a types.py
+     en el mismo commit.
+
+  3. La fase de urgencia es derivada — nunca almacenada
+     getUrgencyPhase(deadline) es la única fuente de verdad.
+
+  4. Patrón Surface Registry
+     Las surfaces se registran vía manifests.
+     Sin switch/case, sin imports directos de componentes en routes.
+
+  5. Protocolo Envelope
+     Toda comunicación agente → frontend son envelopes tipados
+     validados por Zod antes de llegar al Surface Registry.
+
+  6. Declaraciones de capacidades
+     Cada herramienta declara capacidades requeridas vía @guarded_tool.
+     PolicyEngine evalúa antes de ejecutar.
+
+  7. Autoridad del usuario en acciones destructivas
+     El agente nunca auto-ejecuta operaciones de alto riesgo.
+     ApprovalGate siempre se renderiza para decisiones pendientes.
 ```
 
-Las especificaciones originales se preservan en `base-docs/`.
+---
+
+## Contribuir
+
+Issues y PRs bienvenidos. Leer `project-docs/MASTER_WORK_PLAN.md` para el roadmap completo y decisiones arquitectónicas antes de contribuir.
 
 ---
 
-## Equipo
+## Licencia
 
-| Rol | Responsabilidad |
-|-----|----------------|
-| **Desarrollador Principal** | Arquitectura, backend, agente, integración del sistema |
-| **Colaboradora Frontend** | Componentes UI, surfaces, mascota, diseño visual |
+MIT — uso libre.
 
 ---
 
-## Basado En
-
-Construido sobre el **[Generative-UI Global Hackathon Starter Kit](https://github.com/jerelvelarde/Generative-UI-Global-Hackathon-Starter-Kit)**, que provee la infraestructura completa de CopilotKit + LangGraph + Hono + Docker. Crew Companion reemplaza el dominio de gestión de leads por un dominio de coordinación de equipos.
+*Construido por Milton con Claude (Anthropic) como pair programmer de IA.*
