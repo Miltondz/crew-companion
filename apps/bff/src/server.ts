@@ -50,15 +50,19 @@ const copilotHandler = createCopilotRuntimeHandler({
     },
     openGenerativeUI: true,
     a2ui: { injectA2UITool: false },
-    mcpApps: {
-      servers: [
-        {
-          type: "http",
-          url: process.env.MCP_SERVER_URL || "http://localhost:3001/mcp",
-          serverId: "manufact_local",
-        },
-      ],
-    },
+    ...(process.env.MCP_SERVER_URL
+      ? {
+          mcpApps: {
+            servers: [
+              {
+                type: "http" as const,
+                url: process.env.MCP_SERVER_URL,
+                serverId: "manufact_local",
+              },
+            ],
+          },
+        }
+      : {}),
   }),
   cors: true,
 });
