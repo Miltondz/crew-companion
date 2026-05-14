@@ -2,8 +2,15 @@
 
 import { useEffect } from 'react'
 
-export default function MemberError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error('[member-error]', error) }, [error])
+export default function DashboardError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => { console.error('[dashboard-error]', error) }, [error])
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30">
@@ -12,7 +19,7 @@ export default function MemberError({ error, reset }: { error: Error & { digest?
       <div className="text-center max-w-sm">
         <h2 className="text-xl font-bold text-zinc-100 mb-2">Algo salió mal</h2>
         <p className="text-sm text-zinc-400 leading-relaxed">
-          {error.message || 'Error inesperado en la vista de miembro.'}
+          {error.message || 'Error inesperado en el dashboard.'}
         </p>
         {error.digest && (
           <p className="mt-2 text-xs font-mono text-zinc-600">ref: {error.digest}</p>

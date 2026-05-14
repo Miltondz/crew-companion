@@ -10,14 +10,19 @@ from ..tools import (
     delete_task,
     create_milestone,
     update_milestone,
+    delete_milestone,
     resolve_blocker,
     get_documents,
     create_blocker,
+    update_blocker,
+    delete_blocker,
     add_member,
+    update_member,
+    delete_member,
     reset_workspace,
 )
 
-# Planner: operational tools — tasks, milestones, blockers, team structure
+# Planner: full operational control — tasks, milestones, blockers, team
 PLANNER_TOOLS = [
     create_task,
     update_task,
@@ -25,9 +30,14 @@ PLANNER_TOOLS = [
     delete_task,
     create_milestone,
     update_milestone,
+    delete_milestone,
     resolve_blocker,
     create_blocker,
+    update_blocker,
+    delete_blocker,
     add_member,
+    update_member,
+    delete_member,
 ]
 
 # Coach: read-only + blocker creation — guidance, docs, surfacing stuck state
@@ -45,9 +55,14 @@ ORCHESTRATOR_TOOLS = [
     delete_task,
     create_milestone,
     update_milestone,
+    delete_milestone,
     resolve_blocker,
     get_documents,
     create_blocker,
+    update_blocker,
+    delete_blocker,
     add_member,
+    update_member,
+    delete_member,
     reset_workspace,
 ]

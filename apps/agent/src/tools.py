@@ -242,7 +242,106 @@ def reset_workspace(
     })
 
 
-CREW_TOOLS = [create_task, update_task, update_task_status, delete_task, create_milestone, update_milestone, resolve_blocker, get_documents, create_blocker, add_member, reset_workspace]
+@guarded_tool(
+    capabilities=[Capability.MILESTONES_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+    requires_approval=True,
+)
+def delete_milestone(
+    milestone_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Permanently remove a milestone. Clears activeMilestoneId if it matches."""
+    milestones = [m for m in state.get("milestones", []) if m["id"] != milestone_id]
+    active = state.get("activeMilestoneId")
+    new_active = active if active != milestone_id else (milestones[0]["id"] if milestones else None)
+    return Command(update={"milestones": milestones, "activeMilestoneId": new_active})
+
+
+@guarded_tool(
+    capabilities=[Capability.BLOCKERS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def update_blocker(
+    blocker_id: str,
+    description: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Update a blocker's description."""
+    blockers = [
+        {**b, "description": description} if b["id"] == blocker_id else b
+        for b in state.get("blockers", [])
+    ]
+    return Command(update={"blockers": blockers})
+
+
+@guarded_tool(
+    capabilities=[Capability.BLOCKERS_RESOLVE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+    requires_approval=True,
+)
+def delete_blocker(
+    blocker_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Permanently remove a blocker. Clears activeBlockerId on any member that references it."""
+    blockers = [b for b in state.get("blockers", []) if b["id"] != blocker_id]
+    members = [
+        {**m, "activeBlockerId": None} if m.get("activeBlockerId") == blocker_id else m
+        for m in state.get("members", [])
+    ]
+    return Command(update={"blockers": blockers, "members": members})
+
+
+@guarded_tool(
+    capabilities=[Capability.MEMBERS_INVITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def update_member(
+    member_id: str,
+    state: Annotated[dict, InjectedState],
+    name: Optional[str] = None,
+    role: Optional[str] = None,
+    technical_level: Optional[str] = None,
+) -> Command:
+    """Update a member's name, role, or technical level. Pass only fields to change."""
+    def patch(m: dict) -> dict:
+        if m["id"] != member_id:
+            return m
+        updates: dict = {}
+        if name is not None:
+            updates["name"] = name
+        if role is not None:
+            updates["role"] = role
+        if technical_level is not None:
+            updates["technicalLevel"] = technical_level
+        return {**m, **updates}
+    return Command(update={"members": [patch(m) for m in state.get("members", [])]})
+
+
+@guarded_tool(
+    capabilities=[Capability.MEMBERS_INVITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+    requires_approval=True,
+)
+def delete_member(
+    member_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Permanently remove a member and all their blockers from the workspace."""
+    members = [m for m in state.get("members", []) if m["id"] != member_id]
+    blockers = [b for b in state.get("blockers", []) if b.get("memberId") != member_id]
+    return Command(update={"members": members, "blockers": blockers})
+
+
+CREW_TOOLS = [
+    create_task, update_task, update_task_status, delete_task,
+    create_milestone, update_milestone, delete_milestone,
+    resolve_blocker, get_documents,
+    create_blocker, update_blocker, delete_blocker,
+    add_member, update_member, delete_member,
+    reset_workspace,
+]
 
 # Boot-time assertion: every tool must have a registered capability declaration.
 assert_all_tools_registered(CREW_TOOLS)

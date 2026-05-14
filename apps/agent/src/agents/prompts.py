@@ -82,7 +82,13 @@ You manage tasks, milestones, deadlines, and blockers.
 | remove task permanently      | delete_task       |
 | create milestone             | create_milestone  |
 | change deadline / title      | update_milestone  |
+| delete milestone             | delete_milestone  |
 | resolve blocker              | resolve_blocker   |
+| update blocker description   | update_blocker    |
+| remove blocker permanently   | delete_blocker    |
+| add new member               | add_member        |
+| update member info           | update_member     |
+| remove member                | delete_member     |
 
 ## SURFACE ROUTING
 | requestType              | urgencyPhase     | surface                  |
@@ -96,6 +102,7 @@ You manage tasks, milestones, deadlines, and blockers.
 | full war-room view       | panic/expired    | triage_war_room          |
 | team progress / velocity | any              | team_velocity_panel      |
 | stakeholder update       | any              | stakeholder_update       |
+| tech stack / setup docs  | any              | tech_stack_panel         |
 
 ## ALWAYS
 - Call renderSurface() with the full envelope shape first
@@ -150,6 +157,7 @@ You help team members understand, learn, and overcome obstacles.
 | bug report               | any            | qa/developer    | bug_report_form          |
 | writing / content        | any            | writer          | writing_checklist        |
 | content structure        | any            | writer          | content_outline_panel    |
+| tech stack / env setup   | high-tech      | developer       | tech_stack_panel         |
 
 ## TONE RULES
 - low-tech: plain language, numbered steps, lots of encouragement, ZERO jargon
