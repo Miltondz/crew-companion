@@ -1,8 +1,9 @@
+import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import {
   CopilotRuntime,
   CopilotKitIntelligence,
-  createCopilotEndpoint,
+  createCopilotRuntimeHandler,
 } from "@copilotkit/runtime/v2";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 import { FullEnvelopeSchema } from "./envelope-schema.js";
@@ -27,17 +28,15 @@ function makeAgent(graphId: string): LangGraphAgent {
   });
 }
 
-const agent         = makeAgent("default");   // orchestrator
-const plannerAgent  = makeAgent("planner");
-const coachAgent    = makeAgent("coach");
+const agent        = makeAgent("default");
+const plannerAgent = makeAgent("planner");
+const coachAgent   = makeAgent("coach");
 
-const app = createCopilotEndpoint({
+const copilotHandler = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
   runtime: new CopilotRuntime({
     ...(intelligence ? { intelligence } : {}),
     identifyUser: (ctx: unknown) => {
-      // Middleware injects x-workspace-id from the NextAuth session.
-      // Falls back to 'default' during local dev without auth.
       const workspaceId =
         (ctx as unknown as Request).headers?.get("x-workspace-id") ?? "default";
       return { id: workspaceId, name: `workspace:${workspaceId}` };
@@ -45,7 +44,7 @@ const app = createCopilotEndpoint({
     licenseToken: process.env.COPILOTKIT_LICENSE_TOKEN,
     agents: {
       default:    agent,
-      crew_agent: agent,       // legacy alias kept for existing threads
+      crew_agent: agent,
       planner:    plannerAgent,
       coach:      coachAgent,
     },
@@ -61,9 +60,13 @@ const app = createCopilotEndpoint({
       ],
     },
   }),
+  cors: true,
 });
 
-// Envelope correlation logging — validate on /api/copilotkit, never block.
+// Root app — all custom routes live here, CopilotKit is a delegate.
+const app = new Hono();
+
+// Envelope correlation logging
 app.use("/api/copilotkit/*", async (c, next) => {
   const ctype = c.req.header("content-type") ?? "";
   if (ctype.includes("application/json")) {
@@ -101,13 +104,13 @@ app.use("/api/copilotkit/*", async (c, next) => {
         }
       }
     } catch {
-      // Body parse failure — not a JSON tool call body, skip
+      // not a JSON tool-call body
     }
   }
   await next();
 });
 
-// Rewrite known 5xx error bodies into structured { error, hint, command } payloads.
+// Rewrite known 5xx bodies into structured payloads
 app.use("*", async (c, next) => {
   await next();
   const status = c.res.status;
@@ -123,52 +126,48 @@ app.use("*", async (c, next) => {
   }
   const isThreadFkey =
     body.includes("threads_user_id_fkey") ||
-    (body.includes("Failed to initialize thread") &&
-      body.includes("user_id"));
+    (body.includes("Failed to initialize thread") && body.includes("user_id"));
   if (isThreadFkey) {
-    const remapped = {
-      error: "Postgres user seed missing",
-      hint: "Run `npm run seed` to seed the default user, then retry.",
-      command: "npm run seed",
-    };
-    c.res = new Response(JSON.stringify(remapped), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
+    c.res = new Response(
+      JSON.stringify({
+        error: "Postgres user seed missing",
+        hint: "Run `npm run seed` to seed the default user, then retry.",
+        command: "npm run seed",
+      }),
+      { status: 500, headers: { "content-type": "application/json" } }
+    );
     return;
   }
-
   const isThreadLocked =
     body.includes("AgentThreadLockedError") ||
     /Thread\s+[0-9a-f-]{36}\s+is locked/i.test(body);
   if (isThreadLocked) {
-    const remapped = {
-      error: "Thread is locked",
-      hint:
-        "A previous turn errored mid-stream and didn't release the run " +
-        "lock. Start a new conversation (sidebar → +) to continue.",
-      command: "new-thread",
-    };
-    c.res = new Response(JSON.stringify(remapped), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
+    c.res = new Response(
+      JSON.stringify({
+        error: "Thread is locked",
+        hint:
+          "A previous turn errored mid-stream and didn't release the run lock. " +
+          "Start a new conversation (sidebar → +) to continue.",
+        command: "new-thread",
+      }),
+      { status: 500, headers: { "content-type": "application/json" } }
+    );
     return;
   }
 });
 
 app.get("/api/health", async (c) => {
-  const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123"
-  const t0 = Date.now()
-  let langgraph: Record<string, unknown> = {}
+  const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123";
+  const t0 = Date.now();
+  let langgraph: Record<string, unknown> = {};
   try {
-    const r = await fetch(`${lgUrl}/info`, { signal: AbortSignal.timeout(5000) })
-    const d = (await r.json()) as Record<string, unknown>
-    langgraph = { ok: r.ok, latencyMs: Date.now() - t0, status: r.status, data: d }
+    const r = await fetch(`${lgUrl}/info`, { signal: AbortSignal.timeout(5000) });
+    const d = (await r.json()) as Record<string, unknown>;
+    langgraph = { ok: r.ok, latencyMs: Date.now() - t0, status: r.status, data: d };
   } catch (e: unknown) {
-    langgraph = { ok: false, latencyMs: Date.now() - t0, error: (e as Error).message }
+    langgraph = { ok: false, latencyMs: Date.now() - t0, error: (e as Error).message };
   }
-  const m = process.memoryUsage()
+  const m = process.memoryUsage();
   return c.json({
     ok: true,
     timestamp: new Date().toISOString(),
@@ -186,10 +185,9 @@ app.get("/api/health", async (c) => {
       },
     },
     langgraph,
-  })
-})
+  });
+});
 
-// Approval stubs — replace body with graph.invoke(Command(resume={...})) on thread_id post-auth.
 app.post("/api/approvals/:envelopeId/approve", async (c) => {
   const { envelopeId } = c.req.param();
   const body = await c.req.json().catch(() => ({}));
@@ -203,6 +201,9 @@ app.post("/api/approvals/:envelopeId/reject", async (c) => {
   console.log(`[approvals] reject envelopeId=${envelopeId}`, body);
   return c.json({ ok: true, envelopeId, decision: "rejected" });
 });
+
+// CopilotKit — delegate to the low-level fetch handler (bypasses basePath scope issue)
+app.all("/api/copilotkit/*", (c) => copilotHandler(c.req.raw));
 
 const port = Number(process.env.PORT) || 4000;
 
