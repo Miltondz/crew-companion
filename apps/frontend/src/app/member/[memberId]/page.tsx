@@ -349,7 +349,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
-          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
           {/* Active task + countdown row */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">

@@ -27,6 +27,7 @@ export const manifest: SurfaceManifest<typeof MemberActionEnvelopeSchema> = {
 
   envelopeSchema: MemberActionEnvelopeSchema,
 
+  color: 'slate',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

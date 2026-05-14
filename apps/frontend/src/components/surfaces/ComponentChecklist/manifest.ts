@@ -26,6 +26,7 @@ export const manifest: SurfaceManifest<typeof ComponentChecklistEnvelopeSchema> 
 
   envelopeSchema: ComponentChecklistEnvelopeSchema,
 
+  color: 'cyan',
   density: 'compact',
   preferredZone: 'primary-workzone',
 

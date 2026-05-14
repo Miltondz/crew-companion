@@ -30,6 +30,7 @@ export const manifest: SurfaceManifest<typeof DebugSessionEnvelopeSchema> = {
 
   envelopeSchema: DebugSessionEnvelopeSchema,
 
+  color: 'slate',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

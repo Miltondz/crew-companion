@@ -28,6 +28,7 @@ export const manifest: SurfaceManifest<typeof BeginnerGuideEnvelopeSchema> = {
 
   envelopeSchema: BeginnerGuideEnvelopeSchema,
 
+  color: 'blue',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

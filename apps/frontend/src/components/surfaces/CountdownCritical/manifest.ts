@@ -34,6 +34,7 @@ export const manifest: SurfaceManifest<typeof CountdownCriticalEnvelopeSchema> =
 
   envelopeSchema: CountdownCriticalEnvelopeSchema,
 
+  color: 'red',
   density: 'compact',
   preferredZone: 'ambient-overlay',
 

@@ -27,6 +27,7 @@ export const manifest: SurfaceManifest<typeof TriageWarRoomEnvelopeSchema> = {
 
   envelopeSchema: TriageWarRoomEnvelopeSchema,
 
+  color: 'red',
   density: 'hero',
   preferredZone: 'primary-workzone',
 

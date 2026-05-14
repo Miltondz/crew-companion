@@ -33,6 +33,7 @@ export const manifest: SurfaceManifest<typeof TaskSuggestionEnvelopeSchema> = {
 
   envelopeSchema: TaskSuggestionEnvelopeSchema,
 
+  color: 'indigo',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

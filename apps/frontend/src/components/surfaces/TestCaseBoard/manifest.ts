@@ -28,6 +28,7 @@ export const manifest: SurfaceManifest<typeof TestCaseBoardEnvelopeSchema> = {
 
   envelopeSchema: TestCaseBoardEnvelopeSchema,
 
+  color: 'cyan',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

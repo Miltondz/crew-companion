@@ -26,6 +26,7 @@ export const manifest: SurfaceManifest<typeof BugReportEnvelopeSchema> = {
 
   envelopeSchema: BugReportEnvelopeSchema,
 
+  color: 'red',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

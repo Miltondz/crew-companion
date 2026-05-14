@@ -30,6 +30,7 @@ export const manifest: SurfaceManifest<typeof ForceGraphEnvelopeSchema> = {
 
   envelopeSchema: ForceGraphEnvelopeSchema,
 
+  color: 'indigo',
   density: 'hero',
   preferredZone: 'primary-workzone',
 

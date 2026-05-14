@@ -24,6 +24,7 @@ export const manifest: SurfaceManifest<typeof FocusedTaskEnvelopeSchema> = {
 
   envelopeSchema: FocusedTaskEnvelopeSchema,
 
+  color: 'amber',
   density: 'compact',
   preferredZone: 'primary-workzone',
 

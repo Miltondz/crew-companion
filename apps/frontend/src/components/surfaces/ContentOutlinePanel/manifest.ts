@@ -29,6 +29,7 @@ export const manifest: SurfaceManifest<typeof ContentOutlineEnvelopeSchema> = {
 
   envelopeSchema: ContentOutlineEnvelopeSchema,
 
+  color: 'amber',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

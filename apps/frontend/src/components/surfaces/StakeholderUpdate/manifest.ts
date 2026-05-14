@@ -26,6 +26,7 @@ export const manifest: SurfaceManifest<typeof StakeholderUpdateEnvelopeSchema> =
 
   envelopeSchema: StakeholderUpdateEnvelopeSchema,
 
+  color: 'emerald',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

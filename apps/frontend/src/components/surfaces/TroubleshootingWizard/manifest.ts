@@ -28,6 +28,7 @@ export const manifest: SurfaceManifest<typeof TroubleshootingEnvelopeSchema> = {
 
   envelopeSchema: TroubleshootingEnvelopeSchema,
 
+  color: 'orange',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

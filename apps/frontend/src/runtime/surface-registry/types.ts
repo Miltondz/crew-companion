@@ -95,6 +95,7 @@ export interface SurfaceManifest<TSchema extends ZodTypeAny = ZodTypeAny> {
   envelopeSchema: TSchema
 
   // ── Visual properties (consumed by 3.2 Layout Engine) ────────────────
+  color?: 'red' | 'orange' | 'amber' | 'emerald' | 'indigo' | 'violet' | 'cyan' | 'slate' | 'blue'
   density: 'compact' | 'standard' | 'hero'
   preferredZone: RegionId
   minWidth?: number

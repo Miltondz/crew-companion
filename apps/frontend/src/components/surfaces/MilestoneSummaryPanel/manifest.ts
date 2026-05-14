@@ -36,7 +36,8 @@ export const manifest: SurfaceManifest<typeof MilestoneSummaryEnvelopeSchema> = 
 
   envelopeSchema: MilestoneSummaryEnvelopeSchema,
 
-  density: 'standard',
+  color: 'indigo',
+  density: 'hero',
   preferredZone: 'primary-workzone',
 
   canPin: true,

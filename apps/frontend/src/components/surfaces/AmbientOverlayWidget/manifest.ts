@@ -24,6 +24,7 @@ export const manifest: SurfaceManifest<typeof AmbientOverlayWidgetEnvelopeSchema
 
   envelopeSchema: AmbientOverlayWidgetEnvelopeSchema,
 
+  color: 'slate',
   density: 'compact',
   preferredZone: 'ambient-overlay',
 

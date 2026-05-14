@@ -28,6 +28,7 @@ export const manifest: SurfaceManifest<typeof DesignBriefEnvelopeSchema> = {
 
   envelopeSchema: DesignBriefEnvelopeSchema,
 
+  color: 'violet',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

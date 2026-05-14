@@ -29,7 +29,8 @@ export const manifest: SurfaceManifest<typeof TeamVelocityEnvelopeSchema> = {
 
   envelopeSchema: TeamVelocityEnvelopeSchema,
 
-  density: 'standard',
+  color: 'emerald',
+  density: 'hero',
   preferredZone: 'primary-workzone',
 
   canPin: true,

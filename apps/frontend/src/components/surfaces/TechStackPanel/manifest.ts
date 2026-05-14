@@ -36,6 +36,7 @@ export const manifest: SurfaceManifest<typeof TechStackEnvelopeSchema> = {
 
   envelopeSchema: TechStackEnvelopeSchema,
 
+  color: 'cyan',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

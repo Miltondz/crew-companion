@@ -28,6 +28,7 @@ export const manifest: SurfaceManifest<typeof ChecklistEnvelopeSchema> = {
 
   envelopeSchema: ChecklistEnvelopeSchema,
 
+  color: 'slate',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

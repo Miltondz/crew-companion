@@ -27,6 +27,7 @@ export const manifest: SurfaceManifest<typeof IdeaMatrixEnvelopeSchema> = {
 
   envelopeSchema: IdeaMatrixEnvelopeSchema,
 
+  color: 'violet',
   density: 'hero',
   preferredZone: 'primary-workzone',
 

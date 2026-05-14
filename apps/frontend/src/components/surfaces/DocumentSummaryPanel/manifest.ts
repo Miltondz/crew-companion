@@ -23,6 +23,7 @@ export const manifest: SurfaceManifest<typeof DocumentSummaryEnvelopeSchema> = {
 
   envelopeSchema: DocumentSummaryEnvelopeSchema,
 
+  color: 'slate',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

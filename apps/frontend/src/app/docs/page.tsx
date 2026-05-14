@@ -221,7 +221,7 @@ function DocsCanvas() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
             >
-          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={state.urgencyPhase} />
           {selectedDoc ? (
             <div className="mx-auto max-w-3xl">
               <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">

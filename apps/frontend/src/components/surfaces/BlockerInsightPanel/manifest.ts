@@ -36,6 +36,7 @@ export const manifest: SurfaceManifest<typeof BlockerInsightEnvelopeSchema> = {
 
   envelopeSchema: BlockerInsightEnvelopeSchema,
 
+  color: 'orange',
   density: 'standard',
   preferredZone: 'primary-workzone',
 

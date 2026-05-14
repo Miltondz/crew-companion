@@ -27,7 +27,8 @@ export const manifest: SurfaceManifest<typeof WritingChecklistEnvelopeSchema> = 
 
   envelopeSchema: WritingChecklistEnvelopeSchema,
 
-  density: 'compact',
+  color: 'amber',
+  density: 'standard',
   preferredZone: 'primary-workzone',
 
   canPin: true,

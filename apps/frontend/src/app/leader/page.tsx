@@ -449,7 +449,7 @@ function LeaderCanvas() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
-          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} />
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
 
           {/* Milestone + Team */}
           <div>
