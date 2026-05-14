@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronUp, MessageSquarePlus } from 'lucide-react'
+import { MessageSquarePlus, MessageSquare, ChevronDown } from 'lucide-react'
 
 interface Props {
   children: ReactNode
@@ -11,6 +11,28 @@ interface Props {
 
 export function AgentRailRegion({ children, habitat, onNewChat }: Props) {
   const [chatCollapsed, setChatCollapsed] = useState(false)
+
+  if (chatCollapsed) {
+    return (
+      <>
+        {/* Re-open button — top-right */}
+        <button
+          onClick={() => setChatCollapsed(false)}
+          className="fixed top-4 right-4 z-50 flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-lg hover:bg-indigo-700 transition"
+          aria-label="Abrir chat"
+        >
+          <MessageSquare size={14} />
+          Chat
+        </button>
+        {/* Mascot — fixed bottom-right */}
+        {habitat && (
+          <div className="fixed bottom-4 right-4 z-40">
+            {habitat}
+          </div>
+        )}
+      </>
+    )
+  }
 
   return (
     <div className="workspace-region workspace-region--agent-rail flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-xl">
@@ -27,19 +49,17 @@ export function AgentRailRegion({ children, habitat, onNewChat }: Props) {
             </button>
           )}
           <button
-            onClick={() => setChatCollapsed(c => !c)}
+            onClick={() => setChatCollapsed(true)}
             className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-            aria-label={chatCollapsed ? 'expand' : 'collapse'}
+            aria-label="collapse"
           >
-            {chatCollapsed ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            <ChevronDown size={15} />
           </button>
         </div>
       </div>
-      {!chatCollapsed && (
-        <div className="flex-1 overflow-hidden min-h-0">
-          {children}
-        </div>
-      )}
+      <div className="flex-1 overflow-hidden min-h-0">
+        {children}
+      </div>
       {habitat && (
         <div className="shrink-0 border-t border-slate-200 flex justify-center p-2">
           {habitat}

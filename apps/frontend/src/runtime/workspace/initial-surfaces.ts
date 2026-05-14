@@ -48,6 +48,14 @@ export function getInitialSurfaces(
 
   const surfaces: SurfaceEnvelope[] = []
 
+  const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
+  const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+  const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
+  const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
+
+  // Skip all surfaces when only seed/demo data is present
+  if (!hasRealMembers && !hasRealTasks) return surfaces
+
   const specialization = member?.specialization
 
   if (role === 'leader') {
