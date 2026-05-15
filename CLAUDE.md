@@ -109,6 +109,21 @@ If any axis fails, fix it in the same change before moving on.
 
 ---
 
+## Pre-push audit (MANDATORY — run before every `git push`)
+
+Before staging any commit or push, review every changed file for:
+
+1. **Type errors** — no inline `import()` type expressions in generics; all types imported at top level.
+2. **Stale refs** — if a `useRef` is updated inside a `useEffect`, capture the old value in a local variable *before* updating it; never read the ref after mutation and expect the old value.
+3. **Invariant 3** — milestone/task objects must never store a `phase` field. Phase is always computed via `getUrgencyPhase(deadline)`.
+4. **Seed data leaks** — `SEED_MEMBER_IDS`, `SEED_TASK_IDS`, `SEED_MILESTONE_IDS` must be module-level constants (not inside component body). Every render site that shows members/tasks/milestones must filter through the appropriate set.
+5. **Module-level constants** — sets, maps, and records that don't depend on props/state belong outside the component function to avoid recreation on every render.
+6. **Dead code** — conditions that can never be true (e.g., checking a value after it was already reassigned) must be removed.
+
+If any finding exists: fix it before committing. Do not push with known audit findings open.
+
+---
+
 ## Visual design rules (components)
 
 - Use 21st.dev MCP for deep component redesigns — not shallow dark: variant patches.

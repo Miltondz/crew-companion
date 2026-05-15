@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
+import { Flag, LayoutGrid, Activity } from 'lucide-react'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -23,6 +24,8 @@ import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-regi
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestonePanel } from '@/components/leader/MilestonePanel'
 import { TeamOverview } from '@/components/leader/TeamOverview'
+import { SectionFrame } from '@/components/leader/SectionFrame'
+import type { GridShape } from '@/components/leader/SectionFrame'
 import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { useCrewAgent } from '@/lib/useCrewAgent'
@@ -31,7 +34,6 @@ import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { UserMenu } from '@/components/shared/UserMenu'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
-import { ActivityStream } from '@/components/shared/ActivityStream'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
@@ -41,6 +43,10 @@ import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
 import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
 
+
+const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
+const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+const SEED_MILESTONE_IDS = new Set(['ms1'])
 
 interface AddTaskForm {
   title: string
@@ -56,15 +62,15 @@ function LeaderCanvas() {
   const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [showAddTask, setShowAddTask] = useState(false)
-  const [showActivity, setShowActivity] = useState(false)
   const [inviteCode, setInviteCode] = useState<string>('')
-  const [milestoneSectionCollapsed, setMilestoneSectionCollapsed] = useState(false)
-  const [taskBoardCollapsed, setTaskBoardCollapsed] = useState(false)
   const [showMilestoneEdit, setShowMilestoneEdit] = useState(false)
   const [milestoneEditForm, setMilestoneEditForm] = useState({ title: '', deadline: '' })
+  const [showCreateMilestone, setShowCreateMilestone] = useState(false)
+  const [createMilestoneForm, setCreateMilestoneForm] = useState({ title: '', deadline: '' })
 
-  const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
-  const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+  const [milestoneAgentShape, setMilestoneAgentShape] = useState<GridShape | undefined>(undefined)
+  const [taskBoardAgentShape, setTaskBoardAgentShape] = useState<GridShape | undefined>(undefined)
+  const [activityAgentShape, setActivityAgentShape] = useState<GridShape | undefined>(undefined)
   const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
   const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
@@ -73,7 +79,7 @@ function LeaderCanvas() {
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
     description: '',
-    assignedTo: state.members[0]?.id ?? '',
+    assignedTo: '',
     priority: 'medium',
   })
 
@@ -215,6 +221,22 @@ function LeaderCanvas() {
     },
   })
 
+  useFrontendTool({
+    name: 'controlWorkspace',
+    description: 'Controla el layout del workspace: expande, compacta o resalta secciones según el contexto',
+    parameters: z.object({
+      section: z.enum(['milestone', 'task-board', 'activity']),
+      shape: z.enum(['compact', 'normal', 'wide', 'hero']),
+    }),
+    handler: async ({ section, shape }) => {
+      const s = shape as GridShape
+      if (section === 'milestone') setMilestoneAgentShape(s)
+      else if (section === 'task-board') setTaskBoardAgentShape(s)
+      else if (section === 'activity') setActivityAgentShape(s)
+      return `${section} → ${shape}`
+    },
+  })
+
   const currentLeader = state.members.find(m => m.id === state.currentMemberId)
   const runtimeContext = useRuntimeContext({
     role: 'leader',
@@ -301,21 +323,23 @@ function LeaderCanvas() {
       status: 'todo' as TaskStatus,
       priority: taskForm.priority,
       createdAt: new Date().toISOString(),
-      milestoneId: state.activeMilestoneId,
+      milestoneId: SEED_MILESTONE_IDS.has(state.activeMilestoneId ?? '') ? undefined : state.activeMilestoneId,
     }
     const assignee = state.members.find(m => m.id === newTask.assignedTo)
     setState(prev => ({
       ...prev,
       tasks: [...prev.tasks, newTask],
-      milestones: prev.milestones.map(m =>
-        m.id === prev.activeMilestoneId
-          ? { ...m, taskIds: [...m.taskIds, newTask.id] }
-          : m
-      ),
+      milestones: SEED_MILESTONE_IDS.has(prev.activeMilestoneId ?? '')
+        ? prev.milestones
+        : prev.milestones.map(m =>
+            m.id === prev.activeMilestoneId
+              ? { ...m, taskIds: [...m.taskIds, newTask.id] }
+              : m
+          ),
     }))
     toast.success('Tarea creada', { description: newTask.title })
     pushActivity('task_created', `Nueva tarea "${newTask.title}" → ${assignee?.name ?? 'sin asignar'}`, '📋')
-    setTaskForm({ title: '', description: '', assignedTo: state.members[0]?.id ?? '', priority: 'medium' })
+    setTaskForm({ title: '', description: '', assignedTo: '', priority: 'medium' })
     setShowAddTask(false)
   }
 
@@ -388,6 +412,24 @@ function LeaderCanvas() {
     setShowMilestoneEdit(false)
   }
 
+  const handleCreateMilestone = () => {
+    if (!createMilestoneForm.title.trim()) return
+    const id = crypto.randomUUID()
+    setState(prev => ({
+      ...prev,
+      milestones: [...prev.milestones, {
+        id,
+        title: createMilestoneForm.title.trim(),
+        deadline: createMilestoneForm.deadline ? new Date(createMilestoneForm.deadline).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        taskIds: [],
+      }],
+      activeMilestoneId: id,
+    }))
+    toast.success('Milestone creado', { description: createMilestoneForm.title })
+    setCreateMilestoneForm({ title: '', deadline: '' })
+    setShowCreateMilestone(false)
+  }
+
   const kanbanColumns: { status: TaskStatus; label: string; accent: string; countColor: string }[] = [
     { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   countColor: 'bg-slate-100 text-slate-600'   },
     { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    countColor: 'bg-blue-100 text-blue-700'     },
@@ -428,7 +470,6 @@ function LeaderCanvas() {
               </div>
             </div>
 
-            {/* Nav links to members */}
             <div className="flex items-center gap-2 flex-wrap">
               {hasRealMembers && effectiveMembers.map(m => (
                 <button
@@ -473,7 +514,7 @@ function LeaderCanvas() {
                       .catch(() => toast.info(`Código: ${inviteCode}`))
                   }}
                   className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
-                  title={`Copiar link de invitación`}
+                  title="Copiar link de invitación"
                 >
                   🔗 Invitar
                 </button>
@@ -496,288 +537,275 @@ function LeaderCanvas() {
 
         {/* Scrollable content */}
         <motion.div
-          className="flex flex-1 flex-col gap-4 overflow-y-auto p-5"
+          className="flex flex-1 flex-col overflow-y-auto p-5"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
           <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
 
-          {/* Milestone + Team */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Milestone & Equipo</span>
-              <div className="flex items-center gap-1">
-                {effectiveMilestone && !milestoneSectionCollapsed && (
-                  <>
+          {/* Bento grid */}
+          <div className="mt-4 grid grid-cols-6 gap-4 content-start">
+
+            {/* MILESTONE */}
+            <SectionFrame
+              id="milestone"
+              title="Milestone & Equipo"
+              color="indigo"
+              Icon={Flag}
+              phase={urgencyPhase}
+              supportedShapes={['compact', 'normal', 'wide']}
+              agentShape={milestoneAgentShape}
+              actions={
+                effectiveMilestone && !SEED_MILESTONE_IDS.has(effectiveMilestone.id) ? (
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={handleOpenMilestoneEdit}
                       className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-                      title="Editar milestone"
-                    >
-                      ✏️ Editar
-                    </button>
+                    >✏️</button>
                     <button
                       onClick={handleDeleteMilestone}
                       className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
-                      title="Eliminar milestone"
-                    >
-                      🗑️ Eliminar
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => setMilestoneSectionCollapsed(c => !c)}
-                  className="rounded p-0.5 text-slate-400 hover:text-slate-600"
-                  aria-label={milestoneSectionCollapsed ? 'expand' : 'minimize'}
-                >
-                  {milestoneSectionCollapsed ? '▲' : '▼'}
-                </button>
-              </div>
-            </div>
-            {!milestoneSectionCollapsed && (
-              <>
-              {showMilestoneEdit && (
-                <motion.div
-                  className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <p className="mb-3 text-sm font-bold text-slate-700">Editar milestone</p>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre</label>
-                      <input
-                        type="text"
-                        value={milestoneEditForm.title}
-                        onChange={e => setMilestoneEditForm(f => ({ ...f, title: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
-                      <input
-                        type="datetime-local"
-                        value={milestoneEditForm.deadline}
-                        onChange={e => setMilestoneEditForm(f => ({ ...f, deadline: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                      />
-                    </div>
+                    >🗑️</button>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={handleSaveMilestone}
-                      disabled={!milestoneEditForm.title.trim()}
-                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      onClick={() => setShowMilestoneEdit(false)}
-                      className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  {effectiveMilestone ? (
-                    <MilestonePanel
-                      milestone={effectiveMilestone}
-                      tasks={effectiveTasks}
-                      urgencyPhase={urgencyPhase}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/80 p-8">
-                      <EmptyState icon="🏁" title="Sin milestone activo" description="Pedile al asistente que cree uno" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-3">
-                  <TeamOverview
-                    members={effectiveMembers}
-                    tasks={effectiveTasks}
-                    blockers={state.blockers}
-                  />
-                  {/* Blockers — resolve button */}
-                  {activeBlockers.length > 0 && (
-                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-orange-500">Blockers activos</p>
-                      <div className="space-y-2">
-                        {activeBlockers.map(b => {
-                          const member = state.members.find(m => m.id === b.memberId)
-                          return (
-                            <div key={b.id} className="rounded-lg bg-white p-2.5 ring-1 ring-orange-200">
-                              <p className="text-xs font-semibold text-slate-700">{member?.name}</p>
-                              <p className="mt-0.5 text-[11px] italic text-slate-500">"{b.description}"</p>
-                              <button
-                                onClick={() => handleResolveBlocker(b.id)}
-                                className="mt-1.5 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition"
-                              >
-                                ✓ Resolver
-                              </button>
-                            </div>
-                          )
-                        })}
+                ) : undefined
+              }
+            >
+              <div className="p-4">
+                {showMilestoneEdit && (
+                  <motion.div
+                    className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <p className="mb-3 text-sm font-bold text-slate-700">Editar milestone</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre</label>
+                        <input type="text" value={milestoneEditForm.title}
+                          onChange={e => setMilestoneEditForm(f => ({ ...f, title: e.target.value }))}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
+                        <input type="datetime-local" value={milestoneEditForm.deadline}
+                          onChange={e => setMilestoneEditForm(f => ({ ...f, deadline: e.target.value }))}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
                       </div>
                     </div>
-                  )}
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={handleSaveMilestone} disabled={!milestoneEditForm.title.trim()}
+                        className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40">Guardar</button>
+                      <button onClick={() => setShowMilestoneEdit(false)}
+                        className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                    </div>
+                  </motion.div>
+                )}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    {effectiveMilestone ? (
+                      <MilestonePanel milestone={effectiveMilestone} tasks={effectiveTasks} urgencyPhase={urgencyPhase} />
+                    ) : (
+                      <div className="rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 p-6">
+                        {!showCreateMilestone ? (
+                          <div className="flex flex-col items-center gap-3 text-center">
+                            <span className="text-3xl">🏁</span>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-700">Sin milestone activo</p>
+                              <p className="text-xs text-slate-400 mt-0.5">Creá uno para empezar a trackear el proyecto</p>
+                            </div>
+                            <button onClick={() => setShowCreateMilestone(true)}
+                              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition">
+                              + Crear milestone
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="mb-3 text-sm font-bold text-slate-700">Nuevo milestone</p>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre *</label>
+                                <input type="text" value={createMilestoneForm.title}
+                                  onChange={e => setCreateMilestoneForm(f => ({ ...f, title: e.target.value }))}
+                                  placeholder="Ej: MVP launch" autoFocus
+                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
+                                <input type="datetime-local" value={createMilestoneForm.deadline}
+                                  onChange={e => setCreateMilestoneForm(f => ({ ...f, deadline: e.target.value }))}
+                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                              </div>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button onClick={handleCreateMilestone} disabled={!createMilestoneForm.title.trim()}
+                                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40">Crear</button>
+                              <button onClick={() => setShowCreateMilestone(false)}
+                                className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <TeamOverview members={effectiveMembers} tasks={effectiveTasks} blockers={state.blockers} />
+                    {activeBlockers.length > 0 && (
+                      <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-orange-500">Blockers activos</p>
+                        <div className="space-y-2">
+                          {activeBlockers.map(b => {
+                            const member = state.members.find(m => m.id === b.memberId)
+                            return (
+                              <div key={b.id} className="rounded-lg bg-white p-2.5 ring-1 ring-orange-200">
+                                <p className="text-xs font-semibold text-slate-700">{member?.name}</p>
+                                <p className="mt-0.5 text-[11px] italic text-slate-500">"{b.description}"</p>
+                                <button onClick={() => handleResolveBlocker(b.id)}
+                                  className="mt-1.5 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-200 transition">
+                                  ✓ Resolver
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              </>
-            )}
-          </div>
+            </SectionFrame>
 
-          {/* Kanban board */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">Task Board</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTaskBoardCollapsed(c => !c)}
-                  className="rounded p-0.5 text-slate-400 hover:text-slate-600"
-                  aria-label={taskBoardCollapsed ? 'expand' : 'minimize'}
-                >
-                  {taskBoardCollapsed ? '▲' : '▼'}
-                </button>
+            {/* TASK BOARD */}
+            <SectionFrame
+              id="task-board"
+              title="Task Board"
+              color="blue"
+              Icon={LayoutGrid}
+              phase={urgencyPhase}
+              supportedShapes={['normal', 'wide', 'hero']}
+              agentShape={taskBoardAgentShape}
+              actions={
                 <button
                   onClick={() => setShowAddTask(v => !v)}
-                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition"
+                  className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-500/30 transition"
                 >
-                  {showAddTask ? '✕ Cancelar' : '＋ Nueva tarea'}
+                  {showAddTask ? '✕' : '＋ Tarea'}
                 </button>
-              </div>
-            </div>
-
-            {/* Add Task form */}
-            {showAddTask && !taskBoardCollapsed && (
-              <motion.div
-                className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Título *</label>
-                    <input
-                      type="text"
-                      value={taskForm.title}
-                      onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))}
-                      placeholder="Ej: Implementar login"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Descripción</label>
-                    <input
-                      type="text"
-                      value={taskForm.description}
-                      onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))}
-                      placeholder="Detalles de la tarea"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asignar a</label>
-                    <select
-                      value={taskForm.assignedTo}
-                      onChange={e => setTaskForm(f => ({ ...f, assignedTo: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400"
-                    >
-                      {state.members.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prioridad</label>
-                    <select
-                      value={taskForm.priority}
-                      onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as TaskPriority }))}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400"
-                    >
-                      <option value="high">Alta</option>
-                      <option value="medium">Media</option>
-                      <option value="low">Baja</option>
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={handleAddTask}
-                  disabled={!taskForm.title.trim()}
-                  className="mt-3 w-full rounded-lg bg-indigo-600 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40"
-                >
-                  Crear tarea
-                </button>
-              </motion.div>
-            )}
-
-            {!taskBoardCollapsed && (
-              <div className="grid grid-cols-3 gap-4">
-                {kanbanColumns.map(({ status, label, accent, countColor }) => {
-                  const tasks = effectiveTasks.filter(t => t.status === status)
-                  return (
-                    <div key={status} className={`rounded-xl border-t-4 ${accent} bg-white/90 shadow-sm backdrop-blur-sm`}>
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</span>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countColor}`}>
-                          {tasks.length}
-                        </span>
+              }
+            >
+              <div className="p-4">
+                {showAddTask && (
+                  <motion.div
+                    className="mb-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Título *</label>
+                        <input type="text" value={taskForm.title}
+                          onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="Ej: Implementar login"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
                       </div>
-                      <div className="flex flex-col gap-2 px-3 pb-3">
-                        {hasRealTasks ? tasks.map(t => (
-                          <TaskCard
-                            key={t.id}
-                            task={{
-                              ...t,
-                              assignedTo: state.members.find(m => m.id === t.assignedTo)?.name ?? t.assignedTo,
-                            }}
-                            isHighlighted={state.highlightedTaskIds.includes(t.id)}
-                            onStatusChange={handleTaskStatusChange}
-                          />
-                        )) : (
-                          <div className="py-4 text-center text-xs text-slate-400">Sin tareas</div>
-                        )}
-                        {hasRealTasks && tasks.length === 0 && (
-                          <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
-                        )}
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Descripción</label>
+                        <input type="text" value={taskForm.description}
+                          onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="Detalles opcionales"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asignar a</label>
+                        <select value={taskForm.assignedTo}
+                          onChange={e => setTaskForm(f => ({ ...f, assignedTo: e.target.value }))}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
+                          <option value="">Sin asignar</option>
+                          {effectiveMembers.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prioridad</label>
+                        <select value={taskForm.priority}
+                          onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as TaskPriority }))}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
+                          <option value="high">Alta</option>
+                          <option value="medium">Media</option>
+                          <option value="low">Baja</option>
+                        </select>
                       </div>
                     </div>
-                  )
-                })}
+                    <button onClick={handleAddTask} disabled={!taskForm.title.trim()}
+                      className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-bold text-white hover:bg-blue-700 transition disabled:opacity-40">
+                      Crear tarea
+                    </button>
+                  </motion.div>
+                )}
+                <div className="grid grid-cols-3 gap-3">
+                  {kanbanColumns.map(({ status, label, accent, countColor }) => {
+                    const tasks = effectiveTasks.filter(t => t.status === status)
+                    return (
+                      <div key={status} className={`rounded-xl border-t-4 ${accent} bg-slate-50/80`}>
+                        <div className="flex items-center justify-between px-3 py-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${countColor}`}>{tasks.length}</span>
+                        </div>
+                        <div className="flex flex-col gap-2 px-2 pb-3">
+                          {hasRealTasks ? tasks.map(t => (
+                            <TaskCard key={t.id}
+                              task={{ ...t, assignedTo: effectiveMembers.find(m => m.id === t.assignedTo)?.name ?? (t.assignedTo || 'Sin asignar') }}
+                              isHighlighted={state.highlightedTaskIds.includes(t.id)}
+                              onStatusChange={handleTaskStatusChange} />
+                          )) : (
+                            <div className="py-3 text-center text-xs text-slate-400">Sin tareas</div>
+                          )}
+                          {hasRealTasks && tasks.length === 0 && (
+                            <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            )}
+            </SectionFrame>
+
+            {/* ACTIVITY STREAM */}
+            <SectionFrame
+              id="activity"
+              title="Actividad reciente"
+              color="emerald"
+              Icon={Activity}
+              phase={urgencyPhase}
+              supportedShapes={['compact', 'normal', 'wide']}
+              agentShape={activityAgentShape}
+            >
+              <div className="p-4">
+                {activityEvents.length === 0 ? (
+                  <EmptyState icon="📭" title="Sin actividad reciente" />
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {activityEvents.slice(0, 20).map((ev, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs">
+                        <span className="text-base leading-none mt-0.5">{ev.icon ?? '📋'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-slate-700 font-medium leading-tight">{ev.message}</p>
+                          <p className="text-slate-400 text-[10px] mt-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </SectionFrame>
+
           </div>
         </motion.div>
-
-          {/* Activity Stream */}
-          <div className="rounded-xl bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
-            <button
-              onClick={() => setShowActivity(v => !v)}
-              className="flex w-full items-center justify-between px-4 py-3 hover:bg-slate-50 transition"
-            >
-              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <span>📡</span> Actividad reciente
-                {activityEvents.length > 0 && (
-                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-                    {activityEvents.length}
-                  </span>
-                )}
-              </span>
-              <span className="text-slate-400 text-xs">{showActivity ? '▲' : '▼'}</span>
-            </button>
-            {showActivity && (
-              <div className="max-h-56 overflow-y-auto border-t border-slate-100 px-1 py-1">
-                <ActivityStream events={activityEvents} />
-              </div>
-            )}
-          </div>
 
         {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (

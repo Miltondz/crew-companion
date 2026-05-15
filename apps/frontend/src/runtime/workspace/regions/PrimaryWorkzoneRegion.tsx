@@ -91,7 +91,7 @@ export function PrimaryWorkzoneRegion({ mounts, phase }: Props) {
   if (sorted.length === 0) return null
 
   return (
-    <div className="workspace-region workspace-region--primary grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
+    <div className="workspace-region workspace-region--primary grid grid-cols-6 gap-3 content-start">
       {sorted.map(m => (
         <MountFrame
           key={m.mountId}
@@ -152,7 +152,7 @@ function MountFrame({
         'rounded-xl bg-white shadow-sm overflow-hidden transition-all ring-1',
         cs.borderLeft,
         cs.ring,
-        expanded ? 'md:col-span-2' : '',
+        expanded ? 'col-span-6' : 'col-span-6 md:col-span-3',
         mount.hibernated ? 'opacity-40' : '',
         isCritical ? 'shadow-red-100 shadow-md' : '',
       ].filter(Boolean).join(' ')}
