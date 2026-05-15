@@ -222,6 +222,33 @@ function LeaderCanvas() {
   })
 
   useFrontendTool({
+    name: 'addMember',
+    description: 'Añade un nuevo miembro al equipo con nombre, rol y especialización',
+    parameters: z.object({
+      name: z.string(),
+      role: z.enum(['leader', 'member']),
+      specialization: z.enum(['developer', 'designer', 'qa', 'manager', 'writer', 'other']).optional(),
+      technicalLevel: z.enum(['low-tech', 'high-tech']).optional(),
+    }),
+    handler: async ({ name, role, specialization, technicalLevel }) => {
+      const id = crypto.randomUUID()
+      setState(prev => ({
+        ...prev,
+        members: [...prev.members, {
+          id,
+          name,
+          role,
+          specialization,
+          technicalLevel: technicalLevel ?? 'low-tech',
+        }],
+      }))
+      toast.success(`${name} añadido al equipo`)
+      pushActivity('task_created', `${name} se unió como ${specialization ?? role}`, '👤')
+      return `miembro ${name} (${id}) añadido`
+    },
+  })
+
+  useFrontendTool({
     name: 'controlWorkspace',
     description: 'Controla el layout del workspace: expande, compacta o resalta secciones según el contexto',
     parameters: z.object({
@@ -284,7 +311,7 @@ function LeaderCanvas() {
   })
 
   const activeMilestone = state.milestones.find(m => m.id === state.activeMilestoneId)
-  const effectiveMilestone = (activeMilestone?.id === 'ms1' && !hasRealTasks) ? null : activeMilestone
+  const effectiveMilestone = SEED_MILESTONE_IDS.has(activeMilestone?.id ?? '') ? null : activeMilestone
   const activeBlockers = state.blockers.filter(b => !b.resolved)
 
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
