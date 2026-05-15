@@ -44,7 +44,7 @@ import type { MinimizedSection } from '@/components/leader/MinimizedTray'
 import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { useCrewAgent } from '@/lib/useCrewAgent'
-import { getUrgencyPhase } from '@/lib/crew/derive'
+import { getUrgencyPhase, computeCountdown } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { UserMenu } from '@/components/shared/UserMenu'
@@ -69,6 +69,15 @@ interface AddTaskForm {
   description: string
   assignedTo: string
   priority: TaskPriority
+}
+
+function TrayCountdown({ deadline }: { deadline: string }) {
+  const [text, setText] = useState(() => computeCountdown(deadline))
+  useEffect(() => {
+    const id = setInterval(() => setText(computeCountdown(deadline)), 1000)
+    return () => clearInterval(id)
+  }, [deadline])
+  return <span className="font-mono tabular-nums text-[10px]">{text}</span>
 }
 
 function LeaderCanvas() {
@@ -649,7 +658,7 @@ function LeaderCanvas() {
                 if (id === 'milestone') return {
                   id, title: 'Milestone & Equipo', color: 'indigo' as const, Icon: Flag,
                   summary: effectiveMilestone
-                    ? `${effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length}/${effectiveMilestone.taskIds.length} tareas`
+                    ? <TrayCountdown deadline={effectiveMilestone.deadline} />
                     : 'Sin milestone',
                 }
                 if (id === 'task-board') return {
@@ -819,38 +828,35 @@ function LeaderCanvas() {
               isMinimized={minimizedSections.has('task-board')}
               onMinimize={handleSectionMinimize}
               actions={
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowAddTask(v => !v)}
-                    className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-500/30 transition"
-                  >
-                    {showAddTask ? '✕' : '＋ Tarea'}
-                  </button>
-                  <div className="relative group">
-                    <button className="rounded p-0.5 text-slate-300 hover:text-blue-500 transition" title="Columnas visibles">
-                      <Eye size={10} />
-                    </button>
-                    <div className="absolute right-0 top-full mt-1 z-20 hidden group-hover:flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg min-w-[130px]">
-                      {allKanbanColumns.map(col => (
-                        <button
-                          key={col.status}
-                          onClick={() => toggleColumn(col.status)}
-                          className="flex items-center gap-2 rounded-lg px-2 py-1 text-[10px] hover:bg-slate-50 transition text-left"
-                        >
-                          {visibleColumns.has(col.status)
-                            ? <Eye size={9} className="text-blue-500 shrink-0" />
-                            : <EyeOff size={9} className="text-slate-300 shrink-0" />}
-                          <span className={visibleColumns.has(col.status) ? 'text-slate-700 font-semibold' : 'text-slate-400'}>
-                            {col.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <button
+                  onClick={() => setShowAddTask(v => !v)}
+                  className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-500/30 transition"
+                >
+                  {showAddTask ? '✕' : '＋ Tarea'}
+                </button>
               }
             >
               <div className="p-4">
+                <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                  <Eye size={11} className="text-slate-400 mr-0.5" />
+                  {allKanbanColumns.map(col => (
+                    <button
+                      key={col.status}
+                      onClick={() => toggleColumn(col.status)}
+                      className={[
+                        'flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition',
+                        visibleColumns.has(col.status)
+                          ? 'border-blue-300 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-400',
+                      ].join(' ')}
+                    >
+                      {visibleColumns.has(col.status)
+                        ? <Eye size={8} />
+                        : <EyeOff size={8} />}
+                      {col.label}
+                    </button>
+                  ))}
+                </div>
                 <AnimatePresence initial={false}>
                   {showAddTask && (
                     <motion.div

@@ -179,7 +179,6 @@ export function KanbanBoard({
                     {hasRealTasks ? columnTasks.map(t => (
                       <motion.div
                         key={t.id}
-                        layout
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
@@ -210,7 +209,7 @@ export function KanbanBoard({
 
       <DragOverlay>
         {activeTask ? (
-          <div className="rotate-2 shadow-xl opacity-95 pointer-events-none">
+          <div className="rotate-2 shadow-xl opacity-95 pointer-events-none w-64">
             <TaskCard
               task={activeTask}
               isHighlighted={false}
