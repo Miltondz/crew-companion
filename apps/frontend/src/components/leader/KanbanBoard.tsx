@@ -8,6 +8,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -74,9 +75,9 @@ function SortableTaskCard({
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
-        opacity: isDragging ? 0.35 : 1,
+        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 50 : 'auto',
       }}
       {...attributes}
@@ -88,6 +89,85 @@ function SortableTaskCard({
         isHighlighted={isHighlighted}
         onStatusChange={onStatusChange}
       />
+    </div>
+  )
+}
+
+function DroppableColumn({
+  status,
+  label,
+  accent,
+  bg,
+  countColor,
+  columnTasks,
+  isOver,
+  activeId,
+  hasRealTasks,
+  highlightedTaskIds,
+  onStatusChange,
+}: {
+  status: TaskStatus
+  label: string
+  accent: string
+  bg: string
+  countColor: string
+  columnTasks: (Task & { assignedTo: string })[]
+  isOver: boolean
+  activeId: string | null
+  hasRealTasks: boolean
+  highlightedTaskIds: string[]
+  onStatusChange: (taskId: string, newStatus: TaskStatus) => void
+}) {
+  const { setNodeRef } = useDroppable({ id: status })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        'rounded-xl border-t-4 transition-all duration-150',
+        accent,
+        isOver && activeId ? 'ring-2 ring-offset-1 scale-[1.01]' : '',
+        isOver && activeId ? accent.replace('border-t-', 'ring-') : '',
+        bg,
+      ].filter(Boolean).join(' ')}
+    >
+      <div className="flex items-center justify-between px-3 py-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${countColor}`}>{columnTasks.length}</span>
+      </div>
+      <SortableContext
+        id={status}
+        items={columnTasks.map(t => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col gap-2 px-2 pb-3 min-h-[4rem]">
+          <AnimatePresence mode="popLayout">
+            {hasRealTasks ? columnTasks.map(t => (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.12 }}
+              >
+                <SortableTaskCard
+                  task={t}
+                  isHighlighted={highlightedTaskIds.includes(t.id)}
+                  onStatusChange={onStatusChange}
+                />
+              </motion.div>
+            )) : (
+              <div className="py-3 text-center text-xs text-slate-400">Sin tareas</div>
+            )}
+          </AnimatePresence>
+          {hasRealTasks && columnTasks.length === 0 && (
+            <EmptyState
+              icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'}
+              title="Sin tareas"
+            />
+          )}
+        </div>
+      </SortableContext>
     </div>
   )
 }
@@ -149,67 +229,33 @@ export function KanbanBoard({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
         {columns.map(({ status, label, accent, bg, countColor }) => {
           const columnTasks = resolvedTasks.filter(t => t.status === status)
           const isOver = overId === status || (overId ? getColumnForItem(overId) === status : false)
 
           return (
-            <SortableContext
+            <DroppableColumn
               key={status}
-              id={status}
-              items={columnTasks.map(t => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div
-                className={[
-                  'rounded-xl border-t-4 transition-all duration-150',
-                  accent,
-                  isOver && activeId ? 'ring-2 ring-offset-1 scale-[1.01]' : '',
-                  isOver && activeId ? accent.replace('border-t-', 'ring-') : '',
-                  bg,
-                ].filter(Boolean).join(' ')}
-              >
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${countColor}`}>{columnTasks.length}</span>
-                </div>
-                <div className="flex flex-col gap-2 px-2 pb-3 min-h-[3rem]">
-                  <AnimatePresence mode="popLayout">
-                    {hasRealTasks ? columnTasks.map(t => (
-                      <motion.div
-                        key={t.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        <SortableTaskCard
-                          task={t}
-                          isHighlighted={highlightedTaskIds.includes(t.id)}
-                          onStatusChange={onStatusChange}
-                        />
-                      </motion.div>
-                    )) : (
-                      <div className="py-3 text-center text-xs text-slate-400">Sin tareas</div>
-                    )}
-                  </AnimatePresence>
-                  {hasRealTasks && columnTasks.length === 0 && (
-                    <EmptyState
-                      icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'}
-                      title="Sin tareas"
-                    />
-                  )}
-                </div>
-              </div>
-            </SortableContext>
+              status={status}
+              label={label}
+              accent={accent}
+              bg={bg}
+              countColor={countColor}
+              columnTasks={columnTasks}
+              isOver={isOver}
+              activeId={activeId}
+              hasRealTasks={hasRealTasks}
+              highlightedTaskIds={highlightedTaskIds}
+              onStatusChange={onStatusChange}
+            />
           )
         })}
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeTask ? (
-          <div className="rotate-2 shadow-xl opacity-95 pointer-events-none w-64">
+          <div className="rotate-1 shadow-2xl opacity-90 pointer-events-none w-64">
             <TaskCard
               task={activeTask}
               isHighlighted={false}
