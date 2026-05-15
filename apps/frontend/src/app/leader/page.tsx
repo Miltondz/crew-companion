@@ -457,10 +457,10 @@ function LeaderCanvas() {
     setShowCreateMilestone(false)
   }
 
-  const kanbanColumns: { status: TaskStatus; label: string; accent: string; countColor: string }[] = [
-    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   countColor: 'bg-slate-100 text-slate-600'   },
-    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    countColor: 'bg-blue-100 text-blue-700'     },
-    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500', countColor: 'bg-emerald-100 text-emerald-700'},
+  const kanbanColumns: { status: TaskStatus; label: string; accent: string; bg: string; countColor: string }[] = [
+    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   bg: 'bg-slate-50',      countColor: 'bg-slate-100 text-slate-600'    },
+    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    bg: 'bg-blue-50/60',    countColor: 'bg-blue-100 text-blue-700'      },
+    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500', bg: 'bg-emerald-50/60', countColor: 'bg-emerald-100 text-emerald-700' },
   ]
 
   return (
@@ -774,10 +774,10 @@ function LeaderCanvas() {
                   </motion.div>
                 )}
                 <div className="grid grid-cols-3 gap-3">
-                  {kanbanColumns.map(({ status, label, accent, countColor }) => {
+                  {kanbanColumns.map(({ status, label, accent, bg, countColor }) => {
                     const tasks = effectiveTasks.filter(t => t.status === status)
                     return (
-                      <div key={status} className={`rounded-xl border-t-4 ${accent} bg-slate-50/80`}>
+                      <div key={status} className={`rounded-xl border-t-4 ${accent} ${bg}`}>
                         <div className="flex items-center justify-between px-3 py-2">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
                           <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${countColor}`}>{tasks.length}</span>

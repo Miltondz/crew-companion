@@ -74,16 +74,23 @@ function SlideDigit({ value, phase }: { value: string; phase: UrgencyPhase }) {
     }
   }, [value, animate])
 
+  const textColor = phase === 'expired' ? 'text-zinc-500' : phase === 'panic' ? 'text-red-300' : phase === 'urgent' ? 'text-orange-300' : phase === 'focus' ? 'text-yellow-300' : 'text-white'
+  const borderClass = phaseDigitColor[phase].split(' ').filter(c => c.startsWith('border')).join(' ')
+
   return (
-    <div className={cn(
-      'relative w-14 h-[4.5rem] overflow-hidden rounded-lg shadow-xl border',
-      'bg-gradient-to-b from-zinc-800 to-zinc-900',
-      phaseDigitColor[phase].split(' ').filter(c => c.startsWith('border')).join(' ')
-    )}>
-      <div ref={ref} className={cn(
-        'absolute inset-0 flex items-center justify-center text-4xl font-bold font-mono',
-        phase === 'expired' ? 'text-zinc-500' : phase === 'panic' ? 'text-red-300' : phase === 'urgent' ? 'text-orange-300' : phase === 'focus' ? 'text-yellow-300' : 'text-white'
-      )}>
+    <div
+      className={cn(
+        'relative flex-1 min-w-[2rem] max-w-[5rem] overflow-hidden rounded-lg shadow-xl border',
+        'bg-gradient-to-b from-zinc-800 to-zinc-900',
+        borderClass
+      )}
+      style={{ aspectRatio: '0.65', containerType: 'inline-size' }}
+    >
+      <div
+        ref={ref}
+        className={cn('absolute inset-0 flex items-center justify-center font-bold font-mono', textColor)}
+        style={{ fontSize: 'clamp(1rem, 55cqi, 2.5rem)' }}
+      >
         {value}
       </div>
     </div>
@@ -139,7 +146,7 @@ export function MilestoneCountdown({ deadline, milestoneTitle, compact = false }
 
   return (
     <div className={cn(
-      'relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 bg-zinc-900 overflow-hidden',
+      'relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 bg-zinc-900 overflow-hidden w-full',
       phaseGlow[phase]
     )}>
       {isPanic && (
@@ -157,13 +164,13 @@ export function MilestoneCountdown({ deadline, milestoneTitle, compact = false }
       {isExpired ? (
         <p className="text-lg font-bold text-zinc-500 z-10">¡Tiempo agotado!</p>
       ) : (
-        <div className="flex items-center gap-1 z-10">
+        <div className="flex items-center gap-1 w-full justify-center z-10">
           <SlideDigit value={h0} phase={phase} />
           <SlideDigit value={h1} phase={phase} />
-          <span className="text-white font-bold text-2xl mx-1">:</span>
+          <span className="text-white font-bold text-xl mx-1 shrink-0">:</span>
           <SlideDigit value={m0} phase={phase} />
           <SlideDigit value={m1} phase={phase} />
-          <span className="text-white font-bold text-2xl mx-1">:</span>
+          <span className="text-white font-bold text-xl mx-1 shrink-0">:</span>
           <SlideDigit value={s0} phase={phase} />
           <SlideDigit value={s1} phase={phase} />
         </div>
