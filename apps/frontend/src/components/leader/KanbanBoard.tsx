@@ -12,6 +12,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
+  type Modifier,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -23,6 +24,28 @@ import { motion, AnimatePresence } from 'motion/react'
 import { TaskCard } from '@/components/shared/TaskCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { TaskStatus, TaskPriority } from '@/lib/crew/types'
+
+function getEventCoords(event: Event): { x: number; y: number } | null {
+  if ('touches' in event) {
+    const t = (event as TouchEvent).touches[0] ?? (event as TouchEvent).changedTouches[0]
+    return t ? { x: t.clientX, y: t.clientY } : null
+  }
+  if ('clientX' in event) return { x: (event as MouseEvent).clientX, y: (event as MouseEvent).clientY }
+  return null
+}
+
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (draggingNodeRect && activatorEvent) {
+    const coords = getEventCoords(activatorEvent)
+    if (!coords) return transform
+    return {
+      ...transform,
+      x: transform.x + coords.x - (draggingNodeRect.left + draggingNodeRect.width / 2),
+      y: transform.y + coords.y - (draggingNodeRect.top + draggingNodeRect.height / 2),
+    }
+  }
+  return transform
+}
 
 interface Task {
   id: string
@@ -253,7 +276,7 @@ export function KanbanBoard({
         })}
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {activeTask ? (
           <div className="rotate-1 shadow-2xl opacity-90 pointer-events-none w-64">
             <TaskCard

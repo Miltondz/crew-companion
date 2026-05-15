@@ -643,7 +643,7 @@ function LeaderCanvas() {
 
         {/* Scrollable content */}
         <motion.div
-          className="flex flex-1 flex-col overflow-y-auto p-5"
+          className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden p-5"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
@@ -663,7 +663,12 @@ function LeaderCanvas() {
                 }
                 if (id === 'task-board') return {
                   id, title: 'Task Board', color: 'blue' as const, Icon: LayoutGrid,
-                  summary: `${effectiveTasks.filter(t => t.status === 'done').length}/${effectiveTasks.length} done`,
+                  summary: kanbanColumns
+                    .map(c => {
+                      const count = effectiveTasks.filter(t => t.status === c.status).length
+                      return `${c.label}: ${count}`
+                    })
+                    .join(' · '),
                 }
                 return {
                   id, title: 'Actividad', color: 'emerald' as const, Icon: Activity,
@@ -679,7 +684,7 @@ function LeaderCanvas() {
             collisionDetection={closestCenter}
             onDragEnd={handleSectionDragEnd}
           >
-            <SortableContext items={sectionOrder} strategy={rectSortingStrategy}>
+            <SortableContext items={sectionOrder.filter(id => !minimizedSections.has(id) && id !== 'activity')} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-6 gap-4 content-start">
 
             {/* MILESTONE */}
@@ -924,42 +929,43 @@ function LeaderCanvas() {
             </SectionFrame>
             )}
 
-            {/* ACTIVITY STREAM */}
-            {!minimizedSections.has('activity') && (
-            <SectionFrame
-              id="activity"
-              title="Actividad reciente"
-              color="emerald"
-              Icon={Activity}
-              phase={urgencyPhase}
-              supportedShapes={['compact', 'normal', 'wide']}
-              agentShape={activityAgentShape}
-              isMinimized={minimizedSections.has('activity')}
-              onMinimize={handleSectionMinimize}
-            >
-              <div className="p-4">
-                {activityEvents.length === 0 ? (
-                  <EmptyState icon="📭" title="Sin actividad reciente" />
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {activityEvents.slice(0, 20).map((ev, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="text-base leading-none mt-0.5">{ev.icon ?? '📋'}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-slate-700 font-medium leading-tight">{ev.message}</p>
-                          <p className="text-slate-400 text-[10px] mt-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </SectionFrame>
-            )}
 
               </div>
             </SortableContext>
           </DndContext>
+
+          {/* Activity — compact auto-height strip, always at bottom */}
+          {!minimizedSections.has('activity') && (
+          <SectionFrame
+            id="activity"
+            title="Actividad reciente"
+            color="emerald"
+            Icon={Activity}
+            phase={urgencyPhase}
+            supportedShapes={['compact', 'normal', 'wide', 'hero']}
+            agentShape={activityAgentShape}
+            isMinimized={minimizedSections.has('activity')}
+            onMinimize={handleSectionMinimize}
+          >
+            <div className="px-4 py-2">
+              {activityEvents.length === 0 ? (
+                <EmptyState icon="📭" title="Sin actividad reciente" />
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {activityEvents.slice(0, 20).map((ev, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className="text-base leading-none mt-0.5">{ev.icon ?? '📋'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-700 font-medium leading-tight">{ev.message}</p>
+                        <p className="text-slate-400 text-[10px] mt-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SectionFrame>
+          )}
         </motion.div>
 
         {/* Dev urgency buttons */}
