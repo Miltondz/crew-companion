@@ -23,16 +23,17 @@ const COLOR_STYLES: Record<ColorToken, {
   borderLeft: string
   icon: string
   ring: string
+  bg: string
 }> = {
-  red:     { header: 'bg-red-50 border-b border-red-100',       borderLeft: 'border-l-4 border-l-red-400',     icon: 'text-red-500',     ring: 'ring-red-200' },
-  orange:  { header: 'bg-orange-50 border-b border-orange-100', borderLeft: 'border-l-4 border-l-orange-400', icon: 'text-orange-500',   ring: 'ring-orange-200' },
-  amber:   { header: 'bg-amber-50 border-b border-amber-100',   borderLeft: 'border-l-4 border-l-amber-400',   icon: 'text-amber-500',   ring: 'ring-amber-200' },
-  emerald: { header: 'bg-emerald-50 border-b border-emerald-100', borderLeft: 'border-l-4 border-l-emerald-500', icon: 'text-emerald-600', ring: 'ring-emerald-200' },
-  indigo:  { header: 'bg-indigo-50 border-b border-indigo-100', borderLeft: 'border-l-4 border-l-indigo-400',   icon: 'text-indigo-500',  ring: 'ring-indigo-200' },
-  violet:  { header: 'bg-violet-50 border-b border-violet-100', borderLeft: 'border-l-4 border-l-violet-400',   icon: 'text-violet-500',  ring: 'ring-violet-200' },
-  cyan:    { header: 'bg-cyan-50 border-b border-cyan-100',     borderLeft: 'border-l-4 border-l-cyan-500',     icon: 'text-cyan-600',    ring: 'ring-cyan-200' },
-  slate:   { header: 'bg-slate-50 border-b border-slate-200',   borderLeft: 'border-l-4 border-l-slate-300',   icon: 'text-slate-500',   ring: 'ring-slate-200' },
-  blue:    { header: 'bg-blue-50 border-b border-blue-100',     borderLeft: 'border-l-4 border-l-blue-400',     icon: 'text-blue-500',    ring: 'ring-blue-200' },
+  red:     { header: 'bg-red-50 border-b border-red-100',         borderLeft: 'border-l-4 border-l-red-400',     icon: 'text-red-500',     ring: 'ring-red-200',     bg: 'bg-red-50/50'     },
+  orange:  { header: 'bg-orange-50 border-b border-orange-100',   borderLeft: 'border-l-4 border-l-orange-400', icon: 'text-orange-500',   ring: 'ring-orange-200',   bg: 'bg-orange-50/50'  },
+  amber:   { header: 'bg-amber-50 border-b border-amber-100',     borderLeft: 'border-l-4 border-l-amber-400',   icon: 'text-amber-500',   ring: 'ring-amber-200',   bg: 'bg-amber-50/50'   },
+  emerald: { header: 'bg-emerald-50 border-b border-emerald-100', borderLeft: 'border-l-4 border-l-emerald-500', icon: 'text-emerald-600', ring: 'ring-emerald-200', bg: 'bg-emerald-50/50' },
+  indigo:  { header: 'bg-indigo-50 border-b border-indigo-100',   borderLeft: 'border-l-4 border-l-indigo-400',  icon: 'text-indigo-500',  ring: 'ring-indigo-200',  bg: 'bg-indigo-50/50'  },
+  violet:  { header: 'bg-violet-50 border-b border-violet-100',   borderLeft: 'border-l-4 border-l-violet-400',  icon: 'text-violet-500',  ring: 'ring-violet-200',  bg: 'bg-violet-50/50'  },
+  cyan:    { header: 'bg-cyan-50 border-b border-cyan-100',       borderLeft: 'border-l-4 border-l-cyan-500',    icon: 'text-cyan-600',    ring: 'ring-cyan-200',    bg: 'bg-cyan-50/50'    },
+  slate:   { header: 'bg-slate-50 border-b border-slate-200',     borderLeft: 'border-l-4 border-l-slate-300',   icon: 'text-slate-500',   ring: 'ring-slate-200',   bg: 'bg-slate-50/60'   },
+  blue:    { header: 'bg-blue-50 border-b border-blue-100',       borderLeft: 'border-l-4 border-l-blue-400',    icon: 'text-blue-500',    ring: 'ring-blue-200',    bg: 'bg-blue-50/50'    },
 }
 
 const SURFACE_ICONS: Record<string, LucideIcon> = {
@@ -149,7 +150,8 @@ function MountFrame({
   return (
     <div
       className={[
-        'rounded-xl bg-white shadow-sm overflow-hidden transition-all ring-1',
+        'rounded-xl shadow-sm overflow-hidden transition-all ring-1',
+        cs.bg,
         cs.borderLeft,
         cs.ring,
         expanded ? 'col-span-6' : 'col-span-6 md:col-span-3',

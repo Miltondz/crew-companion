@@ -23,13 +23,13 @@ export const SHAPE_CONFIGS: Record<GridShape, ShapeConfig> = {
 
 type ColorToken = 'indigo' | 'blue' | 'emerald' | 'violet' | 'amber' | 'slate'
 
-const COLOR_STYLES: Record<ColorToken, { header: string; borderTop: string; icon: string; ring: string; shapePicker: string }> = {
-  indigo:  { header: 'bg-indigo-50 border-b border-indigo-100',   borderTop: 'border-t-4 border-t-indigo-400',   icon: 'text-indigo-500',  ring: 'ring-indigo-200',  shapePicker: 'hover:bg-indigo-100 text-indigo-500' },
-  blue:    { header: 'bg-blue-50 border-b border-blue-100',       borderTop: 'border-t-4 border-t-blue-400',     icon: 'text-blue-500',    ring: 'ring-blue-200',    shapePicker: 'hover:bg-blue-100 text-blue-500' },
-  emerald: { header: 'bg-emerald-50 border-b border-emerald-100', borderTop: 'border-t-4 border-t-emerald-500', icon: 'text-emerald-600', ring: 'ring-emerald-200', shapePicker: 'hover:bg-emerald-100 text-emerald-600' },
-  violet:  { header: 'bg-violet-50 border-b border-violet-100',   borderTop: 'border-t-4 border-t-violet-400',   icon: 'text-violet-500',  ring: 'ring-violet-200',  shapePicker: 'hover:bg-violet-100 text-violet-500' },
-  amber:   { header: 'bg-amber-50 border-b border-amber-100',     borderTop: 'border-t-4 border-t-amber-400',   icon: 'text-amber-500',   ring: 'ring-amber-200',   shapePicker: 'hover:bg-amber-100 text-amber-500' },
-  slate:   { header: 'bg-slate-50 border-b border-slate-200',     borderTop: 'border-t-4 border-t-slate-400',   icon: 'text-slate-500',   ring: 'ring-slate-200',   shapePicker: 'hover:bg-slate-100 text-slate-500' },
+const COLOR_STYLES: Record<ColorToken, { header: string; borderTop: string; icon: string; ring: string; shapePicker: string; bg: string }> = {
+  indigo:  { header: 'bg-indigo-50 border-b border-indigo-100',   borderTop: 'border-t-4 border-t-indigo-400',   icon: 'text-indigo-500',  ring: 'ring-indigo-200',  shapePicker: 'hover:bg-indigo-100 text-indigo-500',  bg: 'bg-indigo-50/40'  },
+  blue:    { header: 'bg-blue-50 border-b border-blue-100',       borderTop: 'border-t-4 border-t-blue-400',     icon: 'text-blue-500',    ring: 'ring-blue-200',    shapePicker: 'hover:bg-blue-100 text-blue-500',      bg: 'bg-blue-50/40'    },
+  emerald: { header: 'bg-emerald-50 border-b border-emerald-100', borderTop: 'border-t-4 border-t-emerald-500',  icon: 'text-emerald-600', ring: 'ring-emerald-200', shapePicker: 'hover:bg-emerald-100 text-emerald-600', bg: 'bg-emerald-50/40' },
+  violet:  { header: 'bg-violet-50 border-b border-violet-100',   borderTop: 'border-t-4 border-t-violet-400',   icon: 'text-violet-500',  ring: 'ring-violet-200',  shapePicker: 'hover:bg-violet-100 text-violet-500',  bg: 'bg-violet-50/40'  },
+  amber:   { header: 'bg-amber-50 border-b border-amber-100',     borderTop: 'border-t-4 border-t-amber-400',    icon: 'text-amber-500',   ring: 'ring-amber-200',   shapePicker: 'hover:bg-amber-100 text-amber-500',    bg: 'bg-amber-50/40'   },
+  slate:   { header: 'bg-slate-50 border-b border-slate-200',     borderTop: 'border-t-4 border-t-slate-400',    icon: 'text-slate-500',   ring: 'ring-slate-200',   shapePicker: 'hover:bg-slate-100 text-slate-500',    bg: 'bg-slate-50/60'   },
 }
 
 const PHASE_SHAPES: Record<string, Record<UrgencyPhase, GridShape>> = {
@@ -106,7 +106,8 @@ export function SectionFrame({
 
   return (
     <div className={[
-      'rounded-xl bg-white shadow-sm overflow-hidden ring-1 transition-all',
+      'rounded-xl shadow-sm overflow-hidden ring-1 transition-all',
+      cs.bg,
       cs.borderTop,
       cs.ring,
       shapeConf.cols,
