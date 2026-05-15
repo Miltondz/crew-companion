@@ -3,32 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-type Role = 'leader' | 'member'
-type TechnicalLevel = 'low-tech' | 'high-tech'
-type TaskStatus = 'todo' | 'in-progress' | 'done'
-
-interface TeamMember {
-  id: string
-  name: string
-  role: Role
-  technicalLevel: TechnicalLevel
-  activeBlockerId?: string
-}
-
-interface Task {
-  id: string
-  title: string
-  assignedTo: string
-  status: TaskStatus
-}
-
-interface Blocker {
-  id: string
-  memberId: string
-  description: string
-  resolved: boolean
-}
+import type { TeamMember, Task, Blocker, TechnicalLevel, Role } from '@/lib/crew/types'
 
 interface TeamOverviewProps {
   members: TeamMember[]

@@ -1,11 +1,9 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { Clock, CheckCircle2, Circle, AlertCircle } from 'lucide-react'
+import { Clock, CheckCircle2, Circle, AlertCircle, Eye, Ban } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-type TaskStatus = 'todo' | 'in-progress' | 'done'
-type TaskPriority = 'low' | 'medium' | 'high'
+import type { TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 interface TaskCardProps {
   task: {
@@ -33,6 +31,8 @@ const STATUS_CONFIG: Record<TaskStatus, {
 }> = {
   todo:          { label: 'Pendiente',   Icon: Circle,       classes: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20' },
   'in-progress': { label: 'En progreso', Icon: Clock,        classes: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+  review:        { label: 'En revisión', Icon: Eye,          classes: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
+  blocked:       { label: 'Bloqueada',   Icon: Ban,          classes: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
   done:          { label: 'Completado',  Icon: CheckCircle2, classes: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
 }
 
@@ -92,7 +92,7 @@ export function TaskCard({ task, isHighlighted, onStatusChange }: TaskCardProps)
 
   function handleStatusClick() {
     if (!onStatusChange) return
-    const cycle: TaskStatus[] = ['todo', 'in-progress', 'done']
+    const cycle: TaskStatus[] = ['todo', 'in-progress', 'review', 'blocked', 'done']
     const next = cycle[(cycle.indexOf(task.status) + 1) % cycle.length]
     onStatusChange(task.id, next)
   }

@@ -4,17 +4,7 @@ import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-
-type TaskStatus = 'todo' | 'in-progress' | 'done'
-type TaskPriority = 'low' | 'medium' | 'high'
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: TaskStatus
-  priority: TaskPriority
-}
+import type { TaskStatus, TaskPriority, Task } from '@/lib/crew/types'
 
 interface ActiveTaskViewProps {
   task: Task | undefined
@@ -46,10 +36,12 @@ export function ActiveTaskView({ task, memberName, onMarkDone, onMarkInProgress 
     low: 'bg-green-100 text-green-700 border-green-200',
   }
 
-  const statusStyles = {
-    todo: 'bg-slate-100 text-slate-600 border-slate-200',
+  const statusStyles: Record<TaskStatus, string> = {
+    todo:          'bg-slate-100 text-slate-600 border-slate-200',
     'in-progress': 'bg-blue-100 text-blue-700 border-blue-200',
-    done: 'bg-green-100 text-green-700 border-green-200',
+    review:        'bg-violet-100 text-violet-700 border-violet-200',
+    blocked:       'bg-red-100 text-red-700 border-red-200',
+    done:          'bg-green-100 text-green-700 border-green-200',
   }
 
   return (
@@ -75,7 +67,7 @@ export function ActiveTaskView({ task, memberName, onMarkDone, onMarkInProgress 
             {task.priority === 'high' ? 'Alta prioridad' : task.priority === 'medium' ? 'Media prioridad' : 'Baja prioridad'}
           </Badge>
           <Badge variant="outline" className={cn('text-[10px] font-bold px-2 py-0', statusStyles[task.status])}>
-            {task.status === 'todo' ? 'Pendiente' : task.status === 'in-progress' ? 'En progreso' : 'Completada'}
+            {{ todo: 'Pendiente', 'in-progress': 'En progreso', review: 'En revisión', blocked: 'Bloqueada', done: 'Completada' }[task.status]}
           </Badge>
         </div>
       </CardContent>

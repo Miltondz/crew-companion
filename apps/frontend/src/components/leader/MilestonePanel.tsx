@@ -4,15 +4,7 @@ import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
 import { cn } from '@/lib/utils'
-
-type UrgencyPhase = 'normal' | 'focus' | 'urgent' | 'panic' | 'expired'
-type TaskStatus = 'todo' | 'in-progress' | 'done'
-
-interface Task {
-  id: string
-  title: string
-  status: TaskStatus
-}
+import type { UrgencyPhase, TaskStatus, Task } from '@/lib/crew/types'
 
 interface MilestonePanelProps {
   milestone: {
@@ -33,7 +25,7 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   const sortedTasks = [...milestoneTasks].sort((a, b) => {
-    const order: Record<TaskStatus, number> = { 'in-progress': 0, todo: 1, done: 2 }
+    const order: Record<TaskStatus, number> = { 'in-progress': 0, review: 1, blocked: 2, todo: 3, done: 4 }
     return order[a.status] - order[b.status]
   })
 
@@ -49,6 +41,8 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
     switch (status) {
       case 'done': return '✅'
       case 'in-progress': return '🔄'
+      case 'review': return '👁'
+      case 'blocked': return '🚫'
       case 'todo': return '⬜'
     }
   }
