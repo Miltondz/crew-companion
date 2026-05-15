@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     members: builtMembers,
     currentMemberId: leaderId,
     tasks: [],
-    milestones: [{ id: milestoneId, title: projectName, deadline, taskIds: [], phase: 'normal' }],
+    milestones: [{ id: milestoneId, title: projectName, deadline, taskIds: [] }],
     projectConfig: { type: projectType, isDevProject, contextUrl, contextText },
     blockers: [],
     sharedDocuments: contextText

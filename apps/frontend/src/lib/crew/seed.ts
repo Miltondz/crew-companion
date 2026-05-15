@@ -30,7 +30,7 @@ export function makeSeedState(): SeedState {
       { id: 't3', title: 'Preparar script de demo', description: 'Guión de 2 minutos para la presentación', assignedTo: 'm1', status: 'todo', priority: 'medium', createdAt: new Date().toISOString(), milestoneId: 'ms1' },
     ],
     milestones: [
-      { id: 'ms1', title: 'Demo final hackathon', deadline, taskIds: ['t1', 't2', 't3'], phase: 'normal' }
+      { id: 'ms1', title: 'Demo final hackathon', deadline, taskIds: ['t1', 't2', 't3'] }
     ],
     blockers: [],
     sharedDocuments: [

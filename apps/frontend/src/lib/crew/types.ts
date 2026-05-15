@@ -32,7 +32,6 @@ export interface Milestone {
   title: string
   deadline: string
   taskIds: string[]
-  phase: UrgencyPhase
 }
 
 export interface Blocker {

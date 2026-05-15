@@ -38,7 +38,6 @@ class Milestone(TypedDict):
     title: str
     deadline: str  # ISO absolute — never relative
     taskIds: list[str]
-    phase: UrgencyPhase
 
 
 class Blocker(TypedDict):
