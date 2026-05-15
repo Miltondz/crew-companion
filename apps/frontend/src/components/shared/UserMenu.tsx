@@ -3,20 +3,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from 'next-themes'
-import { LogOut, Moon, Sun, Globe, Home, ChevronDown } from 'lucide-react'
+import { LogOut, Globe, Home, ChevronDown } from 'lucide-react'
 import { useLocale } from '@/lib/i18n'
 
 export function UserMenu() {
   const { data: session } = useSession()
   const router = useRouter()
-  const { resolvedTheme, setTheme } = useTheme()
   const { locale, setLocale } = useLocale()
   const [open, setOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     function onPointer(e: MouseEvent) {
@@ -56,16 +51,6 @@ export function UserMenu() {
             <Home size={14} />
             Volver al inicio
           </button>
-
-          {mounted && (
-            <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors text-left"
-            >
-              {resolvedTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-              {resolvedTheme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            </button>
-          )}
 
           <button
             onClick={() => { setLocale(locale === 'es' ? 'en' : 'es'); setOpen(false) }}

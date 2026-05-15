@@ -35,6 +35,29 @@
   --sidebar-ring: rgba(190, 194, 255, 0.6);
 }
 
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --primary: #818cf8;
+  --primary-foreground: #0f172a;
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #f1f5f9;
+  --destructive: #f87171;
+  --destructive-foreground: #0f172a;
+  --border: #334155;
+  --input: #1e293b;
+  --ring: rgba(129, 140, 248, 0.4);
+  --sidebar: #1e293b;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-border: #334155;
+}
+
 @theme inline {
   --font-sans: var(--font-jakarta);
   --font-mono: var(--font-mono);
@@ -231,6 +254,40 @@ html {
 .phase-bg-urgent   { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); }
 .phase-bg-panic    { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); animation: panic-pulse 2s ease-in-out infinite; }
 .phase-bg-expired  { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); color: #fef2f2; }
+
+/* Dark mode phase backgrounds */
+.dark .phase-bg-normal  { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
+.dark .phase-bg-focus   { background: linear-gradient(135deg, #0f172a 0%, #1c1a07 100%); }
+.dark .phase-bg-urgent  { background: linear-gradient(135deg, #0f172a 0%, #1c0f07 100%); }
+.dark .phase-bg-panic   { background: linear-gradient(135deg, #1a0000 0%, #2d0505 100%); animation: panic-pulse 2s ease-in-out infinite; }
+.dark .phase-bg-expired { background: linear-gradient(135deg, #1a0000 0%, #2d0505 100%); color: #fecaca; }
+
+/* Dark mode workspace structural overrides */
+.dark .workspace-shell { color-scheme: dark; }
+
+/* Cards and panels */
+.dark .bg-white,
+.dark .bg-white\/90,
+.dark .bg-white\/80 {
+  background-color: #1e293b !important;
+  color: #f1f5f9;
+}
+
+/* Slate backgrounds */
+.dark .bg-slate-50  { background-color: #0f172a !important; }
+.dark .bg-slate-100 { background-color: #1e293b !important; }
+.dark .bg-slate-200 { background-color: #334155 !important; }
+
+/* Text colors */
+.dark .text-slate-800,
+.dark .text-slate-700 { color: #e2e8f0 !important; }
+.dark .text-slate-600 { color: #cbd5e1 !important; }
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #64748b !important; }
+
+/* Borders */
+.dark .border-slate-200 { border-color: #334155 !important; }
+.dark .border-slate-100 { border-color: #1e293b !important; }
 
 @keyframes panic-pulse {
   0%, 100% { filter: brightness(1); }

@@ -30,6 +30,7 @@ import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { UserMenu } from '@/components/shared/UserMenu'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { ActivityStream } from '@/components/shared/ActivityStream'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
@@ -59,11 +60,14 @@ function LeaderCanvas() {
   const [inviteCode, setInviteCode] = useState<string>('')
   const [milestoneSectionCollapsed, setMilestoneSectionCollapsed] = useState(false)
   const [taskBoardCollapsed, setTaskBoardCollapsed] = useState(false)
+  const [showMilestoneEdit, setShowMilestoneEdit] = useState(false)
+  const [milestoneEditForm, setMilestoneEditForm] = useState({ title: '', deadline: '' })
 
   const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
-  const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+  const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
+  const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
   const effectiveTasks = state.tasks.filter(t => !SEED_TASK_IDS.has(t.id))
   const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
@@ -339,6 +343,51 @@ function LeaderCanvas() {
     }))
   }
 
+  const handleOpenMilestoneEdit = () => {
+    if (!effectiveMilestone) return
+    setMilestoneEditForm({
+      title: effectiveMilestone.title,
+      deadline: effectiveMilestone.deadline
+        ? new Date(effectiveMilestone.deadline).toISOString().slice(0, 16)
+        : '',
+    })
+    setShowMilestoneEdit(true)
+  }
+
+  const handleSaveMilestone = () => {
+    if (!milestoneEditForm.title.trim() || !effectiveMilestone) return
+    setState(prev => ({
+      ...prev,
+      milestones: prev.milestones.map(m =>
+        m.id === prev.activeMilestoneId
+          ? {
+              ...m,
+              title: milestoneEditForm.title.trim(),
+              deadline: milestoneEditForm.deadline
+                ? new Date(milestoneEditForm.deadline).toISOString()
+                : m.deadline,
+            }
+          : m
+      ),
+    }))
+    toast.success('Milestone actualizado')
+    setShowMilestoneEdit(false)
+  }
+
+  const handleDeleteMilestone = () => {
+    if (!effectiveMilestone) return
+    if (!window.confirm(`¿Eliminar "${effectiveMilestone.title}"? Se eliminarán sus tareas.`)) return
+    const deletedId = state.activeMilestoneId
+    setState(prev => ({
+      ...prev,
+      milestones: prev.milestones.filter(m => m.id !== deletedId),
+      tasks: prev.tasks.filter(t => t.milestoneId !== deletedId),
+      activeMilestoneId: '',
+    }))
+    toast.success('Milestone eliminado')
+    setShowMilestoneEdit(false)
+  }
+
   const kanbanColumns: { status: TaskStatus; label: string; accent: string; countColor: string }[] = [
     { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   countColor: 'bg-slate-100 text-slate-600'   },
     { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    countColor: 'bg-blue-100 text-blue-700'     },
@@ -381,7 +430,7 @@ function LeaderCanvas() {
 
             {/* Nav links to members */}
             <div className="flex items-center gap-2 flex-wrap">
-              {hasRealMembers && state.members.map(m => (
+              {hasRealMembers && effectiveMembers.map(m => (
                 <button
                   key={m.id}
                   onClick={() => router.push(`/member/${m.id}`)}
@@ -439,6 +488,7 @@ function LeaderCanvas() {
               >
                 ⌘K
               </button>
+              <ThemeToggle />
               <UserMenu />
             </div>
           </div>
@@ -457,15 +507,81 @@ function LeaderCanvas() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Milestone & Equipo</span>
-              <button
-                onClick={() => setMilestoneSectionCollapsed(c => !c)}
-                className="rounded p-0.5 text-slate-400 hover:text-slate-600"
-                aria-label={milestoneSectionCollapsed ? 'expand' : 'minimize'}
-              >
-                {milestoneSectionCollapsed ? '▲' : '▼'}
-              </button>
+              <div className="flex items-center gap-1">
+                {effectiveMilestone && !milestoneSectionCollapsed && (
+                  <>
+                    <button
+                      onClick={handleOpenMilestoneEdit}
+                      className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                      title="Editar milestone"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={handleDeleteMilestone}
+                      className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
+                      title="Eliminar milestone"
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setMilestoneSectionCollapsed(c => !c)}
+                  className="rounded p-0.5 text-slate-400 hover:text-slate-600"
+                  aria-label={milestoneSectionCollapsed ? 'expand' : 'minimize'}
+                >
+                  {milestoneSectionCollapsed ? '▲' : '▼'}
+                </button>
+              </div>
             </div>
             {!milestoneSectionCollapsed && (
+              <>
+              {showMilestoneEdit && (
+                <motion.div
+                  className="mb-4 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <p className="mb-3 text-sm font-bold text-slate-700">Editar milestone</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre</label>
+                      <input
+                        type="text"
+                        value={milestoneEditForm.title}
+                        onChange={e => setMilestoneEditForm(f => ({ ...f, title: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
+                      <input
+                        type="datetime-local"
+                        value={milestoneEditForm.deadline}
+                        onChange={e => setMilestoneEditForm(f => ({ ...f, deadline: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={handleSaveMilestone}
+                      disabled={!milestoneEditForm.title.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setShowMilestoneEdit(false)}
+                      className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </motion.div>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
                   {effectiveMilestone ? (
@@ -482,7 +598,7 @@ function LeaderCanvas() {
                 </div>
                 <div className="flex flex-col gap-3">
                   <TeamOverview
-                    members={hasRealMembers ? state.members : []}
+                    members={effectiveMembers}
                     tasks={effectiveTasks}
                     blockers={state.blockers}
                   />
@@ -511,6 +627,7 @@ function LeaderCanvas() {
                   )}
                 </div>
               </div>
+              </>
             )}
           </div>
 

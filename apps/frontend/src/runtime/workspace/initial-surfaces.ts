@@ -80,7 +80,8 @@ export function getInitialSurfaces(
         }, ctx, { priority: 'critical' }))
       }
     } else if (specialization === 'manager') {
-      const allMembers = state.members.map(m => {
+      const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
+      const allMembers = effectiveMembers.map(m => {
         const mTasks = effectiveTasks.filter(t => t.assignedTo === m.id)
         return {
           name: m.name,
@@ -222,7 +223,8 @@ export function getInitialSurfaces(
         }, ctx))
       }
     } else if (specialization === 'manager') {
-      const allMembers = state.members.map(m => {
+      const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
+      const allMembers = effectiveMembers.map(m => {
         const mTasks = effectiveTasks.filter(t => t.assignedTo === m.id)
         return {
           name: m.name,

@@ -74,14 +74,23 @@ export default function SharePage() {
     return () => clearInterval(intervalRef.current)
   }, [token])
 
-  const milestone = state?.milestones?.[0]
+  const SEED_MILESTONE_IDS = new Set(['ms1'])
+  const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+  const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
+
+  const effectiveMilestones = state?.milestones?.filter(m => !SEED_MILESTONE_IDS.has(m.id ?? '')) ?? []
+  const effectiveTasks = state?.tasks?.filter(t => !SEED_TASK_IDS.has(t.id ?? '')) ?? []
+  const effectiveMembers = state?.members?.filter(m => !SEED_MEMBER_IDS.has(m.id ?? '')) ?? []
+
+  const activeMilestoneId = state?.activeMilestoneId
+  const milestone = effectiveMilestones.find(m => m.id === activeMilestoneId) ?? effectiveMilestones[0]
   const countdown = useCountdown(milestone?.deadline)
   const phase = state?.urgencyPhase ?? 'normal'
   const phaseConf = PHASE_CONFIG[phase] ?? PHASE_CONFIG.normal
-  const totalTasks = milestone?.taskIds?.length ?? 0
-  const doneTasks = state?.tasks?.filter(t => t.status === 'done').length ?? 0
+  const totalTasks = (milestone?.taskIds?.filter(id => !SEED_TASK_IDS.has(id)) ?? []).length
+  const doneTasks = effectiveTasks.filter(t => t.status === 'done').length
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
-  const memberCount = state?.members?.length ?? 0
+  const memberCount = effectiveMembers.length
   const blockerCount = state?.blockers?.filter(b => !b.resolved).length ?? 0
   const cfg = state?.observerConfig
   const projectType = state?.projectConfig?.type ?? 'other'
@@ -192,12 +201,12 @@ export default function SharePage() {
         )}
 
         {/* tasks list */}
-        {cfg?.showTasks !== false && state.tasks && state.tasks.length > 0 && (
+        {cfg?.showTasks !== false && effectiveTasks.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
             className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5">
             <h3 className="text-sm font-semibold text-white mb-3">Tareas recientes</h3>
             <div className="space-y-2">
-              {state.tasks.slice(0, 6).map(t => (
+              {effectiveTasks.slice(0, 6).map(t => (
                 <div key={t.id} className="flex items-center gap-3 text-sm">
                   <div className={cn('w-2 h-2 rounded-full shrink-0',
                     t.status === 'done' ? 'bg-green-400' : t.status === 'in-progress' ? 'bg-indigo-400' : 'bg-zinc-600')} />

@@ -16,6 +16,7 @@ import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
 import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
@@ -212,6 +213,7 @@ function DocsCanvas() {
                 <p className="mt-0.5 text-sm text-violet-200">Seleccioná un documento de la lista</p>
               )}
             </div>
+            <ThemeToggle className="ml-auto flex items-center justify-center rounded-full bg-white/15 p-2 text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20" />
           </div>
         </header>
 

@@ -18,9 +18,14 @@ interface CommandPaletteProps {
   state: CrewState
 }
 
+const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
+const SEED_TASK_IDS = new Set(['t1', 't2', 't3'])
+
 export function CommandPalette({ state }: CommandPaletteProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
+  const effectiveTasks = state.tasks.filter(t => !SEED_TASK_IDS.has(t.id))
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -53,11 +58,11 @@ export function CommandPalette({ state }: CommandPaletteProps) {
           </CommandItem>
         </CommandGroup>
 
-        {state.members.length > 0 && (
+        {effectiveMembers.length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Miembros">
-              {state.members.map(m => (
+              {effectiveMembers.map(m => (
                 <CommandItem key={m.id} onSelect={() => go(`/member/${m.id}`)}>
                   <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold">
                     {m.name[0]}
@@ -70,15 +75,15 @@ export function CommandPalette({ state }: CommandPaletteProps) {
           </>
         )}
 
-        {state.tasks.filter(t => t.status !== 'done').length > 0 && (
+        {effectiveTasks.filter(t => t.status !== 'done').length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Tareas activas">
-              {state.tasks.filter(t => t.status !== 'done').slice(0, 6).map(t => (
+              {effectiveTasks.filter(t => t.status !== 'done').slice(0, 6).map(t => (
                 <CommandItem
                   key={t.id}
                   onSelect={() => {
-                    const member = state.members.find(m => m.id === t.assignedTo)
+                    const member = effectiveMembers.find(m => m.id === t.assignedTo)
                     if (member) go(`/member/${member.id}`)
                     else go('/leader')
                   }}
@@ -86,7 +91,7 @@ export function CommandPalette({ state }: CommandPaletteProps) {
                   <span className={`mr-2 h-2 w-2 rounded-full ${t.status === 'in-progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
                   {t.title}
                   <span className="ml-auto text-xs text-slate-400">
-                    {state.members.find(m => m.id === t.assignedTo)?.name}
+                    {effectiveMembers.find(m => m.id === t.assignedTo)?.name}
                   </span>
                 </CommandItem>
               ))}

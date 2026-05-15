@@ -127,7 +127,7 @@ function MountFrame({
   const isCritical = mount.envelope.priority === 'critical'
 
   const [minimized, setMinimized] = useState(false)
-  const [expanded, setExpanded] = useState(isHero)
+  const [expanded, setExpanded] = useState(false)
   const prevPhase = useRef(phase)
   const restoredMinimized = useRef(false)
 

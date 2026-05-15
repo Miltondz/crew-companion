@@ -16,6 +16,7 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
 import { UserMenu } from '@/components/shared/UserMenu'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { TaskCard } from '@/components/shared/TaskCard'
 import { ActiveTaskView } from '@/components/member/ActiveTaskView'
@@ -338,6 +339,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
                 Blocker activo
               </span>
             )}
+            <ThemeToggle />
             <UserMenu />
           </div>
         </header>
