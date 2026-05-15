@@ -1,11 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity } from 'lucide-react'
+import { Flag, LayoutGrid, Activity, Eye, EyeOff } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -16,7 +29,6 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { UrgencyBanner } from '@/components/shared/UrgencyBanner'
 import { UsageBanner } from '@/components/shared/UsageBanner'
-import { TaskCard } from '@/components/shared/TaskCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
@@ -26,6 +38,9 @@ import { MilestonePanel } from '@/components/leader/MilestonePanel'
 import { TeamOverview } from '@/components/leader/TeamOverview'
 import { SectionFrame } from '@/components/leader/SectionFrame'
 import type { GridShape } from '@/components/leader/SectionFrame'
+import { KanbanBoard } from '@/components/leader/KanbanBoard'
+import { MinimizedTray } from '@/components/leader/MinimizedTray'
+import type { MinimizedSection } from '@/components/leader/MinimizedTray'
 import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { useCrewAgent } from '@/lib/useCrewAgent'
@@ -42,6 +57,7 @@ import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
 import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
+import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 
 
 const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
@@ -71,6 +87,57 @@ function LeaderCanvas() {
   const [milestoneAgentShape, setMilestoneAgentShape] = useState<GridShape | undefined>(undefined)
   const [taskBoardAgentShape, setTaskBoardAgentShape] = useState<GridShape | undefined>(undefined)
   const [activityAgentShape, setActivityAgentShape] = useState<GridShape | undefined>(undefined)
+
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['milestone', 'task-board', 'activity']
+    const stored = localStorage.getItem('section-order')
+    return stored ? JSON.parse(stored) : ['milestone', 'task-board', 'activity']
+  })
+  const [minimizedSections, setMinimizedSections] = useState<Set<string>>(new Set())
+  const [visibleColumns, setVisibleColumns] = useState<Set<TaskStatus>>(() => {
+    if (typeof window === 'undefined') return new Set(['todo', 'in-progress', 'review', 'blocked', 'done'])
+    const stored = localStorage.getItem('kanban-visible-columns')
+    return stored ? new Set(JSON.parse(stored)) : new Set(['todo', 'in-progress', 'done'])
+  })
+
+  const sectionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
+
+  const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    setSectionOrder(prev => {
+      const oldIdx = prev.indexOf(active.id as string)
+      const newIdx = prev.indexOf(over.id as string)
+      const next = arrayMove(prev, oldIdx, newIdx)
+      localStorage.setItem('section-order', JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const handleSectionMinimize = useCallback((id: string, minimized: boolean) => {
+    setMinimizedSections(prev => {
+      const next = new Set(prev)
+      if (minimized) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const toggleColumn = (status: TaskStatus) => {
+    setVisibleColumns(prev => {
+      const next = new Set(prev)
+      if (next.has(status)) {
+        if (next.size <= 1) return prev
+        next.delete(status)
+      } else {
+        next.add(status)
+      }
+      localStorage.setItem('kanban-visible-columns', JSON.stringify([...next]))
+      return next
+    })
+  }
   const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
   const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
@@ -290,7 +357,7 @@ function LeaderCanvas() {
       if (!args.envelope) return null
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
-        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+        : (args.envelope as SurfaceEnvelope)
       const result = layoutEngine.mount(fullEnvelope, runtimeContext)
       if (!result.ok) {
         return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
@@ -457,11 +524,14 @@ function LeaderCanvas() {
     setShowCreateMilestone(false)
   }
 
-  const kanbanColumns: { status: TaskStatus; label: string; accent: string; bg: string; countColor: string }[] = [
-    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',   bg: 'bg-slate-50',      countColor: 'bg-slate-100 text-slate-600'    },
-    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',    bg: 'bg-blue-50/60',    countColor: 'bg-blue-100 text-blue-700'      },
-    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500', bg: 'bg-emerald-50/60', countColor: 'bg-emerald-100 text-emerald-700' },
+  const allKanbanColumns: { status: TaskStatus; label: string; accent: string; bg: string; countColor: string }[] = [
+    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',    bg: 'bg-slate-50',       countColor: 'bg-slate-100 text-slate-600'     },
+    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',     bg: 'bg-blue-50/60',     countColor: 'bg-blue-100 text-blue-700'       },
+    { status: 'review',      label: 'En revisión', accent: 'border-t-violet-400',   bg: 'bg-violet-50/50',   countColor: 'bg-violet-100 text-violet-700'   },
+    { status: 'blocked',     label: 'Bloqueado',   accent: 'border-t-red-400',      bg: 'bg-red-50/50',      countColor: 'bg-red-100 text-red-700'         },
+    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500',  bg: 'bg-emerald-50/60',  countColor: 'bg-emerald-100 text-emerald-700' },
   ]
+  const kanbanColumns = allKanbanColumns.filter(c => visibleColumns.has(c.status))
 
   return (
     <>
@@ -571,10 +641,40 @@ function LeaderCanvas() {
         >
           <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
 
-          {/* Bento grid */}
-          <div className="mt-4 grid grid-cols-6 gap-4 content-start">
+          {/* Minimized pill tray */}
+          <MinimizedTray
+            sections={sectionOrder
+              .filter(id => minimizedSections.has(id))
+              .map(id => {
+                if (id === 'milestone') return {
+                  id, title: 'Milestone & Equipo', color: 'indigo' as const, Icon: Flag,
+                  summary: effectiveMilestone
+                    ? `${effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length}/${effectiveMilestone.taskIds.length} tareas`
+                    : 'Sin milestone',
+                }
+                if (id === 'task-board') return {
+                  id, title: 'Task Board', color: 'blue' as const, Icon: LayoutGrid,
+                  summary: `${effectiveTasks.filter(t => t.status === 'done').length}/${effectiveTasks.length} done`,
+                }
+                return {
+                  id, title: 'Actividad', color: 'emerald' as const, Icon: Activity,
+                  summary: activityEvents[0]?.message ?? 'Sin actividad',
+                }
+              }) as MinimizedSection[]}
+            onRestore={id => handleSectionMinimize(id, false)}
+          />
+
+          {/* Bento grid — sortable sections */}
+          <DndContext
+            sensors={sectionSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleSectionDragEnd}
+          >
+            <SortableContext items={sectionOrder} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-6 gap-4 content-start">
 
             {/* MILESTONE */}
+            {!minimizedSections.has('milestone') && (
             <SectionFrame
               id="milestone"
               title="Milestone & Equipo"
@@ -583,6 +683,8 @@ function LeaderCanvas() {
               phase={urgencyPhase}
               supportedShapes={['compact', 'normal', 'wide']}
               agentShape={milestoneAgentShape}
+              isMinimized={minimizedSections.has('milestone')}
+              onMinimize={handleSectionMinimize}
               actions={
                 effectiveMilestone && !SEED_MILESTONE_IDS.has(effectiveMilestone.id) ? (
                   <div className="flex items-center gap-1">
@@ -702,8 +804,10 @@ function LeaderCanvas() {
                 </div>
               </div>
             </SectionFrame>
+            )}
 
             {/* TASK BOARD */}
+            {!minimizedSections.has('task-board') && (
             <SectionFrame
               id="task-board"
               title="Task Board"
@@ -712,97 +816,110 @@ function LeaderCanvas() {
               phase={urgencyPhase}
               supportedShapes={['normal', 'wide', 'hero']}
               agentShape={taskBoardAgentShape}
+              isMinimized={minimizedSections.has('task-board')}
+              onMinimize={handleSectionMinimize}
               actions={
-                <button
-                  onClick={() => setShowAddTask(v => !v)}
-                  className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-500/30 transition"
-                >
-                  {showAddTask ? '✕' : '＋ Tarea'}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setShowAddTask(v => !v)}
+                    className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:bg-blue-500/30 transition"
+                  >
+                    {showAddTask ? '✕' : '＋ Tarea'}
+                  </button>
+                  <div className="relative group">
+                    <button className="rounded p-0.5 text-slate-300 hover:text-blue-500 transition" title="Columnas visibles">
+                      <Eye size={10} />
+                    </button>
+                    <div className="absolute right-0 top-full mt-1 z-20 hidden group-hover:flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg min-w-[130px]">
+                      {allKanbanColumns.map(col => (
+                        <button
+                          key={col.status}
+                          onClick={() => toggleColumn(col.status)}
+                          className="flex items-center gap-2 rounded-lg px-2 py-1 text-[10px] hover:bg-slate-50 transition text-left"
+                        >
+                          {visibleColumns.has(col.status)
+                            ? <Eye size={9} className="text-blue-500 shrink-0" />
+                            : <EyeOff size={9} className="text-slate-300 shrink-0" />}
+                          <span className={visibleColumns.has(col.status) ? 'text-slate-700 font-semibold' : 'text-slate-400'}>
+                            {col.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               }
             >
               <div className="p-4">
-                {showAddTask && (
-                  <motion.div
-                    className="mb-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Título *</label>
-                        <input type="text" value={taskForm.title}
-                          onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))}
-                          placeholder="Ej: Implementar login"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Descripción</label>
-                        <input type="text" value={taskForm.description}
-                          onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))}
-                          placeholder="Detalles opcionales"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asignar a</label>
-                        <select value={taskForm.assignedTo}
-                          onChange={e => setTaskForm(f => ({ ...f, assignedTo: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
-                          <option value="">Sin asignar</option>
-                          {effectiveMembers.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prioridad</label>
-                        <select value={taskForm.priority}
-                          onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as TaskPriority }))}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
-                          <option value="high">Alta</option>
-                          <option value="medium">Media</option>
-                          <option value="low">Baja</option>
-                        </select>
-                      </div>
-                    </div>
-                    <button onClick={handleAddTask} disabled={!taskForm.title.trim()}
-                      className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-bold text-white hover:bg-blue-700 transition disabled:opacity-40">
-                      Crear tarea
-                    </button>
-                  </motion.div>
-                )}
-                <div className="grid grid-cols-3 gap-3">
-                  {kanbanColumns.map(({ status, label, accent, bg, countColor }) => {
-                    const tasks = effectiveTasks.filter(t => t.status === status)
-                    return (
-                      <div key={status} className={`rounded-xl border-t-4 ${accent} ${bg}`}>
-                        <div className="flex items-center justify-between px-3 py-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${countColor}`}>{tasks.length}</span>
+                <AnimatePresence initial={false}>
+                  {showAddTask && (
+                    <motion.div
+                      key="add-task-form"
+                      className="mb-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <p className="mb-3 text-sm font-bold text-slate-700">Nueva tarea</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2">
+                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Título *</label>
+                          <input type="text" value={taskForm.title}
+                            onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))}
+                            placeholder="Ej: Implementar login"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
                         </div>
-                        <div className="flex flex-col gap-2 px-2 pb-3">
-                          {hasRealTasks ? tasks.map(t => (
-                            <TaskCard key={t.id}
-                              task={{ ...t, assignedTo: effectiveMembers.find(m => m.id === t.assignedTo)?.name ?? (t.assignedTo || 'Sin asignar') }}
-                              isHighlighted={state.highlightedTaskIds.includes(t.id)}
-                              onStatusChange={handleTaskStatusChange} />
-                          )) : (
-                            <div className="py-3 text-center text-xs text-slate-400">Sin tareas</div>
-                          )}
-                          {hasRealTasks && tasks.length === 0 && (
-                            <EmptyState icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'} title="Sin tareas" />
-                          )}
+                        <div className="col-span-2">
+                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Descripción</label>
+                          <input type="text" value={taskForm.description}
+                            onChange={e => setTaskForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Detalles opcionales"
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asignar a</label>
+                          <select value={taskForm.assignedTo}
+                            onChange={e => setTaskForm(f => ({ ...f, assignedTo: e.target.value }))}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
+                            <option value="">Sin asignar</option>
+                            {effectiveMembers.map(m => (
+                              <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prioridad</label>
+                          <select value={taskForm.priority}
+                            onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value as TaskPriority }))}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400">
+                            <option value="high">Alta</option>
+                            <option value="medium">Media</option>
+                            <option value="low">Baja</option>
+                          </select>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
+                      <button onClick={handleAddTask} disabled={!taskForm.title.trim()}
+                        className="mt-3 w-full rounded-lg bg-blue-600 py-2 text-sm font-bold text-white hover:bg-blue-700 transition disabled:opacity-40">
+                        Crear tarea
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <KanbanBoard
+                  tasks={effectiveTasks}
+                  members={effectiveMembers}
+                  columns={kanbanColumns}
+                  highlightedTaskIds={state.highlightedTaskIds}
+                  hasRealTasks={hasRealTasks}
+                  onStatusChange={handleTaskStatusChange}
+                />
               </div>
             </SectionFrame>
+            )}
 
             {/* ACTIVITY STREAM */}
+            {!minimizedSections.has('activity') && (
             <SectionFrame
               id="activity"
               title="Actividad reciente"
@@ -811,6 +928,8 @@ function LeaderCanvas() {
               phase={urgencyPhase}
               supportedShapes={['compact', 'normal', 'wide']}
               agentShape={activityAgentShape}
+              isMinimized={minimizedSections.has('activity')}
+              onMinimize={handleSectionMinimize}
             >
               <div className="p-4">
                 {activityEvents.length === 0 ? (
@@ -830,8 +949,11 @@ function LeaderCanvas() {
                 )}
               </div>
             </SectionFrame>
+            )}
 
-          </div>
+              </div>
+            </SortableContext>
+          </DndContext>
         </motion.div>
 
         {/* Dev urgency buttons */}

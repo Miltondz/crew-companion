@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, type LucideIcon } from 'lucide-react'
+import { ChevronDown, GripVertical, type LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { UrgencyPhase } from '@/lib/crew/types'
 
 export type GridShape = 'compact' | 'normal' | 'wide' | 'hero'
@@ -22,7 +24,7 @@ export const SHAPE_CONFIGS: Record<GridShape, ShapeConfig> = {
   hero:    { label: 'Full',       cols: 'col-span-6',               rows: 'row-span-1', icon: '■' },
 }
 
-type ColorToken = 'indigo' | 'blue' | 'emerald' | 'violet' | 'amber' | 'slate'
+export type ColorToken = 'indigo' | 'blue' | 'emerald' | 'violet' | 'amber' | 'slate'
 
 const COLOR_STYLES: Record<ColorToken, {
   header: string
@@ -59,6 +61,9 @@ interface SectionFrameProps {
   actions?: React.ReactNode
   children: React.ReactNode
   agentShape?: GridShape
+  // controlled minimize — when provided, parent owns minimize state
+  isMinimized?: boolean
+  onMinimize?: (id: string, minimized: boolean) => void
 }
 
 export function SectionFrame({
@@ -71,8 +76,11 @@ export function SectionFrame({
   actions,
   children,
   agentShape,
+  isMinimized,
+  onMinimize,
 }: SectionFrameProps) {
   const cs = COLOR_STYLES[color]
+  const controlled = isMinimized !== undefined && onMinimize !== undefined
 
   const getInitialShape = (): GridShape => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY(id)) : null
@@ -81,9 +89,19 @@ export function SectionFrame({
   }
 
   const [shape, setShape] = useState<GridShape>(getInitialShape)
-  const [minimized, setMinimized] = useState(false)
+  const [internalMinimized, setInternalMinimized] = useState(false)
+  const minimized = controlled ? isMinimized : internalMinimized
   const prevPhase = useRef(phase)
   const userOverride = useRef(false)
+
+  const setMinimized = (val: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof val === 'function' ? val(minimized) : val
+    if (controlled) {
+      onMinimize(id, next)
+    } else {
+      setInternalMinimized(next)
+    }
+  }
 
   useEffect(() => {
     if (prevPhase.current === phase) return
@@ -110,16 +128,32 @@ export function SectionFrame({
     localStorage.setItem(LS_KEY(id), s)
   }
 
+  // Sortable (section drag-drop)
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
   const shapeConf = SHAPE_CONFIGS[shape]
   const ctrlBtn = 'rounded p-1 text-slate-400 hover:bg-white/70 hover:text-slate-600 transition-colors'
 
   return (
     <motion.div
+      ref={setNodeRef}
       layout
       initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      animate={{ opacity: isDragging ? 0.4 : 1, scale: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      whileHover={{ y: -2, transition: { duration: 0.15, ease: 'easeOut' } }}
+      whileHover={{ y: isDragging ? 0 : -2, transition: { duration: 0.15, ease: 'easeOut' } }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+        zIndex: isDragging ? 50 : 'auto',
+      }}
       className={[
         'rounded-xl shadow-sm overflow-hidden ring-1 transition-shadow cursor-default',
         cs.bg,
@@ -131,6 +165,17 @@ export function SectionFrame({
       ].join(' ')}
     >
       <div className={`flex items-center gap-2 px-3 py-1.5 ${cs.header} transition-[filter] hover:brightness-[1.02]`}>
+        {/* Drag handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing rounded p-0.5 text-slate-300 hover:text-slate-500 hover:bg-white/60 transition-colors touch-none"
+          title="Arrastrar"
+          tabIndex={-1}
+        >
+          <GripVertical size={11} />
+        </button>
+
         <Icon size={12} className={`flex-shrink-0 ${cs.icon}`} />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 truncate flex-1">
           {title}
