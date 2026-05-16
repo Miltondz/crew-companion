@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity, Eye, EyeOff } from 'lucide-react'
+import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -40,15 +40,12 @@ import { SectionFrame } from '@/components/leader/SectionFrame'
 import type { GridShape } from '@/components/leader/SectionFrame'
 import { KanbanBoard } from '@/components/leader/KanbanBoard'
 import { MinimizedTray } from '@/components/leader/MinimizedTray'
-import type { MinimizedSection } from '@/components/leader/MinimizedTray'
-import { Habitat } from '@/components/companion/Habitat'
+import type { MinimizedSection, MinimizedSectionColor } from '@/components/leader/MinimizedTray'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase, computeCountdown } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
-import { UserMenu } from '@/components/shared/UserMenu'
-import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
@@ -80,6 +77,94 @@ function TrayCountdown({ deadline }: { deadline: string }) {
   return <span className="font-mono tabular-nums text-[10px]">{text}</span>
 }
 
+const PHASE_CHIP_LABELS: Record<UrgencyPhase, string> = {
+  normal: 'Normal', focus: 'Focus', urgent: 'Urgente', panic: 'Pánico', expired: 'Expirado',
+}
+
+const PHASE_CHIP_COLORS: Record<UrgencyPhase, string> = {
+  normal:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  focus:   'bg-yellow-500/15  text-yellow-400  border-yellow-500/30',
+  urgent:  'bg-orange-500/15  text-orange-400  border-orange-500/30',
+  panic:   'bg-red-500/15     text-red-400     border-red-500/30',
+  expired: 'bg-slate-500/15   text-slate-400   border-slate-500/30',
+}
+
+function PhaseChip({ phase }: { phase: UrgencyPhase }) {
+  return (
+    <span className={`phase-chip inline-flex items-center h-5 px-2 rounded-full border text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 ${PHASE_CHIP_COLORS[phase]}`}>
+      {PHASE_CHIP_LABELS[phase]}
+    </span>
+  )
+}
+
+function BlockerBadge({ count }: { count: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-red-500/15 border border-red-500/30 text-[10px] font-semibold text-red-400 shrink-0">
+      <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
+      {count}
+    </span>
+  )
+}
+
+function MemberAvatars({ members, blockers }: {
+  members: Array<{ id: string; name: string }>
+  blockers: Array<{ memberId: string; resolved: boolean }>
+}) {
+  if (members.length === 0) return null
+  return (
+    <div className="flex items-center -space-x-1.5">
+      {members.slice(0, 6).map(m => {
+        const hasBlocker = blockers.some(b => b.memberId === m.id && !b.resolved)
+        return (
+          <div
+            key={m.id}
+            className={`h-6 w-6 rounded-full bg-[var(--phase-glow,#b89450)]/20 border-2 flex items-center justify-center text-[9px] font-bold text-[var(--text-primary)] ${hasBlocker ? 'border-red-400' : 'border-[var(--bg-surface)]'}`}
+            title={m.name}
+          >
+            {m.name[0]?.toUpperCase()}
+          </div>
+        )
+      })}
+      {members.length > 6 && (
+        <div className="h-6 w-6 rounded-full bg-white/10 border-2 border-[var(--bg-surface)] flex items-center justify-center text-[9px] font-bold text-[var(--text-muted)]">
+          +{members.length - 6}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmergencyStrip({ blockers }: { blockers: Array<{ id: string; description: string; memberId: string; resolved: boolean }> }) {
+  return (
+    <div className="col-span-6 rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-2 flex items-center gap-3">
+      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+      <span className="text-xs font-mono text-amber-300">
+        {blockers.length} bloqueador{blockers.length !== 1 ? 'es' : ''} activo{blockers.length !== 1 ? 's' : ''}
+      </span>
+    </div>
+  )
+}
+
+function PanicBanner({ milestoneTitle }: { milestoneTitle: string }) {
+  return (
+    <div className="col-span-6 rounded-lg bg-red-500/15 border border-red-500/40 px-4 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Flame className="w-5 h-5 text-red-400 animate-pulse" />
+        <span className="text-sm font-bold text-red-200">MODO PÁNICO — {milestoneTitle}</span>
+      </div>
+    </div>
+  )
+}
+
+function PostMortemPanel({ milestoneTitle }: { milestoneTitle: string }) {
+  return (
+    <div className="col-span-6 rounded-lg bg-slate-500/10 border border-slate-500/20 px-4 py-3 flex items-center gap-3">
+      <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Post-mortem</span>
+      <span className="text-xs text-slate-500">{milestoneTitle} — deadline superado</span>
+    </div>
+  )
+}
+
 function LeaderCanvas() {
   const router = useRouter()
   const { state, setState } = useCrewAgent()
@@ -87,7 +172,6 @@ function LeaderCanvas() {
   const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
   const [showAddTask, setShowAddTask] = useState(false)
-  const [inviteCode, setInviteCode] = useState<string>('')
   const [showMilestoneEdit, setShowMilestoneEdit] = useState(false)
   const [milestoneEditForm, setMilestoneEditForm] = useState({ title: '', deadline: '' })
   const [showCreateMilestone, setShowCreateMilestone] = useState(false)
@@ -113,18 +197,6 @@ function LeaderCanvas() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    setSectionOrder(prev => {
-      const oldIdx = prev.indexOf(active.id as string)
-      const newIdx = prev.indexOf(over.id as string)
-      const next = arrayMove(prev, oldIdx, newIdx)
-      localStorage.setItem('section-order', JSON.stringify(next))
-      return next
-    })
-  }, [])
-
   const handleSectionMinimize = useCallback((id: string, minimized: boolean) => {
     setMinimizedSections(prev => {
       const next = new Set(prev)
@@ -132,6 +204,34 @@ function LeaderCanvas() {
       else next.delete(id)
       return next
     })
+  }, [])
+
+  const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) return
+    if (over.id === 'ribbon-drop-zone') {
+      handleSectionMinimize(active.id as string, true)
+      return
+    }
+    if (active.id === over.id) return
+    setSectionOrder(prev => {
+      const oldIdx = prev.indexOf(active.id as string)
+      const newIdx = prev.indexOf(over.id as string)
+      const next = arrayMove(prev, oldIdx, newIdx)
+      localStorage.setItem('section-order', JSON.stringify(next))
+      return next
+    })
+  }, [handleSectionMinimize])
+
+  const handleResetLayout = useCallback(() => {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('section-shape:'))
+      .forEach(k => localStorage.removeItem(k))
+    localStorage.removeItem('section-order')
+    localStorage.removeItem('minimizedSections')
+    localStorage.removeItem('sb-width')
+    document.documentElement.style.setProperty('--sb-width', '300px')
+    window.location.reload()
   }, [])
 
   const toggleColumn = (status: TaskStatus) => {
@@ -147,7 +247,6 @@ function LeaderCanvas() {
       return next
     })
   }
-  const hasRealMembers = state.members.some(m => !SEED_MEMBER_IDS.has(m.id))
   const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
   const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
   const effectiveTasks = state.tasks.filter(t => !SEED_TASK_IDS.has(t.id))
@@ -168,13 +267,6 @@ function LeaderCanvas() {
           return
         }
         setState(prev => ({ ...prev, actorRole: 'leader' }))
-      })
-      .catch(() => {})
-    fetch('/api/projects')
-      .then(r => r.json())
-      .then((d: { projects?: Array<{ invite_code?: string }> }) => {
-        const code = d.projects?.[0]?.invite_code
-        if (code) setInviteCode(code)
       })
       .catch(() => {})
   }, [router])
@@ -562,106 +654,48 @@ function LeaderCanvas() {
   ]
   const kanbanColumns = allKanbanColumns.filter(c => visibleColumns.has(c.status))
 
+  const techLevel = (state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'
+  const mascotPendingTasks = effectiveMilestone
+    ? effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status !== 'done').length
+    : 0
+  const mascotMinutesLeft = effectiveMilestone
+    ? Math.max(0, Math.floor((new Date(effectiveMilestone.deadline).getTime() - Date.now()) / 60000))
+    : null
+  const mascotProgress = effectiveMilestone && effectiveMilestone.taskIds.length > 0
+    ? Math.round((effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length / effectiveMilestone.taskIds.length) * 100)
+    : 0
+
   return (
     <>
       <WorkspaceShell
         phase={urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
+        user={{ name: state.members.find(m => m.id === state.currentMemberId)?.name ?? 'Leader', role: 'Team Lead' }}
+        mascotProps={{
+          phase: urgencyPhase,
+          techLevel,
+          pendingTasks: mascotPendingTasks,
+          activeBlockers: activeBlockers.length,
+          minutesLeft: mascotMinutesLeft,
+          progress: mascotProgress,
+          tasks: effectiveTasks,
+        }}
+        commandSurface={{
+          phaseChip: <PhaseChip phase={urgencyPhase} />,
+          milestoneTitle: effectiveMilestone?.title,
+          blockerBadge: activeBlockers.length > 0 ? <BlockerBadge count={activeBlockers.length} /> : undefined,
+          memberAvatars: <MemberAvatars members={effectiveMembers} blockers={state.blockers} />,
+          onCommandPalette: () => {
+            const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
+            window.dispatchEvent(event)
+          },
+          onResetLayout: handleResetLayout,
+        }}
+        activityEvents={activityEvents}
       >
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <UsageBanner />
           <UrgencyBanner phase={urgencyPhase} />
-
-          {/* Header */}
-          <header className="shrink-0 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-600 px-6 py-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 text-xl shadow-inner">⚡</div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-white">Leader Dashboard</h1>
-                {effectiveMilestone && (
-                  <p className="text-xs text-indigo-200">{effectiveMilestone.title}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Habitat
-                compact
-                phase={urgencyPhase}
-                techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
-                pendingTasks={effectiveMilestone ? effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
-                activeBlockers={activeBlockers.length}
-                minutesLeft={effectiveMilestone ? Math.max(0, Math.floor((new Date(effectiveMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-                progress={effectiveMilestone && effectiveMilestone.taskIds.length > 0 ? Math.round((effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length / effectiveMilestone.taskIds.length) * 100) : 0}
-                tasks={effectiveTasks}
-              />
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              {hasRealMembers && effectiveMembers.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => router.push(`/member/${m.id}`)}
-                  className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
-                    {m.name?.[0] ?? '?'}
-                  </span>
-                  {m.name}
-                  {state.blockers.find(b => b.memberId === m.id && !b.resolved) && (
-                    <span className="text-red-300">⚠</span>
-                  )}
-                </button>
-              ))}
-              {!hasRealMembers && (
-                <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-indigo-200/60 ring-1 ring-white/10">
-                  Sin miembros — invita tu equipo
-                </span>
-              )}
-              <button
-                onClick={() => router.push('/docs')}
-                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
-              >
-                📄 Docs
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {activeBlockers.length > 0 && (
-                <span className="flex items-center gap-1.5 rounded-full bg-red-500/30 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-red-400/50">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-300" />
-                  {activeBlockers.length} blocker{activeBlockers.length > 1 ? 's' : ''}
-                </span>
-              )}
-              {inviteCode && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/invite/${inviteCode}`)
-                      .then(() => toast.success('Link de invitación copiado'))
-                      .catch(() => toast.info(`Código: ${inviteCode}`))
-                  }}
-                  className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
-                  title="Copiar link de invitación"
-                >
-                  🔗 Invitar
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
-                  window.dispatchEvent(event)
-                }}
-                className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20"
-                title="Abrir paleta de comandos (Ctrl+K)"
-              >
-                ⌘K
-              </button>
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </div>
-        </header>
 
         {/* Scrollable content */}
         <motion.div
@@ -678,13 +712,13 @@ function LeaderCanvas() {
               .filter(id => minimizedSections.has(id))
               .map(id => {
                 if (id === 'milestone') return {
-                  id, title: 'Milestone & Equipo', color: 'indigo' as const, Icon: Flag,
+                  id, title: 'Milestone & Equipo', color: 'ember' as MinimizedSectionColor, Icon: Flag,
                   summary: effectiveMilestone
                     ? <TrayCountdown deadline={effectiveMilestone.deadline} />
                     : 'Sin milestone',
                 }
                 if (id === 'task-board') return {
-                  id, title: 'Task Board', color: 'blue' as const, Icon: LayoutGrid,
+                  id, title: 'Task Board', color: 'cyan' as MinimizedSectionColor, Icon: LayoutGrid,
                   summary: kanbanColumns
                     .map(c => {
                       const count = effectiveTasks.filter(t => t.status === c.status).length
@@ -693,7 +727,7 @@ function LeaderCanvas() {
                     .join(' · '),
                 }
                 return {
-                  id, title: 'Actividad', color: 'emerald' as const, Icon: Activity,
+                  id, title: 'Actividad', color: 'violet' as MinimizedSectionColor, Icon: Activity,
                   summary: activityEvents[0]?.message ?? 'Sin actividad',
                 }
               }) as MinimizedSection[]}
@@ -707,14 +741,23 @@ function LeaderCanvas() {
             onDragEnd={handleSectionDragEnd}
           >
             <SortableContext items={sectionOrder.filter(id => !minimizedSections.has(id) && id !== 'activity')} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-6 gap-3 content-start">
+              <div className={`phase-layout-${urgencyPhase} content-start`}>
+                {urgencyPhase === 'urgent' && activeBlockers.length > 0 && (
+                  <EmergencyStrip blockers={activeBlockers} />
+                )}
+                {urgencyPhase === 'panic' && effectiveMilestone && (
+                  <PanicBanner milestoneTitle={effectiveMilestone.title} />
+                )}
+                {urgencyPhase === 'expired' && effectiveMilestone && (
+                  <PostMortemPanel milestoneTitle={effectiveMilestone.title} />
+                )}
 
             {/* MILESTONE */}
             {!minimizedSections.has('milestone') && (
             <SectionFrame
               id="milestone"
               title="Milestone & Equipo"
-              color="indigo"
+              color="ember"
               Icon={Flag}
               phase={urgencyPhase}
               supportedShapes={['compact', 'normal', 'wide']}
@@ -847,7 +890,7 @@ function LeaderCanvas() {
             <SectionFrame
               id="task-board"
               title="Task Board"
-              color="blue"
+              color="cyan"
               Icon={LayoutGrid}
               phase={urgencyPhase}
               supportedShapes={['compact', 'normal', 'wide', 'hero']}

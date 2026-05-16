@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, GripVertical, type LucideIcon } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { GripVertical, type LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -12,35 +12,25 @@ export type GridShape = 'compact' | 'normal' | 'wide' | 'hero'
 interface ShapeConfig {
   label: string
   cols: string
-  rows: string
   icon: string
 }
 
-// Grid is 6 columns: compact=2, normal=3, wide=4, hero=6
 export const SHAPE_CONFIGS: Record<GridShape, ShapeConfig> = {
-  compact: { label: 'Compacto',   cols: 'col-span-6 md:col-span-2', rows: 'row-span-1', icon: '▪' },
-  normal:  { label: 'Normal',     cols: 'col-span-6 md:col-span-3', rows: 'row-span-1', icon: '▬' },
-  wide:    { label: 'Horizontal', cols: 'col-span-6 md:col-span-4', rows: 'row-span-1', icon: '▬▬' },
-  hero:    { label: 'Full',       cols: 'col-span-6',               rows: 'row-span-1', icon: '■' },
+  compact: { label: 'Compacto',   cols: 'col-span-6 md:col-span-2', icon: '▪' },
+  normal:  { label: 'Normal',     cols: 'col-span-6 md:col-span-3', icon: '▬' },
+  wide:    { label: 'Horizontal', cols: 'col-span-6 md:col-span-4', icon: '▬▬' },
+  hero:    { label: 'Full',       cols: 'col-span-6',               icon: '■' },
 }
 
-export type ColorToken = 'indigo' | 'blue' | 'emerald' | 'violet' | 'amber' | 'slate'
+export type SpineColor = 'cyan' | 'ember' | 'red' | 'violet' | 'teal' | 'green' | 'slate'
 
-const COLOR_STYLES: Record<ColorToken, {
-  header: string
-  borderTop: string
-  icon: string
-  ring: string
-  shapePicker: string
-  bg: string
-  hoverShadow: string
-}> = {
-  indigo:  { header: 'bg-indigo-50 border-b border-indigo-100',   borderTop: 'border-t-4 border-t-indigo-400',  icon: 'text-indigo-500',  ring: 'ring-indigo-200',  shapePicker: 'hover:bg-indigo-100 text-indigo-500',  bg: 'bg-indigo-50/40',  hoverShadow: 'hover:shadow-indigo-200/60'  },
-  blue:    { header: 'bg-blue-50 border-b border-blue-100',       borderTop: 'border-t-4 border-t-blue-400',    icon: 'text-blue-500',    ring: 'ring-blue-200',    shapePicker: 'hover:bg-blue-100 text-blue-500',      bg: 'bg-blue-50/40',    hoverShadow: 'hover:shadow-blue-200/60'    },
-  emerald: { header: 'bg-emerald-50 border-b border-emerald-100', borderTop: 'border-t-4 border-t-emerald-500', icon: 'text-emerald-600', ring: 'ring-emerald-200', shapePicker: 'hover:bg-emerald-100 text-emerald-600', bg: 'bg-emerald-50/40', hoverShadow: 'hover:shadow-emerald-200/60' },
-  violet:  { header: 'bg-violet-50 border-b border-violet-100',   borderTop: 'border-t-4 border-t-violet-400',  icon: 'text-violet-500',  ring: 'ring-violet-200',  shapePicker: 'hover:bg-violet-100 text-violet-500',  bg: 'bg-violet-50/40',  hoverShadow: 'hover:shadow-violet-200/60'  },
-  amber:   { header: 'bg-amber-50 border-b border-amber-100',     borderTop: 'border-t-4 border-t-amber-400',   icon: 'text-amber-500',   ring: 'ring-amber-200',   shapePicker: 'hover:bg-amber-100 text-amber-500',    bg: 'bg-amber-50/40',   hoverShadow: 'hover:shadow-amber-200/60'   },
-  slate:   { header: 'bg-slate-50 border-b border-slate-200',     borderTop: 'border-t-4 border-t-slate-400',   icon: 'text-slate-500',   ring: 'ring-slate-200',   shapePicker: 'hover:bg-slate-100 text-slate-500',    bg: 'bg-slate-50/60',   hoverShadow: 'hover:shadow-slate-200/60'   },
+const SPINE_ID_MAP: Record<string, SpineColor> = {
+  'task-board': 'cyan',
+  'milestone':  'ember',
+  'blockers':   'red',
+  'activity':   'violet',
+  'team':       'teal',
+  'docs':       'green',
 }
 
 const PHASE_SHAPES: Record<string, Record<UrgencyPhase, GridShape>> = {
@@ -52,18 +42,73 @@ const PHASE_SHAPES: Record<string, Record<UrgencyPhase, GridShape>> = {
 const LS_KEY = (id: string) => `section-shape:${id}`
 
 interface SectionFrameProps {
-  id: 'milestone' | 'task-board' | 'activity'
+  id: string
   title: string
-  color: ColorToken
-  Icon: LucideIcon
+  color?: SpineColor
+  Icon?: LucideIcon
   phase?: UrgencyPhase
   supportedShapes?: GridShape[]
   actions?: React.ReactNode
   children: React.ReactNode
   agentShape?: GridShape
-  // controlled minimize — when provided, parent owns minimize state
   isMinimized?: boolean
   onMinimize?: (id: string, minimized: boolean) => void
+}
+
+function ActivityGlyph() {
+  return (
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+      <polyline
+        points="0,8 3,5 6,7 9,2 12,4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          strokeDasharray: 30,
+          strokeDashoffset: 30,
+          animation: 'sparkline-draw 2s ease-in-out infinite alternate',
+        }}
+      />
+    </svg>
+  )
+}
+
+function MilestoneGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+      <line x1="7" y1="7" x2="7" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+        style={{ transformOrigin: '7px 7px', animation: 'clock-tick 4s steps(12) infinite' }}
+      />
+      <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+        style={{ transformOrigin: '7px 7px', animation: 'clock-tick 48s steps(60) infinite' }}
+      />
+    </svg>
+  )
+}
+
+function BlockersGlyph() {
+  return (
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="none"
+      style={{ animation: 'chevron-pulse 1.4s ease-in-out infinite' }}
+    >
+      <polyline points="0,5 5,0 5,10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <polyline points="6,5 11,0 11,10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function DefaultGlyph({ Icon }: { Icon?: LucideIcon }) {
+  if (!Icon) return null
+  return <Icon size={12} />
+}
+
+function getGlyph(id: string, Icon?: LucideIcon) {
+  if (id === 'activity') return <ActivityGlyph />
+  if (id === 'milestone') return <MilestoneGlyph />
+  if (id === 'blockers') return <BlockersGlyph />
+  return <DefaultGlyph Icon={Icon} />
 }
 
 export function SectionFrame({
@@ -79,7 +124,8 @@ export function SectionFrame({
   isMinimized,
   onMinimize,
 }: SectionFrameProps) {
-  const cs = COLOR_STYLES[color]
+  const spineColor: SpineColor = color ?? SPINE_ID_MAP[id] ?? 'slate'
+  const spineClass = `spine-${spineColor}`
   const controlled = isMinimized !== undefined && onMinimize !== undefined
 
   const getInitialShape = (): GridShape => {
@@ -94,14 +140,14 @@ export function SectionFrame({
   const prevPhase = useRef(phase)
   const userOverride = useRef(false)
 
-  const setMinimized = (val: boolean | ((prev: boolean) => boolean)) => {
+  const setMinimized = useCallback((val: boolean | ((prev: boolean) => boolean)) => {
     const next = typeof val === 'function' ? val(minimized) : val
     if (controlled) {
-      onMinimize(id, next)
+      onMinimize!(id, next)
     } else {
       setInternalMinimized(next)
     }
-  }
+  }, [controlled, onMinimize, id, minimized])
 
   useEffect(() => {
     if (prevPhase.current === phase) return
@@ -114,7 +160,7 @@ export function SectionFrame({
     }
     if (phase === 'panic' && id === 'activity') setMinimized(true)
     else if (oldPhase === 'panic' && id === 'activity') setMinimized(false)
-  }, [phase, id, supportedShapes])
+  }, [phase, id, supportedShapes, setMinimized])
 
   useEffect(() => {
     if (!agentShape || !supportedShapes.includes(agentShape)) return
@@ -128,118 +174,108 @@ export function SectionFrame({
     localStorage.setItem(LS_KEY(id), s)
   }
 
-  // Sortable (section drag-drop)
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({ id })
 
   const shapeConf = SHAPE_CONFIGS[shape]
-  const ctrlBtn = 'rounded p-1 text-slate-400 hover:bg-white/70 hover:text-slate-600 transition-colors'
+  const glyph = getGlyph(id, Icon)
 
   return (
     <motion.div
       ref={setNodeRef}
-      initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: isDragging ? 0.4 : 1, scale: 1, y: 0 }}
+      animate={isDragging ? false : { opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      whileHover={{ y: isDragging ? 0 : -2, transition: { duration: 0.15, ease: 'easeOut' } }}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition ?? undefined,
         zIndex: isDragging ? 50 : 'auto',
       }}
       className={[
-        'rounded-xl shadow-sm overflow-hidden ring-1 transition-shadow cursor-default',
-        cs.bg,
-        cs.borderTop,
-        cs.ring,
-        cs.hoverShadow,
-        'hover:shadow-md',
+        'rounded-xl overflow-hidden bg-[var(--bg-surface)] border border-white/10 shadow-sm',
+        'flex h-full min-h-0',
+        isDragging ? 'opacity-40' : '',
         shapeConf.cols,
       ].join(' ')}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 ${cs.header} transition-[filter] hover:brightness-[1.02]`}>
-        {/* Drag handle */}
-        <button
-          {...attributes}
-          {...listeners}
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing rounded p-0.5 text-slate-300 hover:text-slate-500 hover:bg-white/60 transition-colors touch-none"
-          title="Arrastrar"
-          tabIndex={-1}
+      <div
+        ref={setActivatorNodeRef}
+        {...listeners}
+        {...attributes}
+        className={[
+          'w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-2',
+          'cursor-grab active:cursor-grabbing rounded-l-xl border-r border-white/10 touch-none',
+          spineClass,
+        ].join(' ')}
+        style={{ background: `color-mix(in srgb, var(--spine-color, #94a3b8) 12%, transparent)` }}
+      >
+        <div className="text-[var(--spine-color,#94a3b8)]">{glyph}</div>
+        <span
+          className="font-mono text-[8px] font-bold tracking-widest uppercase text-[var(--spine-color,#94a3b8)]/70"
+          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
         >
-          <GripVertical size={11} />
-        </button>
-
-        <Icon size={12} className={`flex-shrink-0 ${cs.icon}`} />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 truncate flex-1">
           {title}
         </span>
+        <GripVertical className="w-3 h-3 text-[var(--spine-color,#94a3b8)]/40" />
+      </div>
+
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1 border-b border-white/8 shrink-0">
+          <div className="flex items-center gap-0.5 flex-1">
+            {supportedShapes.map(s => (
+              <button
+                key={s}
+                onClick={() => setUserShape(s)}
+                className={[
+                  'rounded px-1 py-0.5 text-[9px] font-bold transition-colors',
+                  shape === s
+                    ? 'text-[var(--spine-color,#94a3b8)] bg-[var(--spine-color,#94a3b8)]/10'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                ].join(' ')}
+                title={SHAPE_CONFIGS[s].label}
+              >
+                {SHAPE_CONFIGS[s].icon}
+              </button>
+            ))}
+            {actions && <div className="flex items-center ml-1">{actions}</div>}
+          </div>
+          <button
+            onClick={() => setMinimized(m => !m)}
+            className="rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors"
+            title={minimized ? 'Mostrar' : 'Minimizar'}
+          >
+            <motion.span
+              animate={{ rotate: minimized ? 0 : 180 }}
+              transition={{ duration: 0.2 }}
+              className="block text-[10px] leading-none"
+            >
+              ▾
+            </motion.span>
+          </button>
+        </div>
 
         <AnimatePresence initial={false}>
           {!minimized && (
             <motion.div
-              key="shape-actions"
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center gap-0.5 flex-shrink-0 overflow-hidden"
+              key="content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              style={{ overflow: 'hidden' }}
             >
-              {supportedShapes.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setUserShape(s)}
-                  className={[
-                    'rounded px-1 py-0.5 text-[9px] font-bold transition-colors',
-                    shape === s
-                      ? `${cs.shapePicker} bg-white/80`
-                      : 'text-slate-300 hover:text-slate-500',
-                  ].join(' ')}
-                  title={SHAPE_CONFIGS[s].label}
-                >
-                  {SHAPE_CONFIGS[s].icon}
-                </button>
-              ))}
-              {actions && (
-                <div className="flex items-center ml-1">{actions}</div>
-              )}
+              {children}
             </motion.div>
           )}
         </AnimatePresence>
-
-        <button
-          onClick={() => setMinimized(m => !m)}
-          className={ctrlBtn}
-          title={minimized ? 'Mostrar' : 'Minimizar'}
-        >
-          <motion.div
-            animate={{ rotate: minimized ? 0 : 180 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-          >
-            <ChevronDown size={11} />
-          </motion.div>
-        </button>
       </div>
-
-      <AnimatePresence initial={false}>
-        {!minimized && (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   )
 }

@@ -2,65 +2,83 @@
 @import "tw-animate-css";
 
 :root {
-  --background: #EDEDF5;
-  --foreground: #010507;
-  --card: #FFFFFF;
-  --card-foreground: #010507;
-  --primary: #010507;
-  --primary-foreground: #FFFFFF;
-  --secondary: #BEC2FF;
-  --secondary-foreground: #010507;
-  --muted: #F7F7F9;
-  --muted-foreground: #57575B;
-  --accent: #BEC2FF;
-  --accent-foreground: #010507;
-  --destructive: #FA5F67;
-  --destructive-foreground: #FFFFFF;
-  --border: #DBDBE5;
-  --input: #FFFFFF;
-  --ring: rgba(190, 194, 255, 0.6);
-  --chart-1: #BEC2FF;
-  --chart-2: #85ECCE;
-  --chart-3: #3D92E8;
-  --chart-4: #FFAC4D;
-  --chart-5: #FFF388;
+  --bg-base: #f5f3ef;
+  --bg-surface: #ffffff;
+  --text-primary: #1a1814;
+  --text-muted: #6b6560;
+  --sb-width: 300px;
+
+  --background: #f5f3ef;
+  --foreground: #1a1814;
+  --card: #ffffff;
+  --card-foreground: #1a1814;
+  --primary: #1a1814;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e4de;
+  --secondary-foreground: #1a1814;
+  --muted: #f0ece4;
+  --muted-foreground: #6b6560;
+  --accent: #e8e4de;
+  --accent-foreground: #1a1814;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e0dbd4;
+  --input: #ffffff;
+  --ring: rgba(184, 148, 80, 0.5);
+  --chart-1: #b89450;
+  --chart-2: #06b6d4;
+  --chart-3: #8b5cf6;
+  --chart-4: #f97316;
+  --chart-5: #22c55e;
   --radius: 0.75rem;
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #010507;
-  --sidebar-primary: #010507;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #BEC2FF;
-  --sidebar-accent-foreground: #010507;
-  --sidebar-border: #DBDBE5;
-  --sidebar-ring: rgba(190, 194, 255, 0.6);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1814;
+  --sidebar-primary: #1a1814;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8e4de;
+  --sidebar-accent-foreground: #1a1814;
+  --sidebar-border: #e0dbd4;
+  --sidebar-ring: rgba(184, 148, 80, 0.5);
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-  --primary: #818cf8;
-  --primary-foreground: #0f172a;
-  --secondary: #334155;
-  --secondary-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #334155;
-  --accent-foreground: #f1f5f9;
-  --destructive: #f87171;
-  --destructive-foreground: #0f172a;
-  --border: #334155;
-  --input: #1e293b;
-  --ring: rgba(129, 140, 248, 0.4);
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-border: #334155;
+  --bg-base: #18160f;
+  --bg-surface: #1f1d16;
+  --bg-card: #252218;
+  --text-primary: #f0ece4;
+  --text-muted: #8a8070;
+
+  --background: #18160f;
+  --foreground: #f0ece4;
+  --card: #252218;
+  --card-foreground: #f0ece4;
+  --primary: #f0ece4;
+  --primary-foreground: #18160f;
+  --secondary: #2e2b22;
+  --secondary-foreground: #f0ece4;
+  --muted: #1f1d16;
+  --muted-foreground: #8a8070;
+  --accent: #2e2b22;
+  --accent-foreground: #f0ece4;
+  --destructive: #ef4444;
+  --destructive-foreground: #18160f;
+  --border: #2e2b22;
+  --input: #1f1d16;
+  --ring: rgba(184, 148, 80, 0.4);
+  --sidebar: #1f1d16;
+  --sidebar-foreground: #f0ece4;
+  --sidebar-border: #2e2b22;
 }
 
+[data-phase="normal"]  { --phase-hue: 42;  --phase-sat: 60%; --phase-glow: #b89450; }
+[data-phase="focus"]   { --phase-hue: 35;  --phase-sat: 70%; --phase-glow: #d4823a; }
+[data-phase="urgent"]  { --phase-hue: 22;  --phase-sat: 80%; --phase-glow: #e05a20; }
+[data-phase="panic"]   { --phase-hue: 5;   --phase-sat: 85%; --phase-glow: #dc2626; }
+[data-phase="expired"] { --phase-hue: 210; --phase-sat: 10%; --phase-glow: #64748b; }
+
 @theme inline {
-  --font-sans: var(--font-jakarta);
-  --font-mono: var(--font-mono);
+  --font-sans: var(--font-inter-tight);
+  --font-mono: var(--font-jetbrains-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -103,14 +121,14 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-jakarta), system-ui, sans-serif;
+    font-family: var(--font-inter-tight), system-ui, sans-serif;
   }
   code,
   kbd,
   pre,
   samp,
   .font-mono {
-    font-family: var(--font-mono), ui-monospace, monospace;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
   }
 }
 
@@ -248,51 +266,68 @@ html {
   animation: lead-card-just-synced 800ms ease-out 1;
 }
 
-/* Phase background gradients (3.2 Spatial Grammar) */
-.phase-bg-normal   { background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%); }
-.phase-bg-focus    { background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); }
-.phase-bg-urgent   { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); }
-.phase-bg-panic    { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); animation: panic-pulse 2s ease-in-out infinite; }
-.phase-bg-expired  { background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); color: #fef2f2; }
+/* Workspace ambient background — driven by data-phase on .workspace-shell */
+.workspace-shell {
+  background: radial-gradient(
+    ellipse 80% 60% at 20% 0%,
+    hsl(var(--phase-hue, 42) var(--phase-sat, 60%) 50% / 0.08),
+    transparent 70%
+  ), var(--bg-base);
+  transition: background 1.2s ease;
+}
 
-/* Dark mode phase backgrounds */
-.dark .phase-bg-normal  { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
-.dark .phase-bg-focus   { background: linear-gradient(135deg, #0f172a 0%, #1c1a07 100%); }
-.dark .phase-bg-urgent  { background: linear-gradient(135deg, #0f172a 0%, #1c0f07 100%); }
-.dark .phase-bg-panic   { background: linear-gradient(135deg, #1a0000 0%, #2d0505 100%); animation: panic-pulse 2s ease-in-out infinite; }
-.dark .phase-bg-expired { background: linear-gradient(135deg, #1a0000 0%, #2d0505 100%); color: #fecaca; }
+/* Phase chip pulse (panic only) */
+@keyframes phase-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsl(5 85% 50% / 0.4); }
+  50% { opacity: 0.85; box-shadow: 0 0 0 6px hsl(5 85% 50% / 0); }
+}
+[data-phase="panic"] .phase-chip { animation: phase-pulse 1.8s ease-in-out infinite; }
 
-/* Dark mode workspace structural overrides */
+/* News ticker */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track { animation: ticker-scroll 30s linear infinite; }
+.ticker-track:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+/* Spine signature colors */
+.spine-cyan   { --spine-color: #06b6d4; }
+.spine-ember  { --spine-color: #f97316; }
+.spine-red    { --spine-color: #ef4444; }
+.spine-violet { --spine-color: #8b5cf6; }
+.spine-teal   { --spine-color: #14b8a6; }
+.spine-green  { --spine-color: #22c55e; }
+.spine-slate  { --spine-color: #94a3b8; }
+
+/* Phase layout topology */
+.phase-layout-normal,
+.phase-layout-focus {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+}
+.phase-layout-urgent {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 0.75rem;
+}
+.phase-layout-panic {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 0.75rem;
+}
+.phase-layout-expired {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+}
+
+/* Dark mode workspace structural override */
 .dark .workspace-shell { color-scheme: dark; }
-
-/* Cards and panels */
-.dark .bg-white,
-.dark .bg-white\/90,
-.dark .bg-white\/80 {
-  background-color: #1e293b !important;
-  color: #f1f5f9;
-}
-
-/* Slate backgrounds */
-.dark .bg-slate-50  { background-color: #0f172a !important; }
-.dark .bg-slate-100 { background-color: #1e293b !important; }
-.dark .bg-slate-200 { background-color: #334155 !important; }
-
-/* Text colors */
-.dark .text-slate-800,
-.dark .text-slate-700 { color: #e2e8f0 !important; }
-.dark .text-slate-600 { color: #cbd5e1 !important; }
-.dark .text-slate-500 { color: #94a3b8 !important; }
-.dark .text-slate-400 { color: #64748b !important; }
-
-/* Borders */
-.dark .border-slate-200 { border-color: #334155 !important; }
-.dark .border-slate-100 { border-color: #1e293b !important; }
-
-@keyframes panic-pulse {
-  0%, 100% { filter: brightness(1); }
-  50%      { filter: brightness(0.92); }
-}
 
 @keyframes gradient-shift {
   0%, 100% { background-position: 0% 50%; }
@@ -363,5 +398,17 @@ html {
 @keyframes lightning {
   0%, 90%, 100% { opacity: 0; }
   92%, 96%      { opacity: 1; }
+}
+
+/* SectionFrame glyph animations */
+@keyframes sparkline-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes clock-tick {
+  to { transform: rotate(360deg); }
+}
+@keyframes chevron-pulse {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  50% { transform: translateX(2px); opacity: 0.7; }
 }
 

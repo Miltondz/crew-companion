@@ -8,6 +8,61 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.12.0] — 2026-05-16 — Visual System Redesign: Editorial spines, phase topology, always-open sidebar
+
+### Added
+
+- **Warm graphite dark theme** — CSS var system replacing blue-black slate; `--bg-base: #18160f` (light) / `#18160f` (dark); ambient phase field gradient (honey → amber → ember → crimson → cool ash) per urgency phase
+- **Font system upgrade** — Inter Tight (display) + JetBrains Mono (code) via `next/font/google`; replaces Jakarta/Mono
+- **Always-open left sidebar (260–440px)** — Fixed layout replacing right-side slide-in AgentRailRegion
+  - User strip 50px (avatar, name, role, theme toggle)
+  - Mascot Habitat 200px (animated creature, phase dot, mini quick-prompt)
+  - CopilotKit chat flex-1 (full height, no collapse button)
+  - Sidebar width persisted to localStorage; drag-handle resize on right edge (native pointer events, not dnd-kit)
+- **Thin 34px header over canvas** — Replaces indigo gradient header; consolidates phase chip, milestone title, countdown, blocker badge, member avatars (red ring = blocker owner), ⌘K palette, ↻ reset button
+- **Editorial spines** — Each surface redesigned with 30px left rail containing:
+  - Rotated vertical mono label
+  - Signature animated glyph (sparkline for Activity, clock for Milestone, hazard chevrons for Blockers)
+  - Drag grip (correct `setActivatorNodeRef` dnd-kit handle pattern)
+  - Per-surface signature colors: TaskBoard=cyan, Milestone=ember, Blockers=red, Activity=violet, Team=teal, Docs=green
+- **Phase-responsive topology** via CSS `grid-template-areas`
+  - normal/focus: 6-column layout, compact task board
+  - urgent: emergency strip top, blocker rail left, board widens
+  - panic: emergency banner full-width, kanban hero (6 cols × 1 row), milestone+blockers below
+  - expired: post-mortem panel, board collapses to compact readonly
+- **Ribbon minimization pattern** — MinimizedTray redesigned as drop zone (`useDroppable { id: 'ribbon-drop-zone' }`)
+  - Drag spine → drop on ribbon = minimize
+  - Click ribbon tile = restore
+  - Signature color per surface carried through
+- **News ticker activity stream** — CSS `@keyframes marquee` animation (30s continuous scroll); replaced horizontal static strip with dynamic event feed; respects `prefers-reduced-motion`
+- **Habitat compact-to-sidebar transition** — Mini quick-input forwards text to CopilotKit via `companionBus` PANEL_OPEN event with `message` payload; CompanionPanel accepts `initialMessage` prop
+- **Countdown responsive sizing** — MilestoneCountdown digits grow with urgency phase (text-base → text-4xl in panic)
+- **Phase chip animation** — Pulses in panic mode only (`@keyframes phase-pulse`)
+- **Reset layout button (↻)** in thin header — Clears section-shape localStorage keys, section-order, minimizedSections, sb-width; hydrates from defaults
+
+### Changed
+
+- **WorkspaceShell layout** — `flex h-screen` → `flex flex-row` with left sidebar; CommandSurfaceRegion moved inside main flex-col (now h-[34px]); ActivityStreamRegion positioned below canvas, not right side
+- **SectionFrame redesign** — Spine (30px) + content (flex-1); `useSortable` listeners on spine (via `setActivatorNodeRef`); `animate={isDragging ? false : ...}` suspends Framer during drag; removed `layout` prop from motion.div
+- **CommandSurfaceRegion redesign** — Thin header with slots for phase-chip, milestone-title, countdown, blocker-badge, member-avatars, ⌘K, reset button; agent-emitted mounts still render here
+- **ContextRailRegion removed** — No longer used; surfaces targeting `context-rail` retargeted to `primary-workzone` or removed
+- **AgentRailRegion full redesign** — No longer a slide-in from right; now left sidebar with user strip + mascot + chat; removed collapse state
+- **ActivityStreamRegion** — `events` prop wired through WorkspaceShell; ticker-track animation via CSS (no Framer)
+- **Habitat redesign** — `sidebar` prop added; sidebar mode renders sprite at 60%, phase dot, bubble, quick-input that opens panel with message forwarded
+- **MilestoneCountdown** — Responsive sizing per phase
+- **Color system rework** — Extended `SpineColor` union (cyan, ember, red, violet, teal, green); removed old generic `ColorToken` system
+
+### Fixed
+
+- **Dead inviteCode state** — Removed `/api/projects` fetch that populated unused `inviteCode` state; only `/api/me/identity` fetch now runs
+- **Module-level constants** — `PHASE_CHIP_LABELS`, `PHASE_CHIP_COLORS` moved from inside component bodies to module scope
+- **Stale closure in SectionFrame** — `setMinimized` wrapped in `useCallback` with correct dependencies
+- **ActivityStreamRegion layout** — Fixed position from right-side strip to bottom bar via flex-col wrapper
+- **Sidebar mini-input** — Placeholder changed from "Mensaje rápido..." to "Pregunta al asistente..." to clarify it opens panel (not direct send)
+- **Unused @keyframes** — Removed orphan `@keyframes panic-bg-pulse` from globals.css
+
+---
+
 ## [0.11.0] — 2026-05-14 — Observability, tests, full CRUD, capability enforcement
 
 ### Added

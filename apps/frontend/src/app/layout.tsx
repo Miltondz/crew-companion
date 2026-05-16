@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Plus_Jakarta_Sans, Spline_Sans_Mono } from "next/font/google";
+import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
 import { LocaleProvider } from "@/lib/i18n";
@@ -14,16 +14,16 @@ import "./globals.css";
 // and break the sidebar layout when both are loaded.
 import "@copilotkit/react-core/v2/styles.css";
 
-const jakarta = Plus_Jakarta_Sans({
+const interTight = Inter_Tight({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-jakarta",
+  variable: "--font-inter-tight",
 });
 
-const splineMono = Spline_Sans_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {
@@ -62,8 +62,8 @@ export default async function RootLayout({
   const initialLocale: Locale = cookieStore.get('crew_locale')?.value === 'en' ? 'en' : 'es'
 
   return (
-    <html lang={initialLocale} className={`${jakarta.variable} ${splineMono.variable}`} suppressHydrationWarning>
-      <body className={`${jakarta.variable} ${splineMono.variable} subpixel-antialiased`}>
+    <html lang={initialLocale} className={`${interTight.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className={`${interTight.variable} ${jetbrainsMono.variable} subpixel-antialiased`}>
         {isDev && (
           <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-center gap-2 bg-amber-400 px-4 py-1 text-xs font-semibold text-amber-950">
             <span>Demo — datos simulados</span>

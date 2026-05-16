@@ -14,7 +14,6 @@ import {
 } from '@copilotkit/react-core/v2'
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { MascotSVG } from '@/components/mascot/MascotSVG'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
@@ -129,7 +128,6 @@ function DocsCanvas() {
       <WorkspaceShell
         phase={state.urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
-        habitat={<MascotSVG mood={state.mascotMood} mode={state.mascotMode} />}
       >
         <div className="flex flex-1 overflow-hidden bg-slate-100">
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { useMachine } from '@xstate/react'
 import { companionMachine } from '@/runtime/companion/machine'
 import { companionBus } from '@/runtime/companion/EventBus'
@@ -12,7 +12,7 @@ import { SpeechBubble } from './SpeechBubble'
 import { CompanionPanel } from './CompanionPanel'
 import type { UrgencyPhase } from '@/lib/crew/types'
 
-interface Props {
+export interface HabitatComponentProps {
   phase: UrgencyPhase
   pendingTasks?: number
   activeBlockers?: number
@@ -21,7 +21,10 @@ interface Props {
   techLevel?: 'low-tech' | 'high-tech'
   tasks?: Array<{ id: string; title: string; description?: string; status: string }>
   compact?: boolean
+  sidebar?: boolean
 }
+
+type Props = HabitatComponentProps
 
 export function Habitat({
   phase,
@@ -32,6 +35,7 @@ export function Habitat({
   techLevel = 'low-tech',
   tasks,
   compact,
+  sidebar,
 }: Props) {
   const [state, send] = useMachine(companionMachine)
   const ctx = state.context
@@ -108,6 +112,71 @@ export function Habitat({
     send({ type: 'DISMISS_BUBBLE' })
   }, [send])
 
+  const [quickInput, setQuickInput] = useState('')
+  const pendingMessage = useRef('')
+
+  if (sidebar) {
+    return (
+      <>
+        <div
+          className="flex flex-col items-center gap-2 w-full h-full px-2 pt-2 pb-1 cursor-pointer select-none"
+          onClick={handleClick}
+          role="button"
+          aria-label="Abrir panel del Companion"
+        >
+          <div className="relative flex-1 flex items-center justify-center w-full">
+            <div className="scale-[0.6] origin-center">
+              <CreatureSprite mood={ctx.mood} mode={ctx.mode} />
+            </div>
+            <div className={`absolute top-1 right-2 w-2 h-2 rounded-full ${
+              phase === 'panic' ? 'bg-red-400 animate-pulse' :
+              phase === 'urgent' ? 'bg-orange-400' :
+              phase === 'focus' ? 'bg-yellow-400' :
+              'bg-emerald-400'
+            }`} />
+          </div>
+          {ctx.bubbleMessage && (
+            <p className="text-[10px] text-[var(--text-muted)] text-center leading-tight line-clamp-2 px-2">
+              {ctx.bubbleMessage}
+            </p>
+          )}
+        </div>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            const text = quickInput.trim()
+            if (!text) return
+            setQuickInput('')
+            pendingMessage.current = text
+            companionBus.emit({ type: 'PANEL_OPEN', message: text })
+            send({ type: 'OPEN_PANEL' })
+          }}
+          className="px-2 pb-2 w-full"
+          onClick={e => e.stopPropagation()}
+        >
+          <input
+            value={quickInput}
+            onChange={e => setQuickInput(e.target.value)}
+            type="text"
+            placeholder="Pregunta al asistente..."
+            className="w-full h-7 rounded-full bg-white/10 border border-white/10 px-3 text-[10px] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:bg-white/15 focus:border-[var(--phase-glow,#b89450)]/40 transition"
+          />
+        </form>
+        <CompanionPanel
+          open={ctx.panelOpen}
+          onClose={() => {
+            pendingMessage.current = ''
+            send({ type: 'CLOSE_PANEL' })
+          }}
+          techLevel={techLevel}
+          tasks={tasks}
+          initialMessage={pendingMessage.current}
+          status={{ pendingTasks, activeBlockers, minutesLeft, progress, phase }}
+        />
+      </>
+    )
+  }
+
   if (compact) {
     return (
       <>
@@ -149,7 +218,7 @@ export function Habitat({
           <input
             name="qmsg"
             type="text"
-            placeholder="Mensaje rápido..."
+            placeholder="Pregunta al asistente..."
             className="h-6 w-36 rounded-full bg-white/10 px-3 text-[10px] text-white placeholder-white/40 outline-none focus:bg-white/20 transition"
           />
         </form>

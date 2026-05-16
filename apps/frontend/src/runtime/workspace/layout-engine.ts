@@ -177,7 +177,12 @@ export class LayoutEngine {
       const evictees = primary.mounts.filter(m => !m.pinned && m.priority < 70)
       for (const m of evictees) this.unmount(m.mountId)
     }
-    // Expired freezes generative content — handled at render time, not state level.
+    if (next === 'expired' && prev !== 'expired') {
+      const primary = this.state['primary-workzone']
+      primary.mounts
+        .filter(m => !m.pinned && m.manifestId !== 'post-mortem')
+        .forEach(m => this.hibernate(m.mountId))
+    }
   }
 
   reset(): void {

@@ -163,11 +163,31 @@ Phase is always computed via `getUrgencyPhase(deadline)` — never stored, never
 
 ---
 
+## Visual System — Warm Graphite & Editorial Spines
+
+The visual design encodes urgency and context directly into layout topology, not just colors. The system is built on three layers:
+
+**Chromatic layer:** Warm graphite dark base (#18160f) replaces cool slate. The ambient phase field behind the workspace is a subtle radial gradient that shifts temperature with urgency — honey (normal) through amber (focus) to crimson (panic) to cool ash (expired). This field is ambient: it does not compete with surface content but provides a continuous rhythm.
+
+**Typographic layer:** Inter Tight for headers, JetBrains Mono for code. Both are loaded via `next/font/google`.
+
+**Spatial layer:** The workspace layout topology itself changes per phase — not just column widths, but grid template structure:
+- `normal/focus`: 6-column grid, task board at `compact` (33%), side-by-side with milestone and activity
+- `urgent`: 6-column grid with emergency strip at top, blocker rail on left, board widens to `normal` (50%)
+- `panic`: full-width emergency banner at top, kanban board at `hero` (100%), milestone + blockers below
+- `expired`: board collapses to compact readonly, post-mortem panel appears
+
+Each surface is wrapped in an **editorial spine** — a 30px left rail containing a rotated vertical label, signature glyph, and drag grip. Glyphs are animated: sparkline for Activity (draws continuously), clock for Milestone (hands rotate), hazard chevrons for Blockers (pulse horizontally). Each surface has a signature color that carries through spine, badge, accent stripes, and ribbon tile — TaskBoard cyan, Milestone ember, Blockers red, Activity violet, Team teal, Docs green.
+
+The **always-open left sidebar** (260–440px, width persisted) replaces the right-side chat slide-in. It houses: user strip (50px), mascot habitat (200px), and CopilotKit chat (flex-1). Users can drag the sidebar's right edge to resize (native pointer events, not dnd-kit). The **thin 34px header** above the canvas consolidates phase chip, milestone title, countdown, blocker badge, member avatars (with red ring for blocker owners), ⌘K palette, and ↻ reset layout button.
+
+---
+
 ## Spatial Grammar — Workspace Layout
 
 The workspace uses a fixed spatial grammar of 6 named regions. This is not CSS grid for aesthetics — it is a protocol. Every surface declares which region it belongs to in its manifest. The Layout Engine resolves conflicts (two surfaces targeting the same region), manages lifecycle (mount, hibernate, evict), and respects user-pinned panels (stored in localStorage, survive agent re-routing).
 
-The **primary-workzone** is the largest region and holds the main agent surface — the panel that changes most dynamically based on urgency and agent intent. The **context-rail** and **agent-rail** are narrower vertical columns on the right for persistent context and the Companion Habitat respectively. The **command-surface** anchors the top bar. The **activity-stream** at the bottom provides a live audit feed. The **ambient-overlay** sits above everything and activates only when urgency demands it.
+The **primary-workzone** is the largest region and holds the main agent surface — the panel that changes most dynamically based on urgency and agent intent. The **agent-rail** is a narrower left column (the sidebar) for the Companion Habitat and CopilotKit chat. The **command-surface** anchors the thin top bar. The **activity-stream** at the bottom provides a live news ticker of recent events. The **ambient-overlay** sits above everything and activates only when urgency demands it. The **context-rail** region was consolidated into primary-workzone.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

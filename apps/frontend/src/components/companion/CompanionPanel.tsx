@@ -29,6 +29,7 @@ interface Props {
   techLevel?: 'low-tech' | 'high-tech'
   suggestedActions?: SuggestedAction[]
   tasks?: Array<{ id: string; title: string; description?: string; status: string }>
+  initialMessage?: string
 }
 
 const INTENT_OPTIONS = [
@@ -84,6 +85,7 @@ export function CompanionPanel({
   techLevel = 'low-tech',
   suggestedActions = [],
   tasks,
+  initialMessage,
 }: Props) {
   const [view, setView] = useState<'main' | 'loading' | 'stepper' | 'error' | 'task-picker'>('main')
   const [activeFlow, setActiveFlow] = useState<TechFlow | null>(null)
@@ -248,6 +250,13 @@ export function CompanionPanel({
               {/* main */}
               {view === 'main' && (
                 <>
+                  {/* pending message from quick-input */}
+                  {initialMessage && (
+                    <div className="rounded-lg bg-indigo-500/10 border border-indigo-500/30 px-3 py-2 text-xs text-indigo-200">
+                      {initialMessage}
+                    </div>
+                  )}
+
                   {/* quick status */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-zinc-800/60 rounded-xl p-3 flex flex-col gap-1">

@@ -10,7 +10,7 @@ export type CompanionEvent =
   | { type: 'DEADLINE_APPROACHING'; minutesLeft: number }
   | { type: 'USER_INACTIVE'; durationMs: number }
   | { type: 'USER_ACTIVE' }
-  | { type: 'PANEL_OPEN' }
+  | { type: 'PANEL_OPEN'; message?: string }
   | { type: 'PANEL_CLOSE' }
 
 type EventType = CompanionEvent['type']

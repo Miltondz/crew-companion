@@ -25,7 +25,6 @@ import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registr
 import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
 import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { MilestoneCountdown } from '@/components/member/MilestoneCountdown'
-import { Habitat } from '@/components/companion/Habitat'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
@@ -275,17 +274,15 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       <WorkspaceShell
         phase={urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
-        habitat={
-          <Habitat
-            phase={urgencyPhase}
-            techLevel={currentMember?.technicalLevel ?? 'low-tech'}
-            pendingTasks={myTasks.filter(t => t.status !== 'done').length}
-            activeBlockers={myBlocker ? 1 : 0}
-            minutesLeft={activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-            progress={activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0}
-            tasks={state.tasks.filter(t => t.assignedTo === memberId)}
-          />
-        }
+        mascotProps={{
+          phase: urgencyPhase,
+          techLevel: currentMember?.technicalLevel ?? 'low-tech',
+          pendingTasks: myTasks.filter(t => t.status !== 'done').length,
+          activeBlockers: myBlocker ? 1 : 0,
+          minutesLeft: activeMilestone ? Math.max(0, Math.floor((new Date(activeMilestone.deadline).getTime() - Date.now()) / 60000)) : null,
+          progress: activeMilestone && activeMilestone.taskIds.length > 0 ? Math.round((myTasks.filter(t => activeMilestone.taskIds.includes(t.id) && t.status === 'done').length / activeMilestone.taskIds.length) * 100) : 0,
+          tasks: state.tasks.filter(t => t.assignedTo === memberId),
+        }}
       >
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <UrgencyBanner phase={urgencyPhase} milestoneTitle={activeMilestone?.title} />
