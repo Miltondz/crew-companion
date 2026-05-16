@@ -567,17 +567,6 @@ function LeaderCanvas() {
       <WorkspaceShell
         phase={urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
-        habitat={
-          <Habitat
-            phase={urgencyPhase}
-            techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
-            pendingTasks={effectiveMilestone ? effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
-            activeBlockers={activeBlockers.length}
-            minutesLeft={effectiveMilestone ? Math.max(0, Math.floor((new Date(effectiveMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
-            progress={effectiveMilestone && effectiveMilestone.taskIds.length > 0 ? Math.round((effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length / effectiveMilestone.taskIds.length) * 100) : 0}
-            tasks={effectiveTasks}
-          />
-        }
       >
         <div className="flex flex-1 flex-col overflow-hidden min-w-0">
           <UsageBanner />
@@ -594,6 +583,19 @@ function LeaderCanvas() {
                   <p className="text-xs text-indigo-200">{effectiveMilestone.title}</p>
                 )}
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Habitat
+                compact
+                phase={urgencyPhase}
+                techLevel={(state.members.find(m => m.id === state.currentMemberId)?.technicalLevel as 'low-tech' | 'high-tech') ?? 'low-tech'}
+                pendingTasks={effectiveMilestone ? effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status !== 'done').length : 0}
+                activeBlockers={activeBlockers.length}
+                minutesLeft={effectiveMilestone ? Math.max(0, Math.floor((new Date(effectiveMilestone.deadline).getTime() - Date.now()) / 60000)) : null}
+                progress={effectiveMilestone && effectiveMilestone.taskIds.length > 0 ? Math.round((effectiveTasks.filter(t => effectiveMilestone.taskIds.includes(t.id) && t.status === 'done').length / effectiveMilestone.taskIds.length) * 100) : 0}
+                tasks={effectiveTasks}
+              />
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -705,7 +707,7 @@ function LeaderCanvas() {
             onDragEnd={handleSectionDragEnd}
           >
             <SortableContext items={sectionOrder.filter(id => !minimizedSections.has(id) && id !== 'activity')} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-6 gap-4 content-start">
+              <div className="grid grid-cols-6 gap-3 content-start">
 
             {/* MILESTONE */}
             {!minimizedSections.has('milestone') && (
@@ -848,7 +850,7 @@ function LeaderCanvas() {
               color="blue"
               Icon={LayoutGrid}
               phase={urgencyPhase}
-              supportedShapes={['normal', 'wide', 'hero']}
+              supportedShapes={['compact', 'normal', 'wide', 'hero']}
               agentShape={taskBoardAgentShape}
               isMinimized={minimizedSections.has('task-board')}
               onMinimize={handleSectionMinimize}

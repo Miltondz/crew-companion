@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function AgentRailRegion({ children, onNewChat }: Props) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   return (
     <>

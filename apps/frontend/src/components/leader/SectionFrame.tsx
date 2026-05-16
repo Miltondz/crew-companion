@@ -45,7 +45,7 @@ const COLOR_STYLES: Record<ColorToken, {
 
 const PHASE_SHAPES: Record<string, Record<UrgencyPhase, GridShape>> = {
   milestone:    { normal: 'normal', focus: 'wide',    urgent: 'wide',    panic: 'compact', expired: 'compact' },
-  'task-board': { normal: 'normal', focus: 'wide',    urgent: 'wide',    panic: 'hero',    expired: 'wide' },
+  'task-board': { normal: 'compact', focus: 'normal',  urgent: 'wide',    panic: 'hero',    expired: 'wide' },
   activity:     { normal: 'normal', focus: 'compact', urgent: 'compact', panic: 'compact', expired: 'normal' },
 }
 
@@ -144,7 +144,6 @@ export function SectionFrame({
   return (
     <motion.div
       ref={setNodeRef}
-      layout
       initial={{ opacity: 0, scale: 0.96, y: 10 }}
       animate={{ opacity: isDragging ? 0.4 : 1, scale: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}

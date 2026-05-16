@@ -228,7 +228,7 @@ function DroppableColumn({
         items={columnTasks.map(t => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-col gap-2 px-2 pb-3 min-h-[4rem]">
+        <div className="flex flex-col gap-1.5 px-2 pb-2 min-h-[4rem]">
           <AnimatePresence>
             {hasRealTasks ? columnTasks.map(t => (
               <motion.div

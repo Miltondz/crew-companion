@@ -113,7 +113,7 @@ export function TaskCard({ task, isHighlighted, onStatusChange }: TaskCardProps)
         border: '1px solid oklch(0.922 0 0 / 0.6)',
       } as React.CSSProperties}
     >
-      <div className="relative rounded-[11px] bg-white dark:bg-slate-900 p-3 space-y-3">
+      <div className="relative rounded-[11px] bg-white dark:bg-slate-900 p-2 space-y-2">
         <PriorityBadge priority={task.priority} />
 
         <div>
@@ -130,7 +130,7 @@ export function TaskCard({ task, isHighlighted, onStatusChange }: TaskCardProps)
           onClick={onStatusChange ? handleStatusClick : undefined}
         />
 
-        <div className="flex items-center gap-2 border-t border-slate-100 dark:border-white/10 pt-2.5">
+        <div className="flex items-center gap-2 border-t border-slate-100 dark:border-white/10 pt-2">
           <Initials name={task.assignedTo} />
           <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
             {task.assignedTo}

@@ -44,12 +44,7 @@ export function WorkspaceShell({ phase, agentRail, children, habitat, onNewChat 
       <ActivityStreamRegion mounts={layout['activity-stream'].mounts} />
       <AmbientOverlayRegion mounts={layout['ambient-overlay'].mounts} />
 
-      {/* Mascot: always fixed bottom-right, independent of chat state */}
-      {habitat && (
-        <div className="fixed bottom-4 right-4 z-40 pointer-events-auto">
-          {habitat}
-        </div>
-      )}
+      {/* habitat slot unused — leader page renders compact mascot in header */}
     </div>
   )
 }

@@ -20,6 +20,7 @@ interface Props {
   progress?: number
   techLevel?: 'low-tech' | 'high-tech'
   tasks?: Array<{ id: string; title: string; description?: string; status: string }>
+  compact?: boolean
 }
 
 export function Habitat({
@@ -30,6 +31,7 @@ export function Habitat({
   progress = 0,
   techLevel = 'low-tech',
   tasks,
+  compact,
 }: Props) {
   const [state, send] = useMachine(companionMachine)
   const ctx = state.context
@@ -105,6 +107,62 @@ export function Habitat({
   const handleDismissBubble = useCallback(() => {
     send({ type: 'DISMISS_BUBBLE' })
   }, [send])
+
+  if (compact) {
+    return (
+      <>
+        <div
+          className="flex items-center gap-2 cursor-pointer select-none"
+          onClick={handleClick}
+          role="button"
+          aria-label="Abrir panel del Companion"
+        >
+          <div className="relative h-10 w-10 flex items-end justify-center shrink-0 overflow-visible">
+            <div className="scale-[0.35] origin-bottom absolute bottom-0">
+              <CreatureSprite mood={ctx.mood} mode={ctx.mode} />
+            </div>
+          </div>
+          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            phase === 'panic' ? 'bg-red-400 animate-pulse' :
+            phase === 'urgent' ? 'bg-orange-400' :
+            phase === 'focus' ? 'bg-yellow-400' :
+            'bg-emerald-400'
+          }`} />
+          {ctx.bubbleMessage && (
+            <span className="text-[10px] text-white/80 max-w-[140px] truncate italic">
+              {ctx.bubbleMessage}
+            </span>
+          )}
+        </div>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            const input = (e.currentTarget.elements.namedItem('qmsg') as HTMLInputElement)
+            const text = input.value.trim()
+            if (!text) return
+            companionBus.emit({ type: 'PANEL_OPEN' })
+            send({ type: 'OPEN_PANEL' })
+            input.value = ''
+          }}
+          className="flex items-center"
+        >
+          <input
+            name="qmsg"
+            type="text"
+            placeholder="Mensaje rápido..."
+            className="h-6 w-36 rounded-full bg-white/10 px-3 text-[10px] text-white placeholder-white/40 outline-none focus:bg-white/20 transition"
+          />
+        </form>
+        <CompanionPanel
+          open={ctx.panelOpen}
+          onClose={() => send({ type: 'CLOSE_PANEL' })}
+          techLevel={techLevel}
+          tasks={tasks}
+          status={{ pendingTasks, activeBlockers, minutesLeft, progress, phase }}
+        />
+      </>
+    )
+  }
 
   return (
     <>
