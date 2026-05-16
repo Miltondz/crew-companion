@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity, AlertTriangle, Flame } from 'lucide-react'
+import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
