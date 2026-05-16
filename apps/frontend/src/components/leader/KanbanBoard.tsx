@@ -154,7 +154,7 @@ function SortableTaskCard({
       {...listeners}
       className="touch-none group relative"
     >
-      <div className="absolute top-1.5 right-1.5 z-10 hidden group-hover:flex items-center gap-0.5">
+      <div className={`absolute top-1.5 right-1.5 z-10 items-center gap-0.5 ${isDragging ? 'hidden' : 'hidden group-hover:flex'}`}>
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); setEditing(true); setEditTitle(task.title); setEditDesc(task.description); setEditPriority(task.priority) }}
@@ -229,7 +229,7 @@ function DroppableColumn({
         strategy={verticalListSortingStrategy}
       >
         <div className="flex flex-col gap-2 px-2 pb-3 min-h-[4rem]">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence>
             {hasRealTasks ? columnTasks.map(t => (
               <motion.div
                 key={t.id}

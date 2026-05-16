@@ -956,39 +956,37 @@ function LeaderCanvas() {
             </SortableContext>
           </DndContext>
 
-          {/* Activity — compact auto-height strip, always at bottom */}
-          {!minimizedSections.has('activity') && (
-          <SectionFrame
-            id="activity"
-            title="Actividad reciente"
-            color="emerald"
-            Icon={Activity}
-            phase={urgencyPhase}
-            supportedShapes={['compact', 'normal', 'wide', 'hero']}
-            agentShape={activityAgentShape}
-            isMinimized={minimizedSections.has('activity')}
-            onMinimize={handleSectionMinimize}
-          >
-            <div className="px-4 py-2">
+        </motion.div>
+
+        {/* Activity strip — compact sticky base bar */}
+        {!minimizedSections.has('activity') && (
+          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm">
+            <div className="flex items-center gap-2 px-4 py-1.5 min-h-0">
+              <Activity size={10} className="text-emerald-500 shrink-0" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0 mr-1">Actividad</span>
               {activityEvents.length === 0 ? (
-                <EmptyState icon="📭" title="Sin actividad reciente" />
+                <span className="text-[10px] text-slate-400 italic">Sin eventos</span>
               ) : (
-                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                  {activityEvents.slice(0, 20).map((ev, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs">
-                      <span className="text-base leading-none mt-0.5">{ev.icon ?? '📋'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-slate-700 font-medium leading-tight">{ev.message}</p>
-                        <p className="text-slate-400 text-[10px] mt-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
+                <div className="flex gap-4 overflow-x-auto scrollbar-none flex-1 min-w-0">
+                  {activityEvents.slice(0, 6).map((ev, i) => (
+                    <span key={i} className="flex items-center gap-1 text-[10px] text-slate-500 shrink-0 whitespace-nowrap">
+                      <span>{ev.icon ?? '📋'}</span>
+                      <span>{ev.message}</span>
+                      <span className="text-slate-300 ml-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </span>
                   ))}
                 </div>
               )}
+              <button
+                onClick={() => handleSectionMinimize('activity', true)}
+                className="ml-auto shrink-0 rounded p-0.5 text-slate-300 hover:text-slate-500 transition"
+                title="Minimizar"
+              >
+                <EyeOff size={10} />
+              </button>
             </div>
-          </SectionFrame>
-          )}
-        </motion.div>
+          </div>
+        )}
 
         {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (
