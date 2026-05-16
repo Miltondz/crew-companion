@@ -8,6 +8,24 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.12.1] — 2026-05-16 — Bug fixes: drag-to-minimize, Copilot chat, ticker, and styling
+
+### Fixed
+
+- **Drag-to-minimize broken** — MinimizedTray was outside DndContext scope, preventing ribbon-drop-zone from receiving drag events. Moved MinimizedTray inside DndContext so sections can be dropped to minimize.
+- **Copilot chat mini-input not sending** — Habitat sidebar/compact mini-input forms were only opening CompanionPanel (local UI) instead of sending to crew agent. Refactored to use `useAgent({ agentId: 'crew_agent' }).addMessage()` + `agent.runAgent()` for real message delivery.
+- **Duplicate activity ticker** — Old static scrollable activity strip (blue, non-animated) coexisting with new CSS-animated ActivityStreamRegion. Removed old strip, kept CSS marquee animation.
+- **Spine text orientation wrong** — Section spine labels read top-to-bottom instead of bottom-to-top. Added 180° rotation transform to vertical text.
+- **Component inner backgrounds light** — Section content areas missing dark background styling. Added `bg-[var(--bg-surface)] text-[var(--text-primary)]` to SectionFrame content wrapper for proper dark theme rendering.
+
+### Changed
+
+- **Habitat mini-input error handling** — Agent failures now surfaced via toast instead of silent promise rejection
+- **Compact form mini-input** — Now sends to agent (was only opening panel)
+- **Code cleanup** — Removed unused imports (Activity, Eye, EyeOff icons); removed dead `pendingMessage` ref from Habitat
+
+---
+
 ## [0.12.0] — 2026-05-16 — Visual System Redesign: Editorial spines, phase topology, always-open sidebar
 
 ### Added
