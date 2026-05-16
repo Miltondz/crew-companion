@@ -78,40 +78,101 @@ interface KanbanBoardProps {
   highlightedTaskIds: string[]
   hasRealTasks: boolean
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void
+  onDelete: (taskId: string) => void
+  onEdit: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'assignedTo'>>) => void
 }
 
 function SortableTaskCard({
   task,
   isHighlighted,
   onStatusChange,
+  onDelete,
+  onEdit,
 }: {
   task: Task & { assignedTo: string }
   isHighlighted: boolean
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void
+  onDelete: (taskId: string) => void
+  onEdit: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'assignedTo'>>) => void
 }) {
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(task.title)
+  const [editDesc, setEditDesc] = useState(task.description)
+  const [editPriority, setEditPriority] = useState(task.priority)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { status: task.status },
+    disabled: editing,
   })
+
+  function saveEdit() {
+    if (editTitle.trim()) {
+      onEdit(task.id, { title: editTitle.trim(), description: editDesc.trim(), priority: editPriority })
+    }
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div ref={setNodeRef} className="rounded-xl border border-blue-300 bg-white p-3 space-y-2 shadow-sm">
+        <input
+          autoFocus
+          value={editTitle}
+          onChange={e => setEditTitle(e.target.value)}
+          className="w-full rounded border border-slate-200 px-2 py-1 text-sm outline-none focus:border-blue-400"
+          placeholder="Título"
+        />
+        <input
+          value={editDesc}
+          onChange={e => setEditDesc(e.target.value)}
+          className="w-full rounded border border-slate-200 px-2 py-1 text-xs outline-none focus:border-blue-400"
+          placeholder="Descripción"
+        />
+        <select
+          value={editPriority}
+          onChange={e => setEditPriority(e.target.value as TaskPriority)}
+          className="w-full rounded border border-slate-200 px-2 py-1 text-xs outline-none"
+        >
+          <option value="high">Alta</option>
+          <option value="medium">Media</option>
+          <option value="low">Baja</option>
+        </select>
+        <div className="flex gap-2">
+          <button onClick={saveEdit} className="flex-1 rounded bg-blue-600 py-1 text-xs font-bold text-white hover:bg-blue-700 transition">Guardar</button>
+          <button onClick={() => setEditing(false)} className="flex-1 rounded bg-slate-100 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0.3 : 1,
-        zIndex: isDragging ? 50 : 'auto',
-      }}
+      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.3 : 1, zIndex: isDragging ? 50 : 'auto' }}
       {...attributes}
       {...listeners}
-      className="touch-none"
+      className="touch-none group relative"
     >
-      <TaskCard
-        task={task}
-        isHighlighted={isHighlighted}
-        onStatusChange={onStatusChange}
-      />
+      <div className="absolute top-1.5 right-1.5 z-10 hidden group-hover:flex items-center gap-0.5">
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); setEditing(true); setEditTitle(task.title); setEditDesc(task.description); setEditPriority(task.priority) }}
+          className="rounded p-1 bg-white/90 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition shadow-sm"
+          title="Editar"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+          className="rounded p-1 bg-white/90 text-slate-400 hover:text-red-500 hover:bg-red-50 transition shadow-sm"
+          title="Eliminar"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+      <TaskCard task={task} isHighlighted={isHighlighted} onStatusChange={onStatusChange} />
     </div>
   )
 }
@@ -128,6 +189,8 @@ function DroppableColumn({
   hasRealTasks,
   highlightedTaskIds,
   onStatusChange,
+  onDelete,
+  onEdit,
 }: {
   status: TaskStatus
   label: string
@@ -140,6 +203,8 @@ function DroppableColumn({
   hasRealTasks: boolean
   highlightedTaskIds: string[]
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void
+  onDelete: (taskId: string) => void
+  onEdit: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'assignedTo'>>) => void
 }) {
   const { setNodeRef } = useDroppable({ id: status })
 
@@ -177,6 +242,8 @@ function DroppableColumn({
                   task={t}
                   isHighlighted={highlightedTaskIds.includes(t.id)}
                   onStatusChange={onStatusChange}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
                 />
               </motion.div>
             )) : (
@@ -202,6 +269,8 @@ export function KanbanBoard({
   highlightedTaskIds,
   hasRealTasks,
   onStatusChange,
+  onDelete,
+  onEdit,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
@@ -271,6 +340,8 @@ export function KanbanBoard({
               hasRealTasks={hasRealTasks}
               highlightedTaskIds={highlightedTaskIds}
               onStatusChange={onStatusChange}
+              onDelete={onDelete}
+              onEdit={onEdit}
             />
           )
         })}

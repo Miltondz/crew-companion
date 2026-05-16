@@ -17,9 +17,24 @@ export function mergeCrewState(raw: unknown): CrewState {
   }
 }
 
+const LS_KEY = 'crew-state-v1'
+let memCache: Partial<CrewState> | null = null
+
 export function useCrewAgent() {
   const { agent } = useAgent({ agentId: 'crew_agent' })
-  const [dbState, setDbState] = useState<Partial<CrewState>>({})
+
+  const [dbState, setDbState] = useState<Partial<CrewState>>(() => {
+    if (memCache) return memCache
+    try {
+      const s = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY) : null
+      if (s) {
+        const parsed = JSON.parse(s) as Partial<CrewState>
+        memCache = parsed
+        return parsed
+      }
+    } catch {}
+    return {}
+  })
 
   useEffect(() => {
     fetch('/api/projects')
@@ -27,13 +42,15 @@ export function useCrewAgent() {
       .then((d: { projects?: Array<{ state_json: unknown }> }) => {
         const stateJson = d.projects?.[0]?.state_json
         if (stateJson && typeof stateJson === 'object') {
-          setDbState(stateJson as Partial<CrewState>)
+          setDbState(prev => {
+            if (Object.keys(prev).length === 0) return stateJson as Partial<CrewState>
+            return prev
+          })
         }
       })
       .catch(() => {})
   }, [])
 
-  // Priority: seed < DB < agent (agent state wins after first chat turn)
   const merged = { ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) }
   const state = mergeCrewState(merged)
 
@@ -42,9 +59,11 @@ export function useCrewAgent() {
       const current = mergeCrewState({ ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) })
       const next = updater(current)
       setDbState(next)
+      memCache = next
       agent?.setState(next)
+      try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch {}
     },
-    [agent, dbState]
+    [agent, dbState],
   )
 
   return { agent, state, setState }

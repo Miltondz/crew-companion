@@ -56,7 +56,7 @@ import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
 import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
-import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority } from '@/lib/crew/types'
+import type { CrewState, UrgencyPhase, TaskStatus, TaskPriority, Task } from '@/lib/crew/types'
 import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 
 
@@ -415,6 +415,26 @@ function LeaderCanvas() {
       return { ...prev, tasks: updatedTasks }
     })
   }
+
+  const handleDeleteTask = useCallback((taskId: string) => {
+    if (SEED_TASK_IDS.has(taskId)) return
+    setState(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(t => t.id !== taskId),
+      milestones: prev.milestones.map(m => ({
+        ...m,
+        taskIds: m.taskIds.filter(id => id !== taskId),
+      })),
+    }))
+  }, [setState])
+
+  const handleEditTask = useCallback((taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'assignedTo'>>) => {
+    if (SEED_TASK_IDS.has(taskId)) return
+    setState(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t),
+    }))
+  }, [setState])
 
   const handleAddTask = () => {
     if (!taskForm.title.trim()) return
@@ -924,6 +944,8 @@ function LeaderCanvas() {
                   highlightedTaskIds={state.highlightedTaskIds}
                   hasRealTasks={hasRealTasks}
                   onStatusChange={handleTaskStatusChange}
+                  onDelete={handleDeleteTask}
+                  onEdit={handleEditTask}
                 />
               </div>
             </SectionFrame>
@@ -951,7 +973,7 @@ function LeaderCanvas() {
               {activityEvents.length === 0 ? (
                 <EmptyState icon="📭" title="Sin actividad reciente" />
               ) : (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
                   {activityEvents.slice(0, 20).map((ev, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
                       <span className="text-base leading-none mt-0.5">{ev.icon ?? '📋'}</span>
