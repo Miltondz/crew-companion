@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useMachine } from '@xstate/react'
+import { useAgent } from '@copilotkit/react-core/v2'
 import { companionMachine } from '@/runtime/companion/machine'
 import { companionBus } from '@/runtime/companion/EventBus'
 import { habitatPropRegistry } from '@/runtime/companion/HabitatPropRegistry'
@@ -10,6 +11,7 @@ import { HabitatProps } from './HabitatProps'
 import { CreatureSprite } from './CreatureSprite'
 import { SpeechBubble } from './SpeechBubble'
 import { CompanionPanel } from './CompanionPanel'
+import { toast } from 'sonner'
 import type { UrgencyPhase } from '@/lib/crew/types'
 
 export interface HabitatComponentProps {
@@ -46,6 +48,7 @@ export function Habitat({
   }, [phase, send])
 
   // Sync blocker count changes
+  // intentionally read stale ctx from closure; send is stable from xstate
   useEffect(() => {
     const diff = activeBlockers - ctx.activeBlockerCount
     if (diff > 0) {
@@ -113,7 +116,17 @@ export function Habitat({
   }, [send])
 
   const [quickInput, setQuickInput] = useState('')
-  const pendingMessage = useRef('')
+  const { agent } = useAgent({ agentId: 'crew_agent' })
+
+  const handleQuickSubmit = useCallback(async (text: string) => {
+    setQuickInput('')
+    try {
+      agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
+      await agent.runAgent()
+    } catch {
+      toast.error('El asistente no está disponible. Inténtalo de nuevo.')
+    }
+  }, [agent])
 
   if (sidebar) {
     return (
@@ -146,10 +159,7 @@ export function Habitat({
             e.preventDefault()
             const text = quickInput.trim()
             if (!text) return
-            setQuickInput('')
-            pendingMessage.current = text
-            companionBus.emit({ type: 'PANEL_OPEN', message: text })
-            send({ type: 'OPEN_PANEL' })
+            handleQuickSubmit(text)
           }}
           className="px-2 pb-2 w-full"
           onClick={e => e.stopPropagation()}
@@ -164,13 +174,9 @@ export function Habitat({
         </form>
         <CompanionPanel
           open={ctx.panelOpen}
-          onClose={() => {
-            pendingMessage.current = ''
-            send({ type: 'CLOSE_PANEL' })
-          }}
+          onClose={() => send({ type: 'CLOSE_PANEL' })}
           techLevel={techLevel}
           tasks={tasks}
-          initialMessage={pendingMessage.current}
           status={{ pendingTasks, activeBlockers, minutesLeft, progress, phase }}
         />
       </>
@@ -209,9 +215,8 @@ export function Habitat({
             const input = (e.currentTarget.elements.namedItem('qmsg') as HTMLInputElement)
             const text = input.value.trim()
             if (!text) return
-            companionBus.emit({ type: 'PANEL_OPEN' })
-            send({ type: 'OPEN_PANEL' })
             input.value = ''
+            handleQuickSubmit(text)
           }}
           className="flex items-center"
         >
@@ -258,7 +263,7 @@ export function Habitat({
               message={ctx.bubbleMessage}
               cta={ctx.bubbleCTA}
               onDismiss={handleDismissBubble}
-              onCTA={(action) => {
+              onCTA={(_action) => {
                 handleDismissBubble()
                 companionBus.emit({ type: 'PANEL_OPEN' })
                 send({ type: 'OPEN_PANEL' })

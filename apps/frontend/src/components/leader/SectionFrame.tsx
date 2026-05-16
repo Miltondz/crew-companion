@@ -219,14 +219,14 @@ export function SectionFrame({
         <div className="text-[var(--spine-color,#94a3b8)]">{glyph}</div>
         <span
           className="font-mono text-[8px] font-bold tracking-widest uppercase text-[var(--spine-color,#94a3b8)]/70"
-          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
         >
           {title}
         </span>
         <GripVertical className="w-3 h-3 text-[var(--spine-color,#94a3b8)]/40" />
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-[var(--bg-surface)] text-[var(--text-primary)]">
         <div className="flex items-center gap-1 px-2 py-1 border-b border-white/8 shrink-0">
           <div className="flex items-center gap-0.5 flex-1">
             {supportedShapes.map(s => (

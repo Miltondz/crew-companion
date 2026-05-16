@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame } from 'lucide-react'
+import { Flag, LayoutGrid, AlertTriangle, Flame } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -706,40 +706,39 @@ function LeaderCanvas() {
         >
           <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
 
-          {/* Minimized pill tray */}
-          <MinimizedTray
-            sections={sectionOrder
-              .filter(id => minimizedSections.has(id))
-              .map(id => {
-                if (id === 'milestone') return {
-                  id, title: 'Milestone & Equipo', color: 'ember' as MinimizedSectionColor, Icon: Flag,
-                  summary: effectiveMilestone
-                    ? <TrayCountdown deadline={effectiveMilestone.deadline} />
-                    : 'Sin milestone',
-                }
-                if (id === 'task-board') return {
-                  id, title: 'Task Board', color: 'cyan' as MinimizedSectionColor, Icon: LayoutGrid,
-                  summary: kanbanColumns
-                    .map(c => {
-                      const count = effectiveTasks.filter(t => t.status === c.status).length
-                      return `${c.label}: ${count}`
-                    })
-                    .join(' · '),
-                }
-                return {
-                  id, title: 'Actividad', color: 'violet' as MinimizedSectionColor, Icon: Activity,
-                  summary: activityEvents[0]?.message ?? 'Sin actividad',
-                }
-              }) as MinimizedSection[]}
-            onRestore={id => handleSectionMinimize(id, false)}
-          />
-
-          {/* Bento grid — sortable sections */}
+          {/* Bento grid — sortable sections + minimized tray share one DndContext so ribbon-drop-zone is a valid target */}
           <DndContext
             sensors={sectionSensors}
             collisionDetection={closestCenter}
             onDragEnd={handleSectionDragEnd}
           >
+            {/* Minimized pill tray — must be inside DndContext for useDroppable to receive drops */}
+            <MinimizedTray
+              sections={sectionOrder
+                .filter(id => minimizedSections.has(id))
+                .map(id => {
+                  if (id === 'milestone') return {
+                    id, title: 'Milestone & Equipo', color: 'ember' as MinimizedSectionColor, Icon: Flag,
+                    summary: effectiveMilestone
+                      ? <TrayCountdown deadline={effectiveMilestone.deadline} />
+                      : 'Sin milestone',
+                  }
+                  if (id === 'task-board') return {
+                    id, title: 'Task Board', color: 'cyan' as MinimizedSectionColor, Icon: LayoutGrid,
+                    summary: kanbanColumns
+                      .map(c => {
+                        const count = effectiveTasks.filter(t => t.status === c.status).length
+                        return `${c.label}: ${count}`
+                      })
+                      .join(' · '),
+                  }
+                  return {
+                    id, title: 'Actividad', color: 'violet' as MinimizedSectionColor, Icon: Activity,
+                    summary: activityEvents[0]?.message ?? 'Sin actividad',
+                  }
+                }) as MinimizedSection[]}
+              onRestore={id => handleSectionMinimize(id, false)}
+            />
             <SortableContext items={sectionOrder.filter(id => !minimizedSections.has(id) && id !== 'activity')} strategy={rectSortingStrategy}>
               <div className={`phase-layout-${urgencyPhase} content-start`}>
                 {urgencyPhase === 'urgent' && activeBlockers.length > 0 && (
@@ -1002,36 +1001,6 @@ function LeaderCanvas() {
           </DndContext>
 
         </motion.div>
-
-        {/* Activity strip — compact sticky base bar */}
-        {!minimizedSections.has('activity') && (
-          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm">
-            <div className="flex items-center gap-2 px-4 py-1.5 min-h-0">
-              <Activity size={10} className="text-emerald-500 shrink-0" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0 mr-1">Actividad</span>
-              {activityEvents.length === 0 ? (
-                <span className="text-[10px] text-slate-400 italic">Sin eventos</span>
-              ) : (
-                <div className="flex gap-4 overflow-x-auto scrollbar-none flex-1 min-w-0">
-                  {activityEvents.slice(0, 6).map((ev, i) => (
-                    <span key={i} className="flex items-center gap-1 text-[10px] text-slate-500 shrink-0 whitespace-nowrap">
-                      <span>{ev.icon ?? '📋'}</span>
-                      <span>{ev.message}</span>
-                      <span className="text-slate-300 ml-0.5">{ev.timestamp.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <button
-                onClick={() => handleSectionMinimize('activity', true)}
-                className="ml-auto shrink-0 rounded p-0.5 text-slate-300 hover:text-slate-500 transition"
-                title="Minimizar"
-              >
-                <EyeOff size={10} />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Dev urgency buttons */}
         {process.env.NODE_ENV === 'development' && (
