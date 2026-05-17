@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { z } from 'zod'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { FileText, Plus, Pencil, Trash2, Save, X, ArrowLeft, Check } from 'lucide-react'
+import { FileText, Plus, Pencil, Trash2, Save, X, Check, FolderOpen } from 'lucide-react'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -16,18 +15,102 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
-import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
-import { adaptLegacyEnvelope, isLegacyEnvelope } from '@/runtime/surface-registry/adapter'
-import { LegacyEnvelopeSchema, FullEnvelopeSchema } from '@/runtime/surface-registry/envelope-schema'
-import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
-import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
-import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
-import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import type { CrewState, SharedDocument } from '@/lib/crew/types'
 
+
+function FolderCard({
+  doc,
+  sharer,
+  isSelected,
+  onSelect,
+  onEdit,
+  onDelete,
+}: {
+  doc: SharedDocument
+  sharer?: string
+  isSelected: boolean
+  onSelect: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <motion.div
+      layout
+      whileHover={{ y: -2 }}
+      onClick={onSelect}
+      className={`group relative shrink-0 w-[180px] h-[140px] flex rounded-lg overflow-hidden cursor-pointer transition-all ${
+        isSelected
+          ? 'bg-[var(--bg-surface)] ring-2 ring-violet-500/60 shadow-lg'
+          : 'bg-[var(--bg-surface)]/60 ring-1 ring-white/10 hover:ring-white/20'
+      }`}
+    >
+      {/* Spine */}
+      <div
+        className="w-[28px] flex-shrink-0 flex flex-col items-center justify-between py-2 border-r border-white/10"
+        style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}
+      >
+        <FolderOpen size={12} className={isSelected ? 'text-violet-300' : 'text-violet-400/80'} />
+        <span
+          className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300/80 whitespace-nowrap overflow-hidden"
+          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', maxHeight: '90px' }}
+        >
+          {doc.title.slice(0, 18)}
+        </span>
+        <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
+      </div>
+
+      {/* Content preview */}
+      <div className="flex-1 min-w-0 flex flex-col p-2">
+        <div className="flex items-start justify-between gap-1 mb-1">
+          <p className={`text-[11px] font-semibold leading-tight line-clamp-2 ${isSelected ? 'text-[var(--text-primary)]' : 'text-[var(--text-primary)]/90'}`}>
+            {doc.title}
+          </p>
+        </div>
+        <p className="text-[9px] font-mono text-[var(--text-muted)] line-clamp-3 flex-1">
+          {doc.content.slice(0, 80) || 'Sin contenido'}
+        </p>
+        <p className="text-[9px] font-mono text-[var(--text-muted)] mt-1 truncate">
+          {sharer ?? '—'}
+        </p>
+
+        {/* Actions on hover */}
+        <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={e => { e.stopPropagation(); onEdit() }}
+            className="rounded p-1 bg-[var(--bg-surface)]/80 text-[var(--text-muted)] hover:text-violet-300 hover:bg-violet-500/15 transition"
+            title="Editar"
+          >
+            <Pencil className="w-2.5 h-2.5" />
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete() }}
+            className="rounded p-1 bg-[var(--bg-surface)]/80 text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/15 transition"
+            title="Eliminar"
+          >
+            <Trash2 className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function NewFolderCard({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.button
+      whileHover={{ y: -2, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="shrink-0 w-[140px] h-[140px] rounded-lg bg-[var(--bg-surface)]/40 ring-1 ring-dashed ring-violet-500/40 hover:ring-violet-500/70 hover:bg-violet-500/10 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer"
+    >
+      <Plus className="w-5 h-5 text-violet-400" />
+      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-violet-400">Nuevo</span>
+    </motion.button>
+  )
+}
 
 function MarkdownContent({ content }: { content: string }) {
   return (
@@ -38,9 +121,7 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 function DocsCanvas() {
-  const router = useRouter()
   const { state, setState } = useCrewAgent()
-  const layout = useLayoutEngine()
   const { events: activityEvents, push: pushActivity } = useActivityStream()
 
   const [selectedDocId, setSelectedDocId] = useState<string | null>(
@@ -77,6 +158,7 @@ function DocsCanvas() {
   }
 
   const startEdit = (doc: SharedDocument) => {
+    setShowCreate(false)
     setEditingId(doc.id)
     setEditForm({ title: doc.title, content: doc.content })
   }
@@ -115,7 +197,7 @@ function DocsCanvas() {
     available: 'before-first-message',
     suggestions: [
       { title: 'Resumir documento', message: 'Dame un resumen del documento abierto.' },
-      { title: 'Buscar info técnica', message: '¿Cómo instalo el proyecto según los docs?' },
+      { title: 'Crear nota nueva', message: 'Creá un documento con los próximos pasos del proyecto.' },
       { title: 'Stack técnico', message: '¿Cuál es el stack tecnológico del proyecto?' },
     ],
   })
@@ -214,37 +296,6 @@ function DocsCanvas() {
     },
   })
 
-  const actorRole = state.members.find(m => m.id === state.currentMemberId)?.role ?? 'leader'
-  const runtimeContext = useRuntimeContext({
-    role: actorRole,
-    phase: state.urgencyPhase,
-    hasActiveBlocker: state.blockers.some(b => !b.resolved),
-  })
-
-  useFrontendTool({
-    name: 'renderSurface',
-    description: 'Renderiza un componente UI tipado en el chat',
-    parameters: z.object({
-      envelope: z.union([LegacyEnvelopeSchema, FullEnvelopeSchema]),
-    }),
-    render: ({ args }) => {
-      if (!args.envelope) return null
-      const fullEnvelope = isLegacyEnvelope(args.envelope)
-        ? adaptLegacyEnvelope(args.envelope, runtimeContext)
-        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
-      const result = layoutEngine.mount(fullEnvelope, runtimeContext)
-      if (!result.ok) {
-        return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
-      }
-      return (
-        <div className="flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs text-[var(--text-muted)] ring-1 ring-white/10">
-          <span>🧩</span>
-          <span>Superficie montada en workspace</span>
-        </div>
-      )
-    },
-  })
-
   useDefaultRenderTool({
     render: ({ name, status, result, parameters }) => (
       <ToolFallbackCard name={name} status={status} result={result} parameters={parameters} />
@@ -259,141 +310,69 @@ function DocsCanvas() {
         user={{ name: currentMember?.name ?? 'Usuario', role: currentMember?.role === 'leader' ? 'Team Lead' : 'Miembro' }}
         activityEvents={activityEvents}
         commandSurface={{
+          milestoneTitle: 'Documentos del equipo',
           onCommandPalette: () => {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
             window.dispatchEvent(event)
           },
         }}
       >
-        <div className="flex flex-1 overflow-hidden bg-[var(--bg-base)]">
+        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--bg-base)]">
 
-          {/* Doc list sidebar */}
-          <div className="flex w-64 shrink-0 flex-col border-r border-white/10 bg-[var(--bg-surface)]">
-            <div className="shrink-0 flex items-center justify-between px-3 py-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-violet-400" />
-                <div>
-                  <p className="text-xs font-bold text-[var(--text-primary)]">Documentos</p>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                    {state.sharedDocuments.length} compartido{state.sharedDocuments.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => { setShowCreate(true); setEditingId(null) }}
-                className="flex items-center gap-1 rounded-full bg-violet-500/15 border border-violet-500/30 px-2 py-1 text-[10px] font-bold text-violet-400 hover:bg-violet-500/25 transition"
-                title="Crear documento"
-              >
-                <Plus className="w-3 h-3" />
-                Nuevo
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2">
-              {state.sharedDocuments.length === 0 && !showCreate ? (
-                <div className="p-4 text-center">
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono mb-2">Sin documentos</p>
-                  <button
-                    onClick={() => setShowCreate(true)}
-                    className="text-[10px] text-violet-400 hover:text-violet-300"
-                  >
-                    + Crear el primero
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {state.sharedDocuments.map(doc => {
-                    const isSelected = doc.id === selectedDocId
-                    const sharer = state.members.find(m => m.id === doc.sharedBy)
-                    return (
-                      <div
-                        key={doc.id}
-                        className={`group rounded-lg px-2.5 py-2 transition-colors ${
-                          isSelected
-                            ? 'bg-violet-500/15 ring-1 ring-violet-500/30'
-                            : 'hover:bg-white/5'
-                        }`}
-                      >
-                        <button
-                          onClick={() => { setSelectedDocId(doc.id); setEditingId(null) }}
-                          className="w-full text-left"
-                        >
-                          <div className="flex items-start gap-2">
-                            <FileText className={`mt-0.5 w-3 h-3 shrink-0 ${isSelected ? 'text-violet-400' : 'text-[var(--text-muted)]'}`} />
-                            <div className="min-w-0 flex-1">
-                              <p className={`truncate text-xs font-semibold ${isSelected ? 'text-violet-300' : 'text-[var(--text-primary)]'}`}>
-                                {doc.title}
-                              </p>
-                              <p className="mt-0.5 text-[10px] text-[var(--text-muted)] font-mono truncate">
-                                por {sharer?.name ?? doc.sharedBy}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                        <div className="mt-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => startEdit(doc)}
-                            className="rounded p-1 text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition"
-                            title="Editar"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(doc)}
-                            className="rounded p-1 text-[var(--text-muted)] hover:bg-red-500/15 hover:text-red-400 transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+          {/* Folder shelf — horizontal scrollable row */}
+          <div className="shrink-0 border-b border-white/10 bg-[var(--bg-surface)]/40 backdrop-blur-sm">
+            <div className="flex items-center gap-2 px-4 py-3 overflow-x-auto scrollbar-thin">
+              <AnimatePresence>
+                {state.sharedDocuments.map(doc => {
+                  const sharer = state.members.find(m => m.id === doc.sharedBy)?.name
+                  return (
+                    <FolderCard
+                      key={doc.id}
+                      doc={doc}
+                      sharer={sharer}
+                      isSelected={doc.id === selectedDocId}
+                      onSelect={() => { setSelectedDocId(doc.id); setEditingId(null); setShowCreate(false) }}
+                      onEdit={() => startEdit(doc)}
+                      onDelete={() => handleDelete(doc)}
+                    />
+                  )
+                })}
+              </AnimatePresence>
+              <NewFolderCard onClick={() => { setShowCreate(true); setEditingId(null); setSelectedDocId(null) }} />
             </div>
           </div>
 
-          {/* Document viewer */}
-          <div className="flex flex-1 flex-col overflow-hidden min-w-0 bg-[var(--bg-base)]">
-            <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-[var(--bg-surface)]/60 backdrop-blur-sm">
-              <button
-                onClick={() => router.push('/leader')}
-                className="flex items-center gap-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
-              >
-                <ArrowLeft className="w-3 h-3" />
-                Líder
-              </button>
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <FileText className="w-4 h-4 text-violet-400 shrink-0" />
-                <h1 className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                  {showCreate ? 'Nuevo documento' : editingId ? 'Editando' : selectedDoc?.title ?? 'Documentos'}
-                </h1>
-              </div>
-              {selectedDoc && !showCreate && !editingId && (
-                <p className="text-[10px] text-[var(--text-muted)] font-mono shrink-0">
-                  {state.members.find(m => m.id === selectedDoc.sharedBy)?.name ?? selectedDoc.sharedBy}
-                  {' · '}
-                  {new Date(selectedDoc.sharedAt).toLocaleDateString('es')}
-                </p>
-              )}
-            </header>
+          {/* Viewer / editor area */}
+          <motion.div
+            key={showCreate ? 'create' : editingId ?? selectedDocId ?? 'empty'}
+            className="flex-1 overflow-y-auto p-6"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+          >
 
-            <motion.div
-              key={showCreate ? 'create' : editingId ?? selectedDocId ?? 'empty'}
-              className="flex-1 overflow-y-auto p-6"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-            >
-              <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={state.urgencyPhase} />
-
-              {/* CREATE FORM */}
-              {showCreate && (
-                <div className="mx-auto max-w-3xl">
-                  <div className="rounded-xl border border-violet-500/30 bg-white/5 p-6">
+            {/* CREATE FORM */}
+            {showCreate && (
+              <div className="mx-auto max-w-3xl">
+                <div className="flex rounded-xl overflow-hidden bg-[var(--bg-surface)] ring-1 ring-violet-500/30 shadow-lg">
+                  {/* Spine */}
+                  <div
+                    className="w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
+                    style={{ background: 'color-mix(in srgb, #8b5cf6 18%, transparent)' }}
+                  >
+                    <Plus size={14} className="text-violet-300" />
+                    <span
+                      className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300"
+                      style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+                    >
+                      Nuevo
+                    </span>
+                    <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
+                  </div>
+                  {/* Body */}
+                  <div className="flex-1 min-w-0 p-6">
                     <div className="mb-4 flex items-center justify-between">
-                      <p className="text-sm font-bold text-[var(--text-primary)]">📄 Crear nuevo documento</p>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">Crear nuevo documento</p>
                       <button
                         onClick={() => { setShowCreate(false); setCreateForm({ title: '', content: '' }) }}
                         className="rounded p-1 text-[var(--text-muted)] hover:bg-white/10 transition"
@@ -442,14 +421,29 @@ function DocsCanvas() {
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* EDIT FORM */}
-              {editingId && !showCreate && (
-                <div className="mx-auto max-w-3xl">
-                  <div className="rounded-xl border border-violet-500/30 bg-white/5 p-6">
+            {/* EDIT FORM */}
+            {editingId && !showCreate && (
+              <div className="mx-auto max-w-3xl">
+                <div className="flex rounded-xl overflow-hidden bg-[var(--bg-surface)] ring-1 ring-violet-500/30 shadow-lg">
+                  <div
+                    className="w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
+                    style={{ background: 'color-mix(in srgb, #8b5cf6 18%, transparent)' }}
+                  >
+                    <Pencil size={12} className="text-violet-300" />
+                    <span
+                      className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300"
+                      style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+                    >
+                      Editar
+                    </span>
+                    <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
+                  </div>
+                  <div className="flex-1 min-w-0 p-6">
                     <div className="mb-4 flex items-center justify-between">
-                      <p className="text-sm font-bold text-[var(--text-primary)]">✏️ Editar documento</p>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">Editar documento</p>
                       <button
                         onClick={() => setEditingId(null)}
                         className="rounded p-1 text-[var(--text-muted)] hover:bg-white/10 transition"
@@ -495,13 +489,30 @@ function DocsCanvas() {
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* VIEWER */}
-              {!showCreate && !editingId && (
-                selectedDoc ? (
-                  <div className="mx-auto max-w-3xl">
-                    <div className="rounded-xl border border-white/10 bg-[var(--bg-surface)] p-8">
+            {/* VIEWER */}
+            {!showCreate && !editingId && (
+              selectedDoc ? (
+                <div className="mx-auto max-w-3xl">
+                  <div className="flex rounded-xl overflow-hidden bg-[var(--bg-surface)] ring-1 ring-white/10 shadow-lg">
+                    {/* Spine */}
+                    <div
+                      className="w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
+                      style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}
+                    >
+                      <FileText size={12} className="text-violet-300" />
+                      <span
+                        className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300/80 line-clamp-1"
+                        style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+                      >
+                        {selectedDoc.title.slice(0, 20)}
+                      </span>
+                      <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
+                    </div>
+                    {/* Body */}
+                    <div className="flex-1 min-w-0 p-8">
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <h2 className="text-xl font-bold text-[var(--text-primary)]">{selectedDoc.title}</h2>
                         <div className="flex items-center gap-1 shrink-0">
@@ -533,18 +544,18 @@ function DocsCanvas() {
                       <MarkdownContent content={selectedDoc.content} />
                     </div>
                   </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <EmptyState
-                      icon="📄"
-                      title="Ningún documento seleccionado"
-                      description="Elegí uno de la lista o creá uno nuevo"
-                    />
-                  </div>
-                )
-              )}
-            </motion.div>
-          </div>
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <EmptyState
+                    icon="📂"
+                    title="Sin documento abierto"
+                    description="Elegí un folder de la fila superior o creá uno nuevo"
+                  />
+                </div>
+              )
+            )}
+          </motion.div>
 
         </div>
       </WorkspaceShell>
