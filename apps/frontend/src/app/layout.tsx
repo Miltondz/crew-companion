@@ -4,6 +4,7 @@ import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { ClientInit } from "@/components/shared/ClientInit";
 import { LocaleProvider } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { Toaster } from "sonner";
@@ -79,7 +80,8 @@ export default async function RootLayout({
             </LocaleProvider>
           </ThemeProvider>
         </div>
-        <Toaster richColors position="top-right" closeButton />
+        <ClientInit />
+        <Toaster richColors position="bottom-right" closeButton />
       </body>
     </html>
   );
