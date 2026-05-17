@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { CopilotKitProviderShell } from "@/components/copilot/CopilotKitProviderShell";
+import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { LocaleProvider } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { Toaster } from "sonner";
@@ -70,11 +71,13 @@ export default async function RootLayout({
           </div>
         )}
         <div className={isDev ? 'pt-6' : ''}>
-          <LocaleProvider initialLocale={initialLocale}>
-            <SessionProvider>
-              <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
-            </SessionProvider>
-          </LocaleProvider>
+          <ThemeProvider>
+            <LocaleProvider initialLocale={initialLocale}>
+              <SessionProvider>
+                <CopilotKitProviderShell>{children}</CopilotKitProviderShell>
+              </SessionProvider>
+            </LocaleProvider>
+          </ThemeProvider>
         </div>
         <Toaster richColors position="top-right" closeButton />
       </body>

@@ -14,7 +14,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className={className ?? 'flex items-center justify-center rounded-full bg-white/15 p-2 text-white backdrop-blur-sm transition hover:bg-white/25 ring-1 ring-white/20'}
+      className={className ?? 'flex items-center justify-center rounded-full bg-white/10 p-1.5 text-[var(--text-primary)] backdrop-blur-sm transition hover:bg-white/20 ring-1 ring-white/15 shrink-0'}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
       aria-label={isDark ? 'Modo claro' : 'Modo oscuro'}
     >

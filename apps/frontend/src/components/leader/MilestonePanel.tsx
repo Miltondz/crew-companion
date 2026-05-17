@@ -30,11 +30,11 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
   })
 
   const phaseStyles = {
-    normal: 'border-slate-200 bg-white',
-    focus: 'border-yellow-300 bg-yellow-50',
-    urgent: 'border-orange-400 bg-orange-50',
-    panic: 'border-red-500 bg-red-50',
-    expired: 'border-red-700 bg-red-100',
+    normal: 'border-white/10 bg-[var(--bg-surface)]',
+    focus: 'border-yellow-300/40 bg-yellow-500/5 dark:border-yellow-700 dark:bg-yellow-950/30',
+    urgent: 'border-orange-400/40 bg-orange-500/5 dark:border-orange-700 dark:bg-orange-950/30',
+    panic: 'border-red-500/40 bg-red-500/5 dark:border-red-800 dark:bg-red-950/30',
+    expired: 'border-red-700/40 bg-red-500/8 dark:border-red-900 dark:bg-red-950/40',
   }
 
   const statusIcon = (status: TaskStatus) => {
@@ -52,7 +52,7 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-lg font-bold">
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-500 mb-1">🎯 Milestone Activo</span>
+            <span className="text-sm font-medium text-[var(--text-muted)] mb-1">🎯 Milestone Activo</span>
             <span>{milestone.title}</span>
           </div>
         </CardTitle>
@@ -62,7 +62,7 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
         <MilestoneCountdown deadline={milestone.deadline} compact={false} />
 
         <div className="space-y-2">
-          <div className="flex justify-between text-xs font-medium text-slate-600">
+          <div className="flex justify-between text-xs font-medium text-[var(--text-muted)]">
             <span>Progreso</span>
             <span>{completedCount} / {totalCount} tareas</span>
           </div>
@@ -70,12 +70,12 @@ export function MilestonePanel({ milestone, tasks, urgencyPhase }: MilestonePane
         </div>
 
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Lista de tareas</h4>
+          <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Lista de tareas</h4>
           <div className="space-y-1.5">
             {sortedTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-2 text-sm text-slate-700">
+              <div key={task.id} className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
                 <span className="text-base leading-none">{statusIcon(task.status)}</span>
-                <span className={cn(task.status === 'done' && 'line-through text-slate-400')}>
+                <span className={cn(task.status === 'done' && 'line-through text-[var(--text-muted)]')}>
                   {task.title}
                 </span>
               </div>

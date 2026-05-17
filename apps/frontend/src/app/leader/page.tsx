@@ -8,11 +8,13 @@ import { toast } from 'sonner'
 import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame } from 'lucide-react'
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
   closestCenter,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -187,6 +189,7 @@ function LeaderCanvas() {
     return stored ? JSON.parse(stored) : ['milestone', 'task-board', 'activity']
   })
   const [minimizedSections, setMinimizedSections] = useState<Set<string>>(new Set())
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [visibleColumns, setVisibleColumns] = useState<Set<TaskStatus>>(() => {
     if (typeof window === 'undefined') return new Set(['todo', 'in-progress', 'review', 'blocked', 'done'])
     const stored = localStorage.getItem('kanban-visible-columns')
@@ -207,6 +210,7 @@ function LeaderCanvas() {
   }, [])
 
   const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveDragId(null)
     const { active, over } = event
     if (!over) return
     if (over.id === 'ribbon-drop-zone') {
@@ -646,11 +650,11 @@ function LeaderCanvas() {
   }
 
   const allKanbanColumns: { status: TaskStatus; label: string; accent: string; bg: string; countColor: string }[] = [
-    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',    bg: 'bg-slate-50',       countColor: 'bg-slate-100 text-slate-600'     },
-    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',     bg: 'bg-blue-50/60',     countColor: 'bg-blue-100 text-blue-700'       },
-    { status: 'review',      label: 'En revisión', accent: 'border-t-violet-400',   bg: 'bg-violet-50/50',   countColor: 'bg-violet-100 text-violet-700'   },
-    { status: 'blocked',     label: 'Bloqueado',   accent: 'border-t-red-400',      bg: 'bg-red-50/50',      countColor: 'bg-red-100 text-red-700'         },
-    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500',  bg: 'bg-emerald-50/60',  countColor: 'bg-emerald-100 text-emerald-700' },
+    { status: 'todo',        label: 'Por hacer',   accent: 'border-t-slate-400',    bg: 'bg-slate-500/10',   countColor: 'bg-slate-500/20 text-[var(--text-muted)]'  },
+    { status: 'in-progress', label: 'En progreso', accent: 'border-t-blue-500',     bg: 'bg-blue-500/10',    countColor: 'bg-blue-500/20 text-blue-400'              },
+    { status: 'review',      label: 'En revisión', accent: 'border-t-violet-400',   bg: 'bg-violet-500/10',  countColor: 'bg-violet-500/20 text-violet-400'          },
+    { status: 'blocked',     label: 'Bloqueado',   accent: 'border-t-red-400',      bg: 'bg-red-500/10',     countColor: 'bg-red-500/20 text-red-400'                },
+    { status: 'done',        label: 'Completado',  accent: 'border-t-emerald-500',  bg: 'bg-emerald-500/10', countColor: 'bg-emerald-500/20 text-emerald-400'        },
   ]
   const kanbanColumns = allKanbanColumns.filter(c => visibleColumns.has(c.status))
 
@@ -710,6 +714,7 @@ function LeaderCanvas() {
           <DndContext
             sensors={sectionSensors}
             collisionDetection={closestCenter}
+            onDragStart={(e: DragStartEvent) => setActiveDragId(String(e.active.id))}
             onDragEnd={handleSectionDragEnd}
           >
             {/* Minimized pill tray — must be inside DndContext for useDroppable to receive drops */}
@@ -998,6 +1003,13 @@ function LeaderCanvas() {
 
               </div>
             </SortableContext>
+            <DragOverlay>
+              {activeDragId && (
+                <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--phase-glow,#b89450)]/40 shadow-2xl px-3 py-2 text-xs font-mono text-[var(--text-primary)] opacity-90">
+                  Arrastrando: {activeDragId}
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
 
         </motion.div>
