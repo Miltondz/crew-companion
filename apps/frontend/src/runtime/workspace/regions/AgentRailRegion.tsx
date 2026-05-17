@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { MessageSquarePlus } from 'lucide-react'
 import { Habitat, type HabitatComponentProps } from '@/components/companion/Habitat'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { WorkspaceNav } from '@/components/shared/WorkspaceNav'
 import type { UrgencyPhase } from '@/lib/crew/types'
 
 interface Props {
@@ -31,6 +32,7 @@ export function AgentRailRegion({ children, onNewChat, user, phase, mascotProps 
           <p className="text-[10px] text-[var(--text-muted)] truncate">{user?.role ?? ''}</p>
         </div>
         <ThemeToggle />
+        <WorkspaceNav />
       </div>
 
       {mascotProps && (

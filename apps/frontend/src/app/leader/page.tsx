@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame, FileText } from 'lucide-react'
+import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame, FileText, Pencil, Trash2 } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -50,6 +50,7 @@ import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useActivityStream } from '@/lib/useActivityStream'
+import { snapCenterToCursor } from '@/lib/dnd/modifiers'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { getInitialSurfaces } from '@/runtime/workspace/initial-surfaces'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
@@ -783,16 +784,22 @@ function LeaderCanvas() {
               isMinimized={minimizedSections.has('milestone')}
               onMinimize={handleSectionMinimize}
               actions={
-                effectiveMilestone && !SEED_MILESTONE_IDS.has(effectiveMilestone.id) ? (
+                effectiveMilestone ? (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={handleOpenMilestoneEdit}
-                      className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-                    >✏️</button>
+                      className="flex items-center justify-center rounded p-1 text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition"
+                      title="Editar milestone"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
                     <button
                       onClick={handleDeleteMilestone}
-                      className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
-                    >🗑️</button>
+                      className="flex items-center justify-center rounded p-1 text-[var(--text-muted)] hover:bg-red-500/15 hover:text-red-400 transition"
+                      title="Eliminar milestone (permite crear otro)"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 ) : undefined
               }
@@ -800,31 +807,31 @@ function LeaderCanvas() {
               <div className="p-4">
                 {showMilestoneEdit && (
                   <motion.div
-                    className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4"
+                    className="mb-4 rounded-xl border border-[var(--phase-glow,#b89450)]/30 bg-white/5 p-4"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     transition={{ duration: 0.2 }}
                   >
-                    <p className="mb-3 text-sm font-bold text-slate-700">Editar milestone</p>
+                    <p className="mb-3 text-sm font-bold text-[var(--text-primary)]">Editar milestone</p>
                     <div className="space-y-3">
                       <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre</label>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Nombre</label>
                         <input type="text" value={milestoneEditForm.title}
                           onChange={e => setMilestoneEditForm(f => ({ ...f, title: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--phase-glow,#b89450)]/50 focus:bg-white/10" />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Deadline</label>
                         <input type="datetime-local" value={milestoneEditForm.deadline}
                           onChange={e => setMilestoneEditForm(f => ({ ...f, deadline: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--phase-glow,#b89450)]/50 focus:bg-white/10 [color-scheme:dark]" />
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
                       <button onClick={handleSaveMilestone} disabled={!milestoneEditForm.title.trim()}
-                        className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40">Guardar</button>
+                        className="rounded-lg bg-[var(--phase-glow,#b89450)]/20 border border-[var(--phase-glow,#b89450)]/40 px-4 py-1.5 text-xs font-bold text-[var(--phase-glow,#b89450)] hover:bg-[var(--phase-glow,#b89450)]/30 transition disabled:opacity-40">Guardar</button>
                       <button onClick={() => setShowMilestoneEdit(false)}
-                        className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                        className="rounded-lg bg-white/5 border border-white/10 px-4 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:bg-white/10 transition">Cancelar</button>
                     </div>
                   </motion.div>
                 )}
@@ -833,42 +840,42 @@ function LeaderCanvas() {
                     {effectiveMilestone ? (
                       <MilestonePanel milestone={effectiveMilestone} tasks={effectiveTasks} urgencyPhase={urgencyPhase} />
                     ) : (
-                      <div className="rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 p-6">
+                      <div className="rounded-xl border-2 border-dashed border-[var(--phase-glow,#b89450)]/30 bg-white/5 p-6">
                         {!showCreateMilestone ? (
                           <div className="flex flex-col items-center gap-3 text-center">
                             <span className="text-3xl">🏁</span>
                             <div>
-                              <p className="text-sm font-semibold text-slate-700">Sin milestone activo</p>
-                              <p className="text-xs text-slate-400 mt-0.5">Creá uno para empezar a trackear el proyecto</p>
+                              <p className="text-sm font-semibold text-[var(--text-primary)]">Sin milestone activo</p>
+                              <p className="text-xs text-[var(--text-muted)] mt-0.5">Creá uno para empezar a trackear el proyecto</p>
                             </div>
                             <button onClick={() => setShowCreateMilestone(true)}
-                              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition">
+                              className="rounded-lg bg-[var(--phase-glow,#b89450)]/20 border border-[var(--phase-glow,#b89450)]/40 px-4 py-2 text-xs font-bold text-[var(--phase-glow,#b89450)] hover:bg-[var(--phase-glow,#b89450)]/30 transition">
                               + Crear milestone
                             </button>
                           </div>
                         ) : (
                           <div>
-                            <p className="mb-3 text-sm font-bold text-slate-700">Nuevo milestone</p>
+                            <p className="mb-3 text-sm font-bold text-[var(--text-primary)]">Nuevo milestone</p>
                             <div className="space-y-3">
                               <div>
-                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Nombre *</label>
+                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Nombre *</label>
                                 <input type="text" value={createMilestoneForm.title}
                                   onChange={e => setCreateMilestoneForm(f => ({ ...f, title: e.target.value }))}
                                   placeholder="Ej: MVP launch" autoFocus
-                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--phase-glow,#b89450)]/50 focus:bg-white/10" />
                               </div>
                               <div>
-                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Deadline</label>
+                                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Deadline</label>
                                 <input type="datetime-local" value={createMilestoneForm.deadline}
                                   onChange={e => setCreateMilestoneForm(f => ({ ...f, deadline: e.target.value }))}
-                                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" />
+                                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--phase-glow,#b89450)]/50 focus:bg-white/10 [color-scheme:dark]" />
                               </div>
                             </div>
                             <div className="mt-3 flex gap-2">
                               <button onClick={handleCreateMilestone} disabled={!createMilestoneForm.title.trim()}
-                                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 transition disabled:opacity-40">Crear</button>
+                                className="rounded-lg bg-[var(--phase-glow,#b89450)]/20 border border-[var(--phase-glow,#b89450)]/40 px-4 py-1.5 text-xs font-bold text-[var(--phase-glow,#b89450)] hover:bg-[var(--phase-glow,#b89450)]/30 transition disabled:opacity-40">Crear</button>
                               <button onClick={() => setShowCreateMilestone(false)}
-                                className="rounded-lg bg-slate-100 px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition">Cancelar</button>
+                                className="rounded-lg bg-white/5 border border-white/10 px-4 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:bg-white/10 transition">Cancelar</button>
                             </div>
                           </div>
                         )}
@@ -1017,10 +1024,11 @@ function LeaderCanvas() {
 
               </div>
             </SortableContext>
-            <DragOverlay>
+            <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
               {activeDragId && (
-                <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--phase-glow,#b89450)]/40 shadow-2xl px-3 py-2 text-xs font-mono text-[var(--text-primary)] opacity-90">
-                  Arrastrando: {activeDragId}
+                <div className="rounded-xl bg-[var(--bg-surface)] border-2 border-[var(--phase-glow,#b89450)]/60 shadow-2xl px-4 py-2.5 text-xs font-mono text-[var(--text-primary)] cursor-grabbing">
+                  <span className="opacity-50 mr-1">⟶</span>
+                  {activeDragId}
                 </div>
               )}
             </DragOverlay>
