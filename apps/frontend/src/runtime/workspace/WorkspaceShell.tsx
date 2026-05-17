@@ -32,9 +32,10 @@ interface Props {
   mascotProps?: Omit<HabitatComponentProps, 'sidebar'>
   commandSurface?: CommandSurfaceSlots
   activityEvents?: ActivityEvent[]
+  webNav?: ReactNode
 }
 
-export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, mascotProps, commandSurface, activityEvents }: Props) {
+export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, mascotProps, commandSurface, activityEvents, webNav }: Props) {
   const layout = useLayoutEngine()
   usePhaseSync(phase)
 
@@ -68,7 +69,9 @@ export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, ma
   }
 
   return (
-    <div data-phase={phase} className="workspace-shell flex h-screen">
+    <div data-phase={phase} className="workspace-shell flex flex-col h-screen">
+      {webNav && <div className="shrink-0">{webNav}</div>}
+      <div className="flex flex-1 min-h-0">
       <aside
         style={{ width: 'var(--sb-width)' }}
         className="flex-shrink-0 flex flex-col h-full border-r border-white/10 bg-[var(--bg-surface)] overflow-hidden relative"
@@ -104,6 +107,7 @@ export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, ma
         </div>
 
         <ActivityStreamRegion mounts={layout['activity-stream'].mounts} events={activityEvents} />
+      </div>
       </div>
 
       <AmbientOverlayRegion mounts={layout['ambient-overlay'].mounts} />

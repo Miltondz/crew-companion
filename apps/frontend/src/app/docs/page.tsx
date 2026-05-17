@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { FileText, Plus, Pencil, Trash2, Save, X, Check, FolderOpen } from 'lucide-react'
+import { FileText, Plus, Pencil, Trash2, Save, X, Check, FolderOpen, Columns2, Maximize2 } from 'lucide-react'
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
@@ -18,7 +19,11 @@ import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
+import { WebNav } from '@/components/shared/WebNav'
+import { MemberAvatars } from '@/components/shared/MemberAvatars'
 import type { CrewState, SharedDocument } from '@/lib/crew/types'
+
+const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
 
 
 function FolderCard({
@@ -121,19 +126,22 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 function DocsCanvas() {
+  const { data: session } = useSession()
   const { state, setState } = useCrewAgent()
   const { events: activityEvents, push: pushActivity } = useActivityStream()
 
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(
-    state.openDocumentIds[0] ?? state.sharedDocuments[0]?.id ?? null
-  )
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
+  const [compareDocId, setCompareDocId] = useState<string | null>(null)
+  const [compareMode, setCompareMode] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [createForm, setCreateForm] = useState({ title: '', content: '' })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ title: '', content: '' })
 
   const selectedDoc = state.sharedDocuments.find(d => d.id === selectedDocId)
+  const compareDoc = state.sharedDocuments.find(d => d.id === compareDocId)
   const currentMember = state.members.find(m => m.id === state.currentMemberId)
+  const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
 
   const handleCreate = () => {
     const title = createForm.title.trim()
@@ -307,10 +315,12 @@ function DocsCanvas() {
       <WorkspaceShell
         phase={state.urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
+        webNav={<WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />}
         user={{ name: currentMember?.name ?? 'Usuario', role: currentMember?.role === 'leader' ? 'Team Lead' : 'Miembro' }}
         activityEvents={activityEvents}
         commandSurface={{
           milestoneTitle: 'Documentos del equipo',
+          memberAvatars: <MemberAvatars members={effectiveMembers} blockers={state.blockers} />,
           onCommandPalette: () => {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
             window.dispatchEvent(event)
@@ -495,54 +505,99 @@ function DocsCanvas() {
             {/* VIEWER */}
             {!showCreate && !editingId && (
               selectedDoc ? (
-                <div className="mx-auto max-w-3xl">
-                  <div className="flex rounded-xl overflow-hidden bg-[var(--bg-surface)] ring-1 ring-white/10 shadow-lg">
-                    {/* Spine */}
-                    <div
-                      className="w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
-                      style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}
+                <div className="w-full">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      onClick={() => setCompareMode(m => { if (m) setCompareDocId(null); return !m })}
+                      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-mono transition ${
+                        compareMode
+                          ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                          : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10'
+                      }`}
+                      title={compareMode ? 'Salir del modo comparación' : 'Comparar dos documentos lado a lado'}
                     >
-                      <FileText size={12} className="text-violet-300" />
-                      <span
-                        className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300/80 line-clamp-1"
-                        style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
-                      >
-                        {selectedDoc.title.slice(0, 20)}
+                      {compareMode ? <Maximize2 className="w-3 h-3" /> : <Columns2 className="w-3 h-3" />}
+                      {compareMode ? 'Vista única' : 'Comparar'}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedDocId(null); setCompareDocId(null); setCompareMode(false) }}
+                      className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition"
+                      title="Cerrar documento"
+                    >
+                      <X className="w-3 h-3" />
+                      Cerrar
+                    </button>
+                    {compareMode && !compareDoc && (
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] ml-1">
+                        Elegí un segundo folder de la fila superior →
                       </span>
-                      <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
-                    </div>
-                    {/* Body */}
-                    <div className="flex-1 min-w-0 p-8">
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <h2 className="text-xl font-bold text-[var(--text-primary)]">{selectedDoc.title}</h2>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => startEdit(selectedDoc)}
-                            className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
-                            title="Editar"
+                    )}
+                  </div>
+
+                  {/* Doc pane(s) */}
+                  <div className={compareMode ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'grid grid-cols-1 gap-4'}>
+                    {[selectedDoc, compareMode && compareDoc ? compareDoc : null].filter(Boolean).map((doc, idx) => {
+                      const d = doc as SharedDocument
+                      const sharerName = state.members.find(m => m.id === d.sharedBy)?.name ?? d.sharedBy
+                      return (
+                        <div key={d.id} className="flex rounded-xl overflow-hidden bg-[var(--bg-surface)] ring-1 ring-white/10 shadow-lg">
+                          <div
+                            className="w-[30px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
+                            style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}
                           >
-                            <Pencil className="w-3 h-3" />
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(selectedDoc)}
-                            className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/15 hover:border-red-500/30 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-red-400 transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Eliminar
-                          </button>
+                            <FileText size={12} className="text-violet-300" />
+                            <span
+                              className="font-mono text-[8px] font-bold tracking-widest uppercase text-violet-300/80 line-clamp-1"
+                              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+                            >
+                              {d.title.slice(0, 20)}
+                            </span>
+                            <div className="h-3 w-0.5 rounded-full bg-violet-400/40" />
+                          </div>
+                          <div className="flex-1 min-w-0 p-8">
+                            <div className="mb-4 flex items-start justify-between gap-3">
+                              <h2 className="text-xl font-bold text-[var(--text-primary)]">{d.title}</h2>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => startEdit(d)}
+                                  className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                                  title="Editar"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(d)}
+                                  className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 hover:bg-red-500/15 hover:border-red-500/30 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-red-400 transition"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Eliminar
+                                </button>
+                                {compareMode && idx === 1 && (
+                                  <button
+                                    onClick={() => setCompareDocId(null)}
+                                    className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 px-2.5 py-1 text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] transition"
+                                    title="Quitar de comparación"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mb-6 flex items-center gap-2 border-b border-white/10 pb-4">
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                                Compartido por <span className="text-[var(--text-primary)]">{sharerName}</span>
+                              </span>
+                              <span className="text-[var(--text-muted)]">·</span>
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono">{new Date(d.sharedAt).toLocaleDateString('es')}</span>
+                            </div>
+                            <MarkdownContent content={d.content} />
+                          </div>
                         </div>
-                      </div>
-                      <div className="mb-6 flex items-center gap-2 border-b border-white/10 pb-4">
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono">
-                          Compartido por <span className="text-[var(--text-primary)]">{state.members.find(m => m.id === selectedDoc.sharedBy)?.name ?? selectedDoc.sharedBy}</span>
-                        </span>
-                        <span className="text-[var(--text-muted)]">·</span>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono">{new Date(selectedDoc.sharedAt).toLocaleDateString('es')}</span>
-                      </div>
-                      <MarkdownContent content={selectedDoc.content} />
-                    </div>
+                      )
+                    })}
                   </div>
                 </div>
               ) : (

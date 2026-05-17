@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
@@ -49,6 +50,7 @@ import { getUrgencyPhase, computeCountdown } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { WebNav } from '@/components/shared/WebNav'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { snapCenterToCursor } from '@/lib/dnd/modifiers'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
@@ -183,6 +185,7 @@ function PostMortemPanel({ milestoneTitle }: { milestoneTitle: string }) {
 
 function LeaderCanvas() {
   const router = useRouter()
+  const { data: session } = useSession()
   const { state, setState } = useCrewAgent()
 
   const layout = useLayoutEngine()
@@ -688,6 +691,7 @@ function LeaderCanvas() {
       <WorkspaceShell
         phase={urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
+        webNav={<WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />}
         user={{ name: state.members.find(m => m.id === state.currentMemberId)?.name ?? 'Leader', role: 'Team Lead' }}
         mascotProps={{
           phase: urgencyPhase,

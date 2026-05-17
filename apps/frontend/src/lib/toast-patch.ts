@@ -20,18 +20,21 @@ export function patchToastErrors() {
   patched = true
 
   type ToastErrorFn = typeof toast.error
+  type ErrorOpts = NonNullable<Parameters<ToastErrorFn>[1]>
   const originalError: ToastErrorFn = toast.error.bind(toast)
 
-  const wrapped: ToastErrorFn = ((message: Parameters<ToastErrorFn>[0], opts?: Parameters<ToastErrorFn>[1]) => {
+  const wrapped: ToastErrorFn = ((message: Parameters<ToastErrorFn>[0], opts?: ErrorOpts) => {
     const textToCopy = extractText(message, opts as { description?: unknown } | undefined)
-    return originalError(message, {
-      action: (opts as { action?: unknown } | undefined)?.action ?? {
-        label: 'Copiar',
-        onClick: () => {
-          navigator.clipboard.writeText(textToCopy).catch(() => {})
-        },
+    const callerAction = opts?.action
+    const defaultAction: ErrorOpts['action'] = {
+      label: 'Copiar',
+      onClick: () => {
+        navigator.clipboard.writeText(textToCopy).catch(() => {})
       },
+    }
+    return originalError(message, {
       ...opts,
+      action: callerAction ?? defaultAction,
     })
   }) as ToastErrorFn
 
