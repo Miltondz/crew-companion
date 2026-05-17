@@ -12,6 +12,7 @@ interface Props {
   countdown?: ReactNode
   blockerBadge?: ReactNode
   memberAvatars?: ReactNode
+  docBadge?: ReactNode
   onCommandPalette?: () => void
   onResetLayout?: () => void
 }
@@ -23,6 +24,7 @@ export function CommandSurfaceRegion({
   countdown,
   blockerBadge,
   memberAvatars,
+  docBadge,
   onCommandPalette,
   onResetLayout,
 }: Props) {
@@ -43,6 +45,8 @@ export function CommandSurfaceRegion({
       {blockerBadge && <div className="shrink-0">{blockerBadge}</div>}
 
       <div className="flex-1" />
+
+      {docBadge && <div className="shrink-0">{docBadge}</div>}
 
       {memberAvatars && <div className="shrink-0">{memberAvatars}</div>}
 

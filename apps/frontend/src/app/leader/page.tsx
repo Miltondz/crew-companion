@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame } from 'lucide-react'
+import { Flag, LayoutGrid, Activity, Eye, EyeOff, AlertTriangle, Flame, FileText } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -105,6 +105,19 @@ function BlockerBadge({ count }: { count: number }) {
       <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
       {count}
     </span>
+  )
+}
+
+function DocBadge({ count, onClick }: { count: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-violet-500/15 border border-violet-500/30 text-[10px] font-semibold text-violet-400 hover:bg-violet-500/25 transition shrink-0"
+      title="Ver documentos"
+    >
+      <FileText className="w-3 h-3" />
+      {count}
+    </button>
   )
 }
 
@@ -688,6 +701,7 @@ function LeaderCanvas() {
           phaseChip: <PhaseChip phase={urgencyPhase} />,
           milestoneTitle: effectiveMilestone?.title,
           blockerBadge: activeBlockers.length > 0 ? <BlockerBadge count={activeBlockers.length} /> : undefined,
+          docBadge: state.sharedDocuments.length > 0 ? <DocBadge count={state.sharedDocuments.length} onClick={() => router.push('/docs')} /> : undefined,
           memberAvatars: <MemberAvatars members={effectiveMembers} blockers={state.blockers} />,
           onCommandPalette: () => {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
