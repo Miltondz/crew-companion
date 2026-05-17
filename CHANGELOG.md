@@ -8,6 +8,46 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.12.3] — 2026-05-16 — Folder spine pattern: docs + dashboard redesign
+
+### Added
+
+- **Folder spine pattern** — established as canonical card style across docs + dashboard. 28-34px vertical spine (color-mixed bg) + rotated label + icon top + tab-dot bottom. Mirrors SectionFrame pattern.
+- **WebNav component** (`apps/frontend/src/components/shared/WebNav.tsx`) — shared web header: Features, How it works, Roadmap, About + user menu. CSS vars throughout. Switches between authed (user name + Salir) and guest (Sign In / Get Started) modes.
+- **WebFooter component** (`apps/frontend/src/components/shared/WebFooter.tsx`) — 4-column footer (Product, Recursos, Contacto, brand) + copyright + stack credits + GitHub link.
+- **Project CRUD API** (`apps/frontend/src/app/api/projects/[workspaceId]/route.ts`):
+  - `PATCH` — rename project (updates `projectConfig.name` + `milestones[0].title`), archive toggle (`archived` + `archivedAt`)
+  - `DELETE` — remove project (`user_projects` + `workspace_state` rows)
+  - Ownership check via `user_projects.role = 'leader'`
+- **Active / Archived filter tabs** in dashboard with counts.
+- **Phase legend** chip row in dashboard.
+- **Rename inline form** on project cards (Enter to save, Esc to cancel).
+- **Share panel** on project cards (collapsible) — invite link + public observer link.
+
+### Changed
+
+- **Docs page** — full folder-spine rewrite:
+  - Removed inner doc-list sidebar (chat sidebar is sufficient on the left)
+  - Documents render as horizontal scrollable shelf of FolderCard at top (180x140 each, violet spine, rotated title, FolderOpen icon)
+  - `+ Nuevo` NewFolderCard at end of shelf (dashed violet outline)
+  - Selected doc / create form / edit form all render below in spine-style container
+  - Removed `<PrimaryWorkzoneRegion>` from /docs — fixes triage_war_room persistence across routes (singleton layoutEngine bug)
+  - Removed standalone `<ThemeToggle>` from docs header (sidebar AgentRailRegion has it; was duplicating)
+- **Dashboard** — full rewrite:
+  - Now uses `WebNav` + `WebFooter` for consistent web shell across authenticated pages
+  - Project cards redesigned as `ProjectFolderCard` (34px spine + phase color + rotated project name + actions)
+  - Spine actions visible on hover: Pencil (rename), Archive/ArchiveRestore, Trash2 (delete)
+  - Empty state with FolderOpen icon and per-filter messaging
+  - All Tailwind hardcoded slate/zinc tokens replaced with CSS vars + opacity tokens
+
+### Fixed
+
+- **Triage war room persisting on /docs** — singleton layoutEngine kept surfaces mounted between routes. Docs no longer renders PrimaryWorkzoneRegion.
+- **Duplicate dark mode button in docs** — removed second ThemeToggle from docs header.
+- **No navigation exit** — already partially solved by WorkspaceNav hamburger; dashboard now uses full WebNav.
+
+---
+
 ## [0.12.2] — 2026-05-16 — Theme provider, drag overlay, documents CRUD, header badges
 
 ### Added
