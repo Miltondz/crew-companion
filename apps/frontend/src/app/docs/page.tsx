@@ -26,7 +26,6 @@ import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { useLayoutEngine } from '@/runtime/workspace/useLayoutEngine'
 import { PrimaryWorkzoneRegion } from '@/runtime/workspace/regions/PrimaryWorkzoneRegion'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
-import { companionBus } from '@/runtime/companion/EventBus'
 import type { CrewState, SharedDocument } from '@/lib/crew/types'
 
 
@@ -74,7 +73,6 @@ function DocsCanvas() {
     setShowCreate(false)
     setCreateForm({ title: '', content: '' })
     pushActivity('doc_opened', `${currentMember?.name ?? 'Alguien'} compartió "${title}"`, '📄')
-    companionBus.emit({ type: 'AGENT_SPOKE' })
     toast.success('Documento creado', { description: title })
   }
 
