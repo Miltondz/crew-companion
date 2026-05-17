@@ -311,11 +311,9 @@ export default function DashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspaceId: p.workspace_id }),
     })
-    if (p.member_id && p.role !== 'leader') {
-      router.push(`/member/${p.member_id}`)
-    } else {
-      router.push('/leader')
-    }
+    const target = p.member_id && p.role !== 'leader' ? `/member/${p.member_id}` : '/leader'
+    // Hard navigation to clear stale CopilotKit agent state from previous project
+    window.location.assign(target)
   }
 
   const archiveProject = async (p: Project, archived: boolean) => {
