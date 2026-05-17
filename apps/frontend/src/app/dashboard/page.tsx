@@ -3,24 +3,25 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signOut } from 'next-auth/react'
-import { motion } from 'motion/react'
-import { Plus, ExternalLink, Link2, Eye, Users, Clock, CheckSquare, Sparkles, LogOut, Settings, X } from 'lucide-react'
-import { AnimatePresence } from 'motion/react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useSession } from 'next-auth/react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, ExternalLink, Link2, Eye, Users, Clock, CheckSquare, Settings, X, Pencil, Trash2, Archive, ArchiveRestore, Folder, FolderOpen, Check } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { WebNav } from '@/components/shared/WebNav'
+import { WebFooter } from '@/components/shared/WebFooter'
+
 
 const PROJECT_TYPE_EMOJI: Record<string, string> = {
   hackathon: '🏆', sprint: '💻', 'remote-team': '🌍', launch: '🚀', consulting: '🤝', other: '⚙️',
 }
 
-const PHASE_CONFIG: Record<string, { label: string; className: string }> = {
-  normal:  { label: 'Normal',   className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  focus:   { label: 'Focus',    className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-  urgent:  { label: 'Urgente',  className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-  panic:   { label: 'Pánico',   className: 'bg-red-500/20 text-red-300 border-red-500/30' },
-  expired: { label: 'Vencido',  className: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30' },
+const PHASE_CONFIG: Record<string, { label: string; spineColor: string; pillClass: string }> = {
+  normal:  { label: 'Normal',   spineColor: '#22c55e', pillClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+  focus:   { label: 'Focus',    spineColor: '#eab308', pillClass: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30' },
+  urgent:  { label: 'Urgente',  spineColor: '#f97316', pillClass: 'bg-orange-500/15 text-orange-300 border-orange-500/30' },
+  panic:   { label: 'Pánico',   spineColor: '#ef4444', pillClass: 'bg-red-500/15 text-red-300 border-red-500/30' },
+  expired: { label: 'Vencido',  spineColor: '#64748b', pillClass: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30' },
 }
 
 interface Project {
@@ -32,7 +33,8 @@ interface Project {
     members?: unknown[]
     blockers?: { resolved?: boolean }[]
     urgencyPhase?: string
-    projectConfig?: { type?: string }
+    projectConfig?: { type?: string; name?: string }
+    archived?: boolean
   }
   observer_token: string
   invite_code: string
@@ -42,7 +44,7 @@ interface Project {
 }
 
 function timeLeft(deadline?: string): string {
-  if (!deadline) return '—'
+  if (!deadline) return 'Sin deadline'
   const diff = new Date(deadline).getTime() - Date.now()
   if (diff <= 0) return 'Vencido'
   const h = Math.floor(diff / 3600000)
@@ -53,23 +55,25 @@ function timeLeft(deadline?: string): string {
 }
 
 function copyToClipboard(text: string, label: string) {
-  navigator.clipboard.writeText(text).then(() => {
-    const el = document.createElement('div')
-    el.textContent = `${label} copiado`
-    el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50'
-    document.body.appendChild(el)
-    setTimeout(() => el.remove(), 2000)
-  })
+  navigator.clipboard.writeText(text).then(() => toast.success(`${label} copiado`))
 }
 
-interface ObserverConfig {
-  showTasks: boolean
-  showTeamNames: boolean
-  showBlockerCount: boolean
-  customMessage: string
-}
 
-function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void }) {
+function ProjectFolderCard({
+  project,
+  onOpen,
+  onArchive,
+  onUnarchive,
+  onDelete,
+  onRename,
+}: {
+  project: Project
+  onOpen: () => void
+  onArchive: () => void
+  onUnarchive: () => void
+  onDelete: () => void
+  onRename: (newName: string) => void
+}) {
   const s = project.state_json
   const milestone = s.milestones?.[0]
   const totalTasks = milestone?.taskIds?.length ?? 0
@@ -81,141 +85,213 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
   const phase = s.urgencyPhase ?? 'normal'
   const phaseConf = PHASE_CONFIG[phase] ?? PHASE_CONFIG.normal
   const projectType = s.projectConfig?.type ?? 'other'
-  const projectName = milestone?.title ?? 'Proyecto sin nombre'
+  const projectName = s.projectConfig?.name || milestone?.title || 'Proyecto sin nombre'
+  const isArchived = !!s.archived
 
-  const [showConfig, setShowConfig] = useState(false)
-  const [config, setConfig] = useState<ObserverConfig>({
-    showTasks: true, showTeamNames: true, showBlockerCount: true, customMessage: '',
-    ...((s as Record<string, unknown>).observerConfig as Partial<ObserverConfig> ?? {}),
-  })
-  const [saving, setSaving] = useState(false)
+  const [showRename, setShowRename] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [renameValue, setRenameValue] = useState(projectName)
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const shareUrl = `${baseUrl}/share/${project.observer_token}`
   const inviteUrl = `${baseUrl}/invite/${project.invite_code}`
 
-  const saveConfig = async () => {
-    setSaving(true)
-    await fetch('/api/workspace/observer-config', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
-    })
-    setSaving(false)
-    setShowConfig(false)
-  }
-
-  const Toggle = ({ label, field }: { label: string; field: keyof Omit<ObserverConfig, 'customMessage'> }) => (
-    <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
-      <span>{label}</span>
-      <div
-        onClick={() => setConfig(c => ({ ...c, [field]: !c[field] }))}
-        className={cn('w-8 h-4 rounded-full transition-colors cursor-pointer relative', config[field] ? 'bg-indigo-500' : 'bg-zinc-700')}
-      >
-        <div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all', config[field] ? 'left-4.5' : 'left-0.5')} />
-      </div>
-    </label>
-  )
-
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="bg-zinc-900/60 border-zinc-800 p-5 hover:border-zinc-700 transition-all duration-200 flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{PROJECT_TYPE_EMOJI[projectType] ?? '⚙️'}</span>
-            <div>
-              <h3 className="font-semibold text-white text-sm leading-tight">{projectName}</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">{timeLeft(milestone?.deadline)}</p>
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -2 }}
+      className={cn(
+        'group relative flex rounded-xl overflow-hidden ring-1 transition-all',
+        isArchived
+          ? 'bg-[var(--bg-surface)]/40 ring-white/5'
+          : 'bg-[var(--bg-surface)] ring-white/10 hover:ring-white/20 shadow-lg'
+      )}
+    >
+      {/* Spine */}
+      <div
+        className="w-[34px] flex-shrink-0 flex flex-col items-center justify-between py-3 border-r border-white/10"
+        style={{ background: `color-mix(in srgb, ${phaseConf.spineColor} 16%, transparent)` }}
+      >
+        {isArchived ? <Folder size={14} style={{ color: phaseConf.spineColor }} /> : <FolderOpen size={14} style={{ color: phaseConf.spineColor }} />}
+        <span
+          className="font-mono text-[8px] font-bold tracking-widest uppercase whitespace-nowrap overflow-hidden text-ellipsis"
+          style={{
+            writingMode: 'vertical-rl',
+            textOrientation: 'mixed',
+            transform: 'rotate(180deg)',
+            maxHeight: '160px',
+            color: phaseConf.spineColor,
+          }}
+        >
+          {projectName.slice(0, 32)}
+        </span>
+        <div className="h-3 w-1 rounded-full" style={{ background: `${phaseConf.spineColor}66` }} />
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 min-w-0 p-4 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl shrink-0">{PROJECT_TYPE_EMOJI[projectType] ?? '⚙️'}</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-[var(--text-primary)] text-sm leading-tight truncate">{projectName}</h3>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono">{timeLeft(milestone?.deadline)}</p>
             </div>
           </div>
-          <Badge className={cn('text-[10px] border shrink-0', phaseConf.className)}>{phaseConf.label}</Badge>
+          <span className={cn('text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0', phaseConf.pillClass)}>
+            {phaseConf.label}
+          </span>
         </div>
 
         {totalTasks > 0 && (
           <div>
-            <div className="flex justify-between text-xs text-zinc-500 mb-1">
-              <span>Progreso</span><span>{doneTasks}/{totalTasks} tareas</span>
+            <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)] mb-1">
+              <span>Progreso</span>
+              <span>{doneTasks}/{totalTasks}</span>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1.5">
-              <div className="h-1.5 rounded-full bg-indigo-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full transition-all"
+                style={{ width: `${progress}%`, background: phaseConf.spineColor }}
+              />
             </div>
           </div>
         )}
 
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
-          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{memberCount} miembro{memberCount !== 1 ? 's' : ''}</span>
-          {blockerCount > 0 && <span className="flex items-center gap-1 text-amber-400"><Clock className="w-3 h-3" />{blockerCount} bloqueador{blockerCount !== 1 ? 'es' : ''}</span>}
+        <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{memberCount}</span>
+          {blockerCount > 0 && (
+            <span className="flex items-center gap-1 text-amber-400">
+              <Clock className="w-3 h-3" />{blockerCount}
+            </span>
+          )}
           <span className="flex items-center gap-1"><CheckSquare className="w-3 h-3" />{progress}%</span>
         </div>
 
-        {/* Observer config panel */}
+        {/* Rename form */}
         <AnimatePresence>
-          {showConfig && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <div className="bg-zinc-800/60 rounded-xl p-4 flex flex-col gap-3 border border-zinc-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-zinc-300">Vista espectador — configurar</p>
-                  <button onClick={() => setShowConfig(false)}><X className="w-3.5 h-3.5 text-zinc-500" /></button>
-                </div>
-                <Toggle label="Mostrar tareas" field="showTasks" />
-                <Toggle label="Mostrar nombres del equipo" field="showTeamNames" />
-                <Toggle label="Mostrar conteo de bloqueadores" field="showBlockerCount" />
-                <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Mensaje personalizado (opcional)</label>
-                  <input
-                    type="text" value={config.customMessage} maxLength={120}
-                    onChange={e => setConfig(c => ({ ...c, customMessage: e.target.value }))}
-                    placeholder="Ej: ¡Estamos en vivo! Miranos construir."
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <button onClick={saveConfig} disabled={saving}
-                  className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors">
-                  {saving ? 'Guardando...' : 'Guardar configuración'}
+          {showRename && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={renameValue}
+                  autoFocus
+                  onChange={e => setRenameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && renameValue.trim()) { onRename(renameValue.trim()); setShowRename(false) }
+                    if (e.key === 'Escape') { setShowRename(false); setRenameValue(projectName) }
+                  }}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-[var(--text-primary)] outline-none focus:border-indigo-500/50 focus:bg-white/10"
+                />
+                <button
+                  onClick={() => { if (renameValue.trim()) { onRename(renameValue.trim()); setShowRename(false) } }}
+                  className="rounded-lg bg-indigo-500/20 border border-indigo-500/40 px-2 py-1 text-xs text-indigo-300 hover:bg-indigo-500/30 transition"
+                >
+                  <Check className="w-3 h-3" />
                 </button>
-                <button onClick={() => copyToClipboard(shareUrl, 'Link público')}
-                  className="w-full py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white text-xs transition-colors">
-                  Copiar link público de la vista
+                <button
+                  onClick={() => { setShowRename(false); setRenameValue(projectName) }}
+                  className="rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-white/10 transition"
+                >
+                  <X className="w-3 h-3" />
                 </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="flex gap-2 pt-1">
-          <button onClick={onOpen}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors">
-            <ExternalLink className="w-3.5 h-3.5" /> Abrir workspace
+        {/* Share panel */}
+        <AnimatePresence>
+          {showShare && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-2.5 space-y-1.5">
+                <button onClick={() => copyToClipboard(inviteUrl, 'Link invitación')} className="w-full flex items-center justify-between rounded px-2 py-1 text-[11px] text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition">
+                  <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Link de invitación</span>
+                  <span className="font-mono opacity-60">copiar</span>
+                </button>
+                <button onClick={() => copyToClipboard(shareUrl, 'Link vista pública')} className="w-full flex items-center justify-between rounded px-2 py-1 text-[11px] text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition">
+                  <span className="flex items-center gap-1.5"><Eye className="w-3 h-3" /> Vista pública</span>
+                  <span className="font-mono opacity-60">copiar</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 mt-auto">
+          <button
+            onClick={onOpen}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+              isArchived
+                ? 'bg-white/5 text-[var(--text-muted)] hover:bg-white/10 border border-white/10'
+                : 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30'
+            )}
+          >
+            <ExternalLink className="w-3 h-3" />
+            {isArchived ? 'Ver archivado' : 'Abrir'}
           </button>
-          <button onClick={() => copyToClipboard(inviteUrl, 'Link de invitación')}
-            title="Copiar link para que un miembro se una"
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
-            <Link2 className="w-3.5 h-3.5" />
-            <span className="text-[9px] leading-none">Invitar</span>
+
+          <button
+            onClick={() => setShowShare(s => !s)}
+            className="rounded-lg p-1.5 bg-white/5 border border-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition"
+            title="Compartir"
+          >
+            <Settings className="w-3 h-3" />
           </button>
-          <button onClick={() => setShowConfig(s => !s)}
-            title="Configurar qué muestra la vista pública de espectador"
-            className={cn('flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border transition-colors', showConfig ? 'border-indigo-500 text-indigo-400' : 'border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white')}>
-            <Settings className="w-3.5 h-3.5" />
-            <span className="text-[9px] leading-none">Público</span>
-          </button>
-          <button onClick={() => copyToClipboard(shareUrl, 'Link de vista espectador')}
-            title="Copiar link de vista solo lectura para stakeholders externos"
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors">
-            <Eye className="w-3.5 h-3.5" />
-            <span className="text-[9px] leading-none">Ver</span>
-          </button>
+
+          {/* Action buttons (visible on hover) */}
+          <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => { setShowRename(true); setRenameValue(projectName) }}
+              className="rounded p-1.5 text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition"
+              title="Renombrar"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+            {isArchived ? (
+              <button
+                onClick={onUnarchive}
+                className="rounded p-1.5 text-[var(--text-muted)] hover:bg-emerald-500/15 hover:text-emerald-400 transition"
+                title="Desarchivar"
+              >
+                <ArchiveRestore className="w-3 h-3" />
+              </button>
+            ) : (
+              <button
+                onClick={onArchive}
+                className="rounded p-1.5 text-[var(--text-muted)] hover:bg-amber-500/15 hover:text-amber-400 transition"
+                title="Archivar"
+              >
+                <Archive className="w-3 h-3" />
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              className="rounded p-1.5 text-[var(--text-muted)] hover:bg-red-500/15 hover:text-red-400 transition"
+              title="Eliminar"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
         </div>
-      </Card>
+      </div>
     </motion.div>
   )
 }
 
+
 export default function DashboardPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'active' | 'archived'>('active')
 
   useEffect(() => {
     fetch('/api/projects')
@@ -242,76 +318,156 @@ export default function DashboardPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      {/* nav */}
-      <nav className="border-b border-zinc-800/50 backdrop-blur-xl bg-zinc-950/60 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-bold text-sm">Crew Companion</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-              <LogOut className="w-3.5 h-3.5" /> Salir
-            </button>
-          </div>
-        </div>
-      </nav>
+  const archiveProject = async (p: Project, archived: boolean) => {
+    const res = await fetch(`/api/projects/${p.workspace_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ archived }),
+    })
+    if (res.ok) {
+      setProjects(ps => ps.map(x => x.workspace_id === p.workspace_id
+        ? { ...x, state_json: { ...x.state_json, archived } }
+        : x
+      ))
+      toast.success(archived ? 'Proyecto archivado' : 'Proyecto desarchivado')
+    } else {
+      toast.error('Error al actualizar')
+    }
+  }
 
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="flex items-start justify-between mb-6 gap-6">
+  const renameProject = async (p: Project, name: string) => {
+    const res = await fetch(`/api/projects/${p.workspace_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    if (res.ok) {
+      setProjects(ps => ps.map(x => x.workspace_id === p.workspace_id
+        ? { ...x, state_json: {
+            ...x.state_json,
+            projectConfig: { ...(x.state_json.projectConfig ?? {}), name },
+            milestones: x.state_json.milestones
+              ? [{ ...(x.state_json.milestones[0] ?? {}), title: name }, ...x.state_json.milestones.slice(1)]
+              : [{ title: name }],
+          } }
+        : x
+      ))
+      toast.success('Proyecto renombrado')
+    } else {
+      toast.error('Error al renombrar')
+    }
+  }
+
+  const deleteProject = async (p: Project) => {
+    const s = p.state_json
+    const projectName = s.projectConfig?.name || s.milestones?.[0]?.title || 'este proyecto'
+    if (!confirm(`¿Eliminar "${projectName}"? Esta acción no se puede deshacer.`)) return
+    const res = await fetch(`/api/projects/${p.workspace_id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setProjects(ps => ps.filter(x => x.workspace_id !== p.workspace_id))
+      toast.success('Proyecto eliminado')
+    } else {
+      toast.error('Error al eliminar')
+    }
+  }
+
+  const visibleProjects = projects.filter(p => filter === 'archived' ? p.state_json.archived : !p.state_json.archived)
+  const activeCount = projects.filter(p => !p.state_json.archived).length
+  const archivedCount = projects.filter(p => p.state_json.archived).length
+
+  return (
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex flex-col">
+      <WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+        <div className="flex items-start justify-between mb-6 gap-6 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold">Mis proyectos</h1>
-            <p className="text-zinc-400 text-sm mt-1 max-w-xl">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Mis proyectos</h1>
+            <p className="text-[var(--text-muted)] text-sm mt-1 max-w-2xl">
               Cada proyecto tiene un workspace con un agente de IA que se adapta a tu rol y fase de urgencia.
               Liderés ven el tablero completo; miembros ven su vista personalizada.
             </p>
           </div>
-          <Link href="/onboarding"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors shrink-0">
+          <Link
+            href="/onboarding"
+            className="flex items-center gap-2 rounded-lg bg-indigo-500/20 border border-indigo-500/40 px-4 py-2 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/30 transition shrink-0"
+          >
             <Plus className="w-4 h-4" />
             Nuevo proyecto
           </Link>
         </div>
 
-        {/* Phase legend */}
-        <div className="flex flex-wrap gap-2 mb-8 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/60">
-          <span className="text-xs text-zinc-500 self-center mr-1">Fases de urgencia:</span>
-          {Object.entries(PHASE_CONFIG).map(([, c]) => (
-            <span key={c.label} className={cn('text-[10px] px-2 py-0.5 rounded-full border', c.className)}>{c.label}</span>
-          ))}
-          <span className="text-xs text-zinc-600 self-center ml-auto hidden sm:block">
-            Calculadas automáticamente según el deadline del hito activo
-          </span>
+        {/* Filter tabs */}
+        <div className="flex items-center gap-1 mb-6 rounded-xl bg-white/5 border border-white/10 p-1 w-fit">
+          <button
+            onClick={() => setFilter('active')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono font-semibold transition',
+              filter === 'active'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            )}
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            Activos ({activeCount})
+          </button>
+          <button
+            onClick={() => setFilter('archived')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono font-semibold transition',
+              filter === 'archived'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            )}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            Archivados ({archivedCount})
+          </button>
         </div>
 
+        {/* Phase legend */}
+        <div className="flex flex-wrap items-center gap-2 mb-6 p-3 rounded-xl bg-white/5 border border-white/10">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] mr-1">Fases:</span>
+          {Object.entries(PHASE_CONFIG).map(([key, conf]) => (
+            <span key={key} className={cn('text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border', conf.pillClass)}>
+              {conf.label}
+            </span>
+          ))}
+        </div>
+
+        {/* Grid */}
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-52 rounded-xl bg-zinc-900/60 border border-zinc-800 animate-pulse" />
-            ))}
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-zinc-500 mb-4">No tenés proyectos todavía.</p>
-            <Link href="/onboarding"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors">
-              <Plus className="w-4 h-4" /> Crear primer proyecto
-            </Link>
+          <div className="text-center py-20 text-sm text-[var(--text-muted)] font-mono">Cargando proyectos…</div>
+        ) : visibleProjects.length === 0 ? (
+          <div className="text-center py-20">
+            <FolderOpen className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3 opacity-50" />
+            <p className="text-sm text-[var(--text-primary)] font-semibold mb-1">
+              {filter === 'archived' ? 'Sin proyectos archivados' : 'Sin proyectos activos'}
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {filter === 'archived' ? 'Cuando archives un proyecto, aparecerá aquí.' : 'Creá uno nuevo o aceptá una invitación.'}
+            </p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map(p => (
-              <ProjectCard key={p.workspace_id} project={p} onOpen={() => openProject(p)} />
-            ))}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence>
+              {visibleProjects.map(p => (
+                <ProjectFolderCard
+                  key={p.workspace_id}
+                  project={p}
+                  onOpen={() => openProject(p)}
+                  onArchive={() => archiveProject(p, true)}
+                  onUnarchive={() => archiveProject(p, false)}
+                  onDelete={() => deleteProject(p)}
+                  onRename={(name) => renameProject(p, name)}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </main>
+
+      <WebFooter />
     </div>
   )
 }
