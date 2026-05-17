@@ -8,6 +8,36 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.12.2] — 2026-05-16 — Theme provider, drag overlay, documents CRUD, header badges
+
+### Added
+
+- **ThemeProvider** (`apps/frontend/src/components/shared/ThemeProvider.tsx`) — wraps app in `next-themes` provider; default dark, class strategy. Root cause fix: previously, no provider existed so `dark` class was never applied to `<html>`, causing all `dark:` Tailwind variants and CSS vars in `.dark { }` to silently fail. Components rendered as bright white boxes regardless of intent.
+- **DragOverlay for sections** — Renders dragged section ID as floating pill during drag (visual feedback). Tracks active drag via `onDragStart` / `onDragEnd`.
+- **Documents CRUD UI** — Full create/edit/delete on `/docs`:
+  - `+ Nuevo` button creates documents with title + markdown content
+  - Per-doc edit/delete buttons (visible on hover in sidebar; persistent in viewer)
+  - Delete confirmation prompt
+  - All CRUD actions push `doc_opened` activity events → notifies team via ticker
+- **Documents agent tools** — Frontend tools `shareDocument`, `updateDocument`, `deleteDocument` added via `useFrontendTool` (agent-callable through CopilotKit)
+- **Doc count badge in header** — `DocBadge` component (violet pill with FileText icon + count), clickable, navigates to `/docs`. Wired through `commandSurface.docBadge` slot.
+
+### Changed
+
+- **Docs page** full rewrite — replaced bright violet gradient header with thin warm graphite header; sidebar/viewer use `bg-[var(--bg-surface)]` and `text-[var(--text-primary)]` consistently; forms use opacity-token accent panels (no more flat white)
+- **ActivityStreamRegion** — Removed early-return-on-empty (was hiding entire ticker if no events yet). Shows placeholder "Sin actividad reciente todavía" when empty.
+- **ThemeToggle** — Improved visibility with CSS vars; smaller padding for header context
+- **MilestonePanel / KanbanBoard** — Replaced hardcoded `bg-white` / `bg-slate-50` / `text-slate-*` with CSS vars and opacity tokens
+
+### Fixed
+
+- **Build failures from removed imports** — `Activity`, `Eye`, `EyeOff` icons were removed during cleanup but still used in JSX. Restored.
+- **Spine text orientation** — Section labels rotated 180° to read bottom-to-top
+- **Duplicate activity ticker** — Old static blue strip removed; only new CSS-marquee version remains
+- **SectionFrame content area** — Now has `bg-[var(--bg-surface)] text-[var(--text-primary)]` so children inherit dark theme by default
+
+---
+
 ## [0.12.1] — 2026-05-16 — Bug fixes: drag-to-minimize, Copilot chat, ticker, and styling
 
 ### Fixed
