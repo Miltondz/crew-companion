@@ -17,38 +17,88 @@ export function mergeCrewState(raw: unknown): CrewState {
   }
 }
 
-const LS_KEY = 'crew-state-v1'
-let memCache: Partial<CrewState> | null = null
+const LS_PREFIX = 'crew-state-v2:'
+const LEGACY_KEY = 'crew-state-v1'
+const memCache: Map<string, Partial<CrewState>> = new Map()
+
+function getLsKey(workspaceId: string | null): string | null {
+  return workspaceId ? `${LS_PREFIX}${workspaceId}` : null
+}
+
+function readLs(workspaceId: string | null): Partial<CrewState> | null {
+  const key = getLsKey(workspaceId)
+  if (!key || typeof window === 'undefined') return null
+  try {
+    const s = localStorage.getItem(key)
+    if (s) return JSON.parse(s) as Partial<CrewState>
+  } catch {}
+  return null
+}
+
+function writeLs(workspaceId: string | null, state: Partial<CrewState>) {
+  const key = getLsKey(workspaceId)
+  if (!key || typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(state)) } catch {}
+}
 
 export function useCrewAgent() {
   const { agent } = useAgent({ agentId: 'crew_agent' })
 
-  const [dbState, setDbState] = useState<Partial<CrewState>>(() => {
-    if (memCache) return memCache
-    try {
-      const s = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY) : null
-      if (s) {
-        const parsed = JSON.parse(s) as Partial<CrewState>
-        memCache = parsed
-        return parsed
-      }
-    } catch {}
-    return {}
-  })
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null)
+  const [dbState, setDbState] = useState<Partial<CrewState>>({})
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    fetch('/api/projects')
-      .then(r => r.json())
-      .then((d: { projects?: Array<{ state_json: unknown }> }) => {
-        const stateJson = d.projects?.[0]?.state_json
+    let cancelled = false
+    async function load() {
+      const identityRes = await fetch('/api/me/identity').then(r => r.json()).catch(() => null)
+      const currentWsId = identityRes?.workspaceId ?? null
+      if (cancelled) return
+      setWorkspaceId(currentWsId)
+
+      // 1. Try in-memory cache for this workspace
+      const cached = currentWsId ? memCache.get(currentWsId) : null
+      if (cached) {
+        setDbState(cached)
+        setHydrated(true)
+        return
+      }
+
+      // 2. Try workspace-specific localStorage
+      const fromLs = readLs(currentWsId)
+      if (fromLs) {
+        setDbState(fromLs)
+        if (currentWsId) memCache.set(currentWsId, fromLs)
+        setHydrated(true)
+        // Continue to refresh from DB in background
+      }
+
+      // 3. Fetch fresh from server (always, to stay in sync)
+      try {
+        const projectsRes = await fetch('/api/projects').then(r => r.json())
+        if (cancelled) return
+        const projects: Array<{ workspace_id: string; state_json: unknown }> = projectsRes?.projects ?? []
+        const proj = currentWsId
+          ? projects.find(p => p.workspace_id === currentWsId)
+          : projects[0]
+        const stateJson = proj?.state_json
         if (stateJson && typeof stateJson === 'object') {
-          setDbState(prev => {
-            if (Object.keys(prev).length === 0) return stateJson as Partial<CrewState>
-            return prev
-          })
+          const partial = stateJson as Partial<CrewState>
+          setDbState(partial)
+          if (currentWsId) memCache.set(currentWsId, partial)
+          writeLs(currentWsId, partial)
         }
-      })
-      .catch(() => {})
+      } catch {}
+
+      // 4. One-time migration: drop legacy single-key state
+      if (typeof window !== 'undefined') {
+        try { localStorage.removeItem(LEGACY_KEY) } catch {}
+      }
+
+      setHydrated(true)
+    }
+    load()
+    return () => { cancelled = true }
   }, [])
 
   const merged = { ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) }
@@ -59,12 +109,12 @@ export function useCrewAgent() {
       const current = mergeCrewState({ ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) })
       const next = updater(current)
       setDbState(next)
-      memCache = next
+      if (workspaceId) memCache.set(workspaceId, next)
+      writeLs(workspaceId, next)
       agent?.setState(next)
-      try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch {}
     },
-    [agent, dbState],
+    [agent, dbState, workspaceId],
   )
 
-  return { agent, state, setState }
+  return { agent, state, setState, hydrated, workspaceId }
 }
