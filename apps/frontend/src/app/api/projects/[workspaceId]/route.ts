@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
+import { syncMetrics } from '@/lib/sync-metrics'
 
 async function assertOwnership(userId: string, workspaceId: string) {
   const { rows } = await getPool().query(
@@ -26,37 +27,48 @@ export async function PATCH(
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { workspaceId } = await params
 
-  const body = await req.json() as { archived?: boolean; name?: string; state_json?: Record<string, unknown> }
+  const body = await req.json() as { archived?: boolean; name?: string; state_json?: Record<string, unknown>; expected_version?: number }
 
   if (body.state_json && typeof body.state_json === 'object') {
-    // state_json write: any project member (leader or member) may persist state
     if (!await assertProjectMember(session.user.id, workspaceId)) {
+      syncMetrics.fail()
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-    // Read-modify-write in a transaction so concurrent agent and frontend writes
-    // converge: body keys win for entities present, but keys absent from body are
-    // preserved from whatever the agent wrote since the last frontend snapshot.
     const client = await getPool().connect()
     try {
       await client.query('BEGIN')
-      const { rows } = await client.query<{ state_json: Record<string, unknown> }>(
-        'SELECT state_json FROM workspace_state WHERE workspace_id = $1 FOR UPDATE',
+      const { rows } = await client.query<{ state_json: Record<string, unknown>; version: number }>(
+        'SELECT state_json, version FROM workspace_state WHERE workspace_id = $1 FOR UPDATE',
         [workspaceId]
       )
+      const currentVersion: number = rows[0]?.version ?? 1
+      if (
+        body.expected_version !== undefined &&
+        body.expected_version !== currentVersion
+      ) {
+        await client.query('ROLLBACK')
+        syncMetrics.conflict()
+        return NextResponse.json(
+          { error: 'version_conflict', current_version: currentVersion, current_state: rows[0]?.state_json ?? {} },
+          { status: 409 }
+        )
+      }
       const current: Record<string, unknown> = rows[0]?.state_json ?? {}
       const merged: Record<string, unknown> = { ...current, ...body.state_json }
       await client.query(
-        'UPDATE workspace_state SET state_json = $1, updated_at = NOW() WHERE workspace_id = $2',
-        [merged, workspaceId]
+        'UPDATE workspace_state SET state_json = $1, version = $2, updated_at = NOW() WHERE workspace_id = $3',
+        [merged, currentVersion + 1, workspaceId]
       )
       await client.query('COMMIT')
+      syncMetrics.success()
+      return NextResponse.json({ ok: true, version: currentVersion + 1 })
     } catch (err) {
       await client.query('ROLLBACK')
+      syncMetrics.fail()
       throw err
     } finally {
       client.release()
     }
-    return NextResponse.json({ ok: true })
   }
 
   // name / archive changes: leader only

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Download, FileText, ChevronDown, ChevronUp, Wifi, WifiOff, Minus } from 'lucide-react'
 
+type SyncMetrics = { success: number; fail: number; conflict: number; since: number }
+
 type StatusData = {
   timestamp: string
   userId: string
@@ -21,6 +23,7 @@ type StatusData = {
     vercel: Record<string, unknown>
     render: Record<string, unknown>
   }
+  syncMetrics?: SyncMetrics | null
 }
 
 type AuditRow = {
@@ -179,11 +182,15 @@ export default function StatusPage() {
   const refresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      const res = await fetch('/api/debug/status')
-      if (res.status === 401) { window.location.href = '/auth/signin'; return }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json() as StatusData
-      setData(json)
+      const [statusRes, metricsRes] = await Promise.all([
+        fetch('/api/debug/status'),
+        fetch('/api/debug/sync-metrics'),
+      ])
+      if (statusRes.status === 401) { window.location.href = '/auth/signin'; return }
+      if (!statusRes.ok) throw new Error(`HTTP ${statusRes.status}`)
+      const json = await statusRes.json() as StatusData
+      const metrics = metricsRes.ok ? await metricsRes.json() as SyncMetrics : null
+      setData({ ...json, syncMetrics: metrics })
       setLastRefresh(new Date().toLocaleTimeString('es', { hour12: false }))
       setError(null)
     } catch (e: unknown) {
@@ -413,6 +420,32 @@ export default function StatusPage() {
             </div>
           ) : (
             <p className="text-xs text-zinc-600">Sin datos de consumo (DATABASE_URL no configurado o tablas vacías)</p>
+          )}
+        </Section>
+
+        {/* State sync metrics */}
+        <Section title="State sync metrics (last 24h, aproximado, por instancia)">
+          {data!.syncMetrics ? (
+            <div className="flex gap-6 text-xs">
+              <span className="flex flex-col gap-1">
+                <span className="text-zinc-600">success</span>
+                <span className="font-mono text-emerald-400">{data!.syncMetrics.success}</span>
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-zinc-600">fail</span>
+                <span className="font-mono text-red-400">{data!.syncMetrics.fail}</span>
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-zinc-600">conflict</span>
+                <span className="font-mono text-yellow-400">{data!.syncMetrics.conflict}</span>
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-zinc-600">since</span>
+                <span className="font-mono text-zinc-400">{new Date(data!.syncMetrics.since).toLocaleTimeString('es', { hour12: false })}</span>
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-600">Sin datos (requiere sesión autenticada)</p>
           )}
         </Section>
 

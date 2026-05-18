@@ -35,9 +35,10 @@ export async function GET() {
     invite_code: string
     updated_at: string
     role: string
+    version: number
   }>(
     `SELECT ws.workspace_id, ws.state_json, ws.observer_token, ws.invite_code,
-            ws.updated_at, up.role
+            ws.updated_at, ws.version, up.role
      FROM workspace_state ws
      JOIN user_projects up ON ws.workspace_id = up.workspace_id
      WHERE up.user_id = $1

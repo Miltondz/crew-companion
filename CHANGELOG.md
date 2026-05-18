@@ -8,6 +8,38 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.13.0] — 2026-05-18 — Warmup, scenarios validator, audit dashboard, version locking
+
+### Added
+
+- **Warmup system** — `/api/ping` (unauthenticated liveness) + `/api/warm` (authenticated BFF + agent warmup). Both endpoints documented; intended for cron-job.org every 5 minutes to keep Render free-tier instance alive. `AgentStatusPill` shows online/starting/offline state in workspace header.
+- **Scenarios validator** (`/dev/scenarios`) — local-only page that runs `getInitialSurfaces()` against every role × tech-level × urgency-phase combination. Shows resolved surface stacks and filter reasons; covers all 24 surfaces.
+- **ManualSurfacePicker** — force-render any registered surface with custom payload from the dev overlay; bypasses Layout Engine; reads Surface Registry directly.
+- **Audit log dashboard** (`/admin/audit`) — paginated table of `audit_log` rows with filters (tool, decision, last N hours). Auth-gated (session required). `GET /api/debug/audit` endpoint with parameterized WHERE clause.
+- **State sync metrics** — in-memory daily rolling counters (success / fail / conflict). Exposed via `GET /api/debug/sync-metrics`. `/status` page shows new "State sync metrics (last 24h)" card.
+- **Optimistic version locking** (`016_workspace_state_version.sql`) — `workspace_state.version BIGINT NOT NULL DEFAULT 1`. Frontend sends `expected_version` with every PATCH; server returns 409 with `current_state` on mismatch. Agent increments version on every write. Frontend resolves 409 by taking server state and showing toast.
+- **DevToolsResync** card in `/dev` — force-push local state to DB with current version; shows 200 / 409 / error inline.
+
+### Fixed
+
+- **Invariant 3 closure** — milestone/task objects no longer capture `phase` field. `getUrgencyPhase(deadline)` is the only source; all storage and comparison paths corrected.
+- **Async DB race on hydration** — `hydrate_workspace_state` now uses `asyncio.to_thread` consistently; eliminated interleaved sync/async Postgres calls that caused occasional state revert on first agent turn.
+- **Bidirectional sync** — frontend ↔ DB ↔ agent writes now converge correctly: entity-count comparison on initial load, debounced PATCH on every `setState`, flush-on-unmount, agent read-modify-write all use the same merge strategy.
+- **Sync error toast** — rate-limited 30s toast on persist failure replaces silent swallow.
+- **Agent state-read robustness** — coach flow JSON parsing hardened; `get_documents` returns empty list instead of raising on missing key.
+- **Prompt drift** — ORCHESTRATOR / PLANNER / COACH prompts re-synced with actual tool names and surface IDs; removed references to retired surfaces.
+- **Audit bundle** — per-workspace pinning keys, auth guards on all API routes, dead surface components removed from registry bootstrap.
+
+### Changed
+
+- `GET /api/projects` — now selects `ws.version` alongside `state_json`; included in project list response.
+- `PATCH /api/projects/[workspaceId]` — returns `{ ok: true, version: N }` on success; returns `{ error: 'version_conflict', current_version, current_state }` on 409.
+- `save_workspace_state` (Python) — increments `version` on every UPDATE.
+- `/status` page — sync metrics card added; `refresh()` now fetches `/api/debug/status` and `/api/debug/sync-metrics` in parallel.
+- `migrations/` count: 001–016 (added 016).
+
+---
+
 ## [0.12.3] — 2026-05-16 — Folder spine pattern: docs + dashboard redesign
 
 ### Added

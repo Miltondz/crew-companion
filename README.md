@@ -730,8 +730,46 @@ The app has two distinct areas: public marketing pages (no auth required) and pr
   /invite/[code]         Team invite picker
   /share/[token]         Observer (read-only) access
   /status                Service health diagnostics
+  /admin/audit           Audit log dashboard (leader only)
   /dev                   Component preview (local only)
+  /dev/scenarios         Surface scenario validator (local only)
 ```
+
+---
+
+## Warmup System
+
+Render free-tier instances sleep after 15 minutes of inactivity. The warmup system prevents cold-start latency from affecting real users.
+
+**Endpoints:**
+- `GET /api/ping` — lightweight liveness check; returns `{ ok: true, ts }`. Safe to call unauthenticated. Used by cron-job.org every 5 minutes.
+- `GET /api/warm` — authenticated warmup; pings the BFF `/health` endpoint, warms the LangGraph agent, and returns a summary. Called by cron-job.org every 5 minutes after authentication.
+
+**AgentStatusPill** — a small UI component that calls `/api/warm` on first load and displays the agent's current state (online/starting/offline) with a pulsing dot. Visible in the workspace header so users know if they need to wait for the agent to wake up.
+
+**Setup (cron-job.org, free):**
+1. Create two cron jobs: `GET https://your-app.vercel.app/api/ping` every 5 minutes.
+2. Create `GET https://your-app.vercel.app/api/warm` every 5 minutes.
+3. No auth needed for `/api/ping`; `/api/warm` uses cookie session (log in first, then use cron-job.org's cookie jar or a secret query param).
+
+---
+
+## Dev Tools — Scenarios Validator
+
+`/dev/scenarios` is a local-only development page that validates every registered surface manifest against a matrix of role × tech-level × urgency-phase combinations. It shows which surfaces mount, which are filtered out, and why — making it easy to catch routing gaps before they reach production.
+
+The scenarios tool runs `getInitialSurfaces()` against each axis combination and lists the resolved surface stack per scenario. Filter by surface ID, role, or phase to focus on the surfaces you're debugging.
+
+---
+
+## Manual Surface Picker
+
+Available via the `ManualSurfacePicker` component (rendered in the dev overlay or accessible via the command palette in development). Lets you force-render any registered surface with a custom payload without waiting for the agent to emit it. Useful for:
+- Testing surface layouts at specific urgency phases
+- Verifying capability guards work correctly
+- Debugging payload shape mismatches between agent and surface
+
+The picker reads the Surface Registry directly and renders the selected surface in a modal overlay, bypassing the Layout Engine region assignment.
 
 ---
 

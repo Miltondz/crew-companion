@@ -1,6 +1,7 @@
 'use client'
 
 import { notFound } from 'next/navigation'
+import { DevToolsResync } from './DevToolsResync'
 import CountdownCritical from '@/components/surfaces/CountdownCritical/CountdownCritical'
 import type { CountdownCriticalPayload } from '@/components/surfaces/CountdownCritical/manifest'
 import type { RuntimeContext, SurfaceEnvelope } from '@/runtime/surface-registry/types'
@@ -60,7 +61,9 @@ export default function DevPage() {
   if (process.env.NODE_ENV === 'production') notFound()
   return (
     <div className="min-h-screen bg-zinc-950 p-8 flex flex-col gap-14">
-      <h1 className="text-white text-2xl font-bold">CountdownCritical — todas las variantes</h1>
+      <h1 className="text-white text-2xl font-bold">Dev Tools</h1>
+      <DevToolsResync />
+      <h2 className="text-zinc-400 text-lg font-semibold">CountdownCritical — todas las variantes</h2>
       {CASES.map(({ label, props }) => (
         <section key={label} className="flex flex-col gap-3">
           <h2 className="text-zinc-400 text-xs font-semibold uppercase tracking-widest">{label}</h2>

@@ -90,6 +90,45 @@ function countEntities(s: Partial<CrewState>): Record<EntityCollection, number> 
   }
 }
 
+function mergeById<T extends { id: string }>(local: T[] = [], server: T[] = []): T[] {
+  const serverIds = new Set(server.map(s => s.id))
+  const localOnly = local.filter(l => !serverIds.has(l.id))
+  return [...server, ...localOnly]
+}
+
+function mergeOnConflict(local: Partial<CrewState>, server: Partial<CrewState>): { merged: Partial<CrewState>; hadLocalOnly: boolean } {
+  const mergedMembers = mergeById(local.members, server.members)
+  const mergedTasks = mergeById(local.tasks, server.tasks)
+  const mergedMilestones = mergeById(local.milestones, server.milestones)
+  const mergedBlockers = mergeById(local.blockers, server.blockers)
+  const mergedDocs = mergeById(local.sharedDocuments, server.sharedDocuments)
+
+  const serverMemberIds = new Set((server.members ?? []).map(m => m.id))
+  const serverTaskIds = new Set((server.tasks ?? []).map(t => t.id))
+  const serverMilestoneIds = new Set((server.milestones ?? []).map(m => m.id))
+  const serverBlockerIds = new Set((server.blockers ?? []).map(b => b.id))
+  const serverDocIds = new Set((server.sharedDocuments ?? []).map(d => d.id))
+
+  const hadLocalOnly =
+    (local.members ?? []).some(m => !serverMemberIds.has(m.id)) ||
+    (local.tasks ?? []).some(t => !serverTaskIds.has(t.id)) ||
+    (local.milestones ?? []).some(m => !serverMilestoneIds.has(m.id)) ||
+    (local.blockers ?? []).some(b => !serverBlockerIds.has(b.id)) ||
+    (local.sharedDocuments ?? []).some(d => !serverDocIds.has(d.id))
+
+  return {
+    merged: {
+      ...server,
+      members: mergedMembers,
+      tasks: mergedTasks,
+      milestones: mergedMilestones,
+      blockers: mergedBlockers,
+      sharedDocuments: mergedDocs,
+    },
+    hadLocalOnly,
+  }
+}
+
 export function useCrewAgent() {
   const { agent } = useAgent({ agentId: 'crew_agent' })
 
@@ -101,6 +140,7 @@ export function useCrewAgent() {
   const workspaceIdRef = useRef<string | null>(null)
   const pendingStateRef = useRef<Partial<CrewState> | null>(null)
   const lastToastAt = useRef<number>(0)
+  const versionRef = useRef<number>(1)
 
   useEffect(() => {
     let cancelled = false
@@ -130,10 +170,11 @@ export function useCrewAgent() {
       try {
         const projectsRes = await fetch('/api/projects').then(r => r.json())
         if (cancelled) return
-        const projects: Array<{ workspace_id: string; state_json: unknown }> = projectsRes?.projects ?? []
+        const projects: Array<{ workspace_id: string; state_json: unknown; version?: number }> = projectsRes?.projects ?? []
         const proj = currentWsId
           ? projects.find(p => p.workspace_id === currentWsId)
           : projects[0]
+        if (proj?.version !== undefined) versionRef.current = proj.version
         const stateJson = proj?.state_json
         if (stateJson && typeof stateJson === 'object') {
           const serverPartial = stateJson as Partial<CrewState>
@@ -159,8 +200,34 @@ export function useCrewAgent() {
               void fetch(`/api/projects/${currentWsId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ state_json: stripNonSerializable(fromLs) }),
+                body: JSON.stringify({ state_json: stripNonSerializable(fromLs), expected_version: versionRef.current }),
                 keepalive: true,
+              }).then(async res => {
+                if (res.status === 409) {
+                  const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
+                  const { merged, hadLocalOnly } = mergeOnConflict(fromLs!, body.current_state)
+                  versionRef.current = body.current_version
+                  setDbState(merged)
+                  if (currentWsId) memCache.set(currentWsId, { state: merged, ts: Date.now() })
+                  writeLs(currentWsId, merged)
+                  toast.info(hadLocalOnly ? 'Sincronizado: cambios fusionados con servidor' : 'Estado actualizado desde otra sesión')
+                  if (hadLocalOnly) {
+                    void fetch(`/api/projects/${currentWsId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ state_json: stripNonSerializable(merged), expected_version: body.current_version }),
+                      keepalive: true,
+                    }).then(async retryRes => {
+                      if (retryRes.ok) {
+                        const retryBody = await retryRes.json() as { version?: number }
+                        if (retryBody.version !== undefined) versionRef.current = retryBody.version
+                      }
+                    }).catch(() => {})
+                  }
+                } else if (res.ok) {
+                  const body = await res.json() as { version?: number }
+                  if (body.version !== undefined) versionRef.current = body.version
+                }
               }).catch(err => {
               console.error('[useCrewAgent] initial sync failed', err)
               const now = Date.now()
@@ -208,7 +275,7 @@ export function useCrewAgent() {
           void fetch(`/api/projects/${wsId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state_json: stripNonSerializable(pending) }),
+            body: JSON.stringify({ state_json: stripNonSerializable(pending), expected_version: versionRef.current }),
             keepalive: true,
           })
         }
@@ -232,13 +299,40 @@ export function useCrewAgent() {
         pendingStateRef.current = stripped
         workspaceIdRef.current = workspaceId
         if (writeBackTimeout.current) clearTimeout(writeBackTimeout.current)
+        const expectedVersion = versionRef.current
         writeBackTimeout.current = setTimeout(() => {
           writeBackTimeout.current = null
           pendingStateRef.current = null
           void fetch(`/api/projects/${workspaceId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state_json: stripped }),
+            body: JSON.stringify({ state_json: stripped, expected_version: expectedVersion }),
+          }).then(async res => {
+            if (res.status === 409) {
+              const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
+              const wsId = workspaceIdRef.current
+              const { merged, hadLocalOnly } = mergeOnConflict(stripped, body.current_state)
+              versionRef.current = body.current_version
+              setDbState(merged)
+              if (wsId) memCache.set(wsId, { state: merged, ts: Date.now() })
+              writeLs(wsId, merged)
+              toast.info(hadLocalOnly ? 'Sincronizado: cambios fusionados con servidor' : 'Estado actualizado desde otra sesión')
+              if (hadLocalOnly && wsId) {
+                void fetch(`/api/projects/${wsId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ state_json: stripNonSerializable(merged), expected_version: body.current_version }),
+                }).then(async retryRes => {
+                  if (retryRes.ok) {
+                    const retryBody = await retryRes.json() as { version?: number }
+                    if (retryBody.version !== undefined) versionRef.current = retryBody.version
+                  }
+                }).catch(() => {})
+              }
+            } else if (res.ok) {
+              const body = await res.json() as { version?: number }
+              if (body.version !== undefined) versionRef.current = body.version
+            }
           }).catch(err => {
             console.error('[useCrewAgent] persist failed', err)
             const now = Date.now()
@@ -253,5 +347,8 @@ export function useCrewAgent() {
     [agent, dbState, workspaceId],
   )
 
-  return { agent, state, setState, hydrated, workspaceId }
+  const bumpVersion = (v: number) => { versionRef.current = v }
+  const getVersion = () => versionRef.current
+
+  return { agent, state, setState, hydrated, workspaceId, bumpVersion, getVersion }
 }

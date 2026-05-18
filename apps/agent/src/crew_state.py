@@ -146,7 +146,7 @@ def save_workspace_state(workspace_id: str, state: dict[str, Any]) -> None:
                 # Agent keys win; DB keys not touched by agent are preserved
                 merged = {**current, **state}
                 cur.execute(
-                    "UPDATE workspace_state SET state_json = %s::jsonb, updated_at = NOW() "
+                    "UPDATE workspace_state SET state_json = %s::jsonb, version = version + 1, updated_at = NOW() "
                     "WHERE workspace_id = %s",
                     (json.dumps(merged), workspace_id),
                 )
