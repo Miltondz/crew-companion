@@ -13,6 +13,10 @@ from ..tools import (
     delete_milestone,
     resolve_blocker,
     get_documents,
+    get_tasks,
+    get_milestones,
+    get_blockers,
+    get_members,
     create_blocker,
     update_blocker,
     delete_blocker,
@@ -27,6 +31,10 @@ from ..tools import (
 
 # Planner: full operational control — tasks, milestones, blockers, team, documents
 PLANNER_TOOLS = [
+    get_tasks,
+    get_milestones,
+    get_blockers,
+    get_members,
     create_task,
     update_task,
     update_task_status,
@@ -49,12 +57,20 @@ PLANNER_TOOLS = [
 # Coach: read-only + blocker creation — guidance, docs, surfacing stuck state
 COACH_TOOLS = [
     get_documents,
+    get_tasks,
+    get_milestones,
+    get_blockers,
+    get_members,
     create_blocker,
     update_task_status,
 ]
 
 # Orchestrator: all tools (direct handling + delegation capability)
 ORCHESTRATOR_TOOLS = [
+    get_tasks,
+    get_milestones,
+    get_blockers,
+    get_members,
     create_task,
     update_task,
     update_task_status,

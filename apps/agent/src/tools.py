@@ -106,6 +106,70 @@ def get_documents(state: Annotated[dict, InjectedState]) -> list:
 
 
 @guarded_tool(
+    capabilities=[Capability.TASKS_READ],
+    risk_level=RiskLevel.LOW,
+)
+def get_tasks(
+    milestone_id: Optional[str] = None,
+    status: Optional[str] = None,
+    *,
+    state: Annotated[dict, InjectedState],
+) -> dict:
+    """Return the current task list. Optionally filter by milestone_id or status (todo/in-progress/done/blocked/review)."""
+    tasks: list = state.get("tasks", [])
+    if milestone_id:
+        tasks = [t for t in tasks if t.get("milestoneId") == milestone_id]
+    if status:
+        tasks = [t for t in tasks if t.get("status") == status]
+    return {"tasks": tasks, "count": len(tasks)}
+
+
+@guarded_tool(
+    capabilities=[Capability.MILESTONES_READ],
+    risk_level=RiskLevel.LOW,
+)
+def get_milestones(state: Annotated[dict, InjectedState]) -> dict:
+    """Returns all milestones with deadlines; derive on_track/at_risk/expired urgency phase from deadline as needed."""
+    milestones: list = state.get("milestones", [])
+    return {"milestones": milestones, "count": len(milestones), "activeMilestoneId": state.get("activeMilestoneId")}
+
+
+@guarded_tool(
+    capabilities=[Capability.BLOCKERS_READ],
+    risk_level=RiskLevel.LOW,
+)
+def get_blockers(
+    resolved: Optional[bool] = None,
+    member_id: Optional[str] = None,
+    *,
+    state: Annotated[dict, InjectedState],
+) -> dict:
+    """Return the current blocker list. Optionally filter by resolved status or member_id."""
+    blockers: list = state.get("blockers", [])
+    if resolved is not None:
+        blockers = [b for b in blockers if b.get("resolved") == resolved]
+    if member_id:
+        blockers = [b for b in blockers if b.get("memberId") == member_id]
+    return {"blockers": blockers, "count": len(blockers)}
+
+
+@guarded_tool(
+    capabilities=[Capability.MEMBERS_READ],
+    risk_level=RiskLevel.LOW,
+)
+def get_members(
+    role: Optional[str] = None,
+    *,
+    state: Annotated[dict, InjectedState],
+) -> dict:
+    """Return the current member roster. Optionally filter by role."""
+    members: list = state.get("members", [])
+    if role:
+        members = [m for m in members if m.get("role") == role]
+    return {"members": members, "count": len(members)}
+
+
+@guarded_tool(
     capabilities=[Capability.BLOCKERS_WRITE, Capability.STATE_WRITE],
     risk_level=RiskLevel.MEDIUM,
 )
@@ -396,6 +460,7 @@ CREW_TOOLS = [
     create_task, update_task, update_task_status, delete_task,
     create_milestone, update_milestone, delete_milestone,
     resolve_blocker, get_documents,
+    get_tasks, get_milestones, get_blockers, get_members,
     create_blocker, update_blocker, delete_blocker,
     add_member, update_member, delete_member,
     reset_workspace,

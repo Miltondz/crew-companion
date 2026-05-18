@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { auth } from '@/lib/auth'
 
 const TECH_FLOW_SCHEMA = `
@@ -70,6 +71,36 @@ const INTENT_NOTES: Record<string, string> = {
   understand_task: 'Focus on breaking down the task into sub-items. Shell commands only if the task involves running code.',
 }
 
+const errorOptionSchema = z.object({
+  label: z.string(),
+  nextStepId: z.string(),
+})
+
+const flowStepSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  command: z.string().optional(),
+  expectedOutput: z.string().optional(),
+  errorOptions: z.array(errorOptionSchema).optional(),
+})
+
+const flowResponseSchema = z.object({
+  id: z.string(),
+  taskLabel: z.string(),
+  technicalLevel: z.enum(['low-tech', 'high-tech']),
+  generatedBy: z.string(),
+  steps: z.array(flowStepSchema).min(3).max(7),
+})
+
+type FlowResponse = z.infer<typeof flowResponseSchema>
+
+function parseAndValidate(rawText: string): FlowResponse {
+  const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+  const parsed = JSON.parse(cleaned) as unknown
+  return flowResponseSchema.parse(parsed)
+}
+
 // Simple in-memory rate limiter: 10 requests / 60s per identifier
 const _rateMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 10
@@ -106,10 +137,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
-  const body = await req.json() as {
-    intent?: string
-    techLevel?: string
-    context?: string
+  let body: { intent?: string; techLevel?: string; context?: string }
+  try {
+    body = await req.json() as typeof body
+  } catch {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   // Whitelist intent and techLevel — never pass raw user input into the prompt
@@ -125,39 +157,50 @@ export async function POST(req: Request) {
   const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite'
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-  const geminiRes = await fetch(geminiUrl, {
-    method: 'POST',
-    signal: AbortSignal.timeout(25_000),
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.3,
-        maxOutputTokens: 1200,
-      },
-    }),
-  })
-
-  if (!geminiRes.ok) {
-    const err = await geminiRes.text()
-    console.error('[coach/flow] Gemini error:', err)
-    return NextResponse.json({ error: 'LLM error' }, { status: 502 })
+  async function callGemini(activePrompt: string): Promise<string> {
+    const res = await fetch(geminiUrl, {
+      method: 'POST',
+      signal: AbortSignal.timeout(25_000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: activePrompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.3,
+          maxOutputTokens: 1200,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('[coach/flow] Gemini error:', err)
+      throw new Error(`Gemini ${res.status}`)
+    }
+    const data = await res.json() as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[]
+    }
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
   }
 
-  const geminiData = await geminiRes.json() as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[]
+  const retryPrompt = `Tu respuesta anterior falló la validación JSON. Devuelve ÚNICAMENTE JSON puro sin bloques de markdown, sin comentarios.\n\n${prompt}`
+
+  let attempts = 0
+  let lastError: unknown = null
+  while (attempts < 2) {
+    attempts++
+    try {
+      const rawText = await callGemini(attempts === 2 ? retryPrompt : prompt)
+      try {
+        const flow = parseAndValidate(rawText)
+        return NextResponse.json({ flow })
+      } catch (err) {
+        lastError = err
+        console.error('[coach/flow] parse/validate failed attempt', attempts, err, 'raw:', rawText.slice(0, 500))
+      }
+    } catch (err) {
+      lastError = err
+      console.error('[coach/flow] network/LLM error attempt', attempts, String(err).slice(0, 200))
+    }
   }
-
-  const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-
-  let flow: unknown
-  try {
-    flow = JSON.parse(rawText)
-  } catch {
-    console.error('[coach/flow] JSON parse failed:', rawText)
-    return NextResponse.json({ error: 'Invalid flow JSON from LLM' }, { status: 502 })
-  }
-
-  return NextResponse.json({ flow })
+  return NextResponse.json({ error: 'Invalid flow JSON from LLM', details: String(lastError) }, { status: 502 })
 }
