@@ -16,7 +16,7 @@ const phaseConfig = {
 }
 
 export default function WritingChecklist({ payload }: SurfaceProps<WritingChecklistPayload>) {
-  const [items, setItems] = useState(payload.items)
+  const [items, setItems] = useState(Array.isArray(payload?.items) ? payload.items : [])
   const [expanded, setExpanded] = useState<string | null>(null)
 
   const toggle = (id: string) => {
@@ -24,7 +24,12 @@ export default function WritingChecklist({ payload }: SurfaceProps<WritingCheckl
   }
 
   const done = items.filter(i => i.done).length
-  const phase = phaseConfig[payload.phase]
+  const phaseKey = (payload?.phase && payload.phase in phaseConfig) ? payload.phase : 'draft' as const
+  const phase = phaseConfig[phaseKey]
+
+  if (items.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   return (
     <Card className="w-full max-w-md border-emerald-200 shadow-md overflow-hidden">
@@ -32,7 +37,7 @@ export default function WritingChecklist({ payload }: SurfaceProps<WritingCheckl
         <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
           <span className="flex items-center gap-2">
             <span>✍️</span>
-            <span>{payload.title}</span>
+            <span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
           </span>
           <Badge variant="outline" className="text-[9px] bg-white/20 text-white border-white/30">
             {phase.label}
@@ -86,7 +91,7 @@ export default function WritingChecklist({ payload }: SurfaceProps<WritingCheckl
           ))}
         </div>
 
-        {payload.tip && (
+        {payload?.tip && (
           <div className="px-4 py-3 bg-teal-50 border-t border-teal-100">
             <p className="text-[11px] text-teal-700">💡 {payload.tip}</p>
           </div>

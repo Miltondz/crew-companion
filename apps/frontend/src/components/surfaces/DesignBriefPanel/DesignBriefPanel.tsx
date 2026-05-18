@@ -13,33 +13,41 @@ const statusConfig = {
 }
 
 export default function DesignBriefPanel({ payload }: SurfaceProps<DesignBriefPayload>) {
-  const done = payload.deliverables.filter(d => d.status === 'done').length
-  const total = payload.deliverables.length
+  const projectName = typeof payload?.projectName === 'string' ? payload.projectName : 'Sin título'
+  const objective = typeof payload?.objective === 'string' ? payload.objective : ''
+  const deliverables = Array.isArray(payload?.deliverables) ? payload.deliverables : []
+
+  if (deliverables.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
+  const done = deliverables.filter(d => d.status === 'done').length
+  const total = deliverables.length
 
   return (
     <Card className="w-full max-w-md border-purple-200 shadow-md overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-violet-600 to-purple-600 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <span>🎨</span>
-          <span>Brief de diseño — {payload.projectName}</span>
+          <span>Brief de diseño — {projectName}</span>
         </CardTitle>
-        <p className="text-xs text-purple-100 mt-1">{payload.objective}</p>
+        <p className="text-xs text-purple-100 mt-1">{objective}</p>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
         {/* Audience + color direction */}
-        {(payload.targetAudience || payload.colorDirection) && (
+        {(payload?.targetAudience || payload?.colorDirection) && (
           <div className="grid grid-cols-2 gap-3">
-            {payload.targetAudience && (
+            {payload?.targetAudience && (
               <div className="rounded-xl bg-purple-50 border border-purple-100 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1">Audiencia</p>
-                <p className="text-xs text-purple-800">{payload.targetAudience}</p>
+                <p className="text-xs text-purple-800">{payload?.targetAudience}</p>
               </div>
             )}
-            {payload.colorDirection && (
+            {payload?.colorDirection && (
               <div className="rounded-xl bg-violet-50 border border-violet-100 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mb-1">Dirección visual</p>
-                <p className="text-xs text-violet-800">{payload.colorDirection}</p>
+                <p className="text-xs text-violet-800">{payload?.colorDirection}</p>
               </div>
             )}
           </div>
@@ -51,7 +59,7 @@ export default function DesignBriefPanel({ payload }: SurfaceProps<DesignBriefPa
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Entregables</p>
             <span className="text-[10px] font-bold text-purple-600">{done}/{total} completados</span>
           </div>
-          {payload.deliverables.map((d, i) => {
+          {deliverables.map((d, i) => {
             const cfg = statusConfig[d.status]
             return (
               <div key={i} className={cn(
@@ -73,7 +81,7 @@ export default function DesignBriefPanel({ payload }: SurfaceProps<DesignBriefPa
         </div>
 
         {/* References */}
-        {payload.references && payload.references.length > 0 && (
+        {payload?.references && payload.references.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Referencias</p>
             {payload.references.map((ref, i) => (

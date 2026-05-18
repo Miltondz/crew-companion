@@ -160,6 +160,7 @@ export function useCrewAgent() {
   const pendingStateRef = useRef<Partial<CrewState> | null>(null)
   const lastToastAt = useRef<number>(0)
   const versionRef = useRef<number>(1)
+  const dbStateRef = useRef<Partial<CrewState>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -230,12 +231,16 @@ export function useCrewAgent() {
                 body: JSON.stringify({ state_json: stripNonSerializable(fromLs), expected_version: versionRef.current }),
                 keepalive: true,
               }).then(async res => {
+                if (cancelled) return
+                if (workspaceIdRef.current !== currentWsId) return
                 if (res.status === 409) {
                   const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
+                  if (cancelled) return
+                  if (workspaceIdRef.current !== currentWsId) return
                   const { merged, hadLocalOnly } = mergeOnConflict(fromLs!, body.current_state)
                   versionRef.current = body.current_version
                   setDbState(merged)
-                  if (currentWsId) memCache.set(currentWsId, { state: merged, ts: Date.now() })
+                  memCache.set(currentWsId, { state: merged, ts: Date.now() })
                   writeLs(currentWsId, merged)
                   toast.info(hadLocalOnly ? 'Sincronizado: cambios fusionados con servidor' : 'Estado actualizado desde otra sesión')
                   if (hadLocalOnly) {
@@ -245,6 +250,8 @@ export function useCrewAgent() {
                       body: JSON.stringify({ state_json: stripNonSerializable(merged), expected_version: body.current_version }),
                       keepalive: true,
                     }).then(async retryRes => {
+                      if (cancelled) return
+                      if (workspaceIdRef.current !== currentWsId) return
                       if (retryRes.ok) {
                         const retryBody = await retryRes.json() as { version?: number }
                         if (retryBody.version !== undefined) versionRef.current = retryBody.version
@@ -256,13 +263,14 @@ export function useCrewAgent() {
                   if (body.version !== undefined) versionRef.current = body.version
                 }
               }).catch(err => {
-              console.error('[useCrewAgent] initial sync failed', err)
-              const now = Date.now()
-              if (now - lastToastAt.current > 30_000) {
-                lastToastAt.current = now
-                toast.error('Cambios no guardados en servidor', { description: 'Reintenta o recarga la página.' })
-              }
-            })
+                if (cancelled) return
+                console.error('[useCrewAgent] initial sync failed', err)
+                const now = Date.now()
+                if (now - lastToastAt.current > 30_000) {
+                  lastToastAt.current = now
+                  toast.error('Cambios no guardados en servidor', { description: 'Reintenta o recarga la página.' })
+                }
+              })
             }
           }
         } else if (fromLs) {
@@ -291,6 +299,10 @@ export function useCrewAgent() {
   }, [])
 
   useEffect(() => {
+    dbStateRef.current = dbState
+  }, [dbState])
+
+  useEffect(() => {
     return () => {
       // Flush pending debounced PATCH immediately on unmount so last edit isn't lost
       if (writeBackTimeout.current) {
@@ -315,63 +327,80 @@ export function useCrewAgent() {
 
   const setState = useCallback(
     (updater: (prev: CrewState) => CrewState) => {
+      const callTimeWorkspaceId = workspaceIdRef.current
+      if (!callTimeWorkspaceId) return
       const current = mergeCrewState({ ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) })
       const next = updater(current)
       setDbState(next)
-      if (workspaceId) memCache.set(workspaceId, { state: next, ts: Date.now() })
-      writeLs(workspaceId, next)
+      memCache.set(callTimeWorkspaceId, { state: next, ts: Date.now() })
+      writeLs(callTimeWorkspaceId, next)
       agent?.setState(next)
-      if (workspaceId) {
-        const stripped = stripNonSerializable(next)
-        pendingStateRef.current = stripped
-        workspaceIdRef.current = workspaceId
-        if (writeBackTimeout.current) clearTimeout(writeBackTimeout.current)
-        const expectedVersion = versionRef.current
-        writeBackTimeout.current = setTimeout(() => {
-          writeBackTimeout.current = null
-          pendingStateRef.current = null
-          void fetch(`/api/projects/${workspaceId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state_json: stripped, expected_version: expectedVersion }),
-          }).then(async res => {
-            if (res.status === 409) {
-              const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
-              const wsId = workspaceIdRef.current
-              const { merged, hadLocalOnly } = mergeOnConflict(stripped, body.current_state)
-              versionRef.current = body.current_version
-              setDbState(merged)
-              if (wsId) memCache.set(wsId, { state: merged, ts: Date.now() })
-              writeLs(wsId, merged)
-              toast.info(hadLocalOnly ? 'Sincronizado: cambios fusionados con servidor' : 'Estado actualizado desde otra sesión')
-              if (hadLocalOnly && wsId) {
-                void fetch(`/api/projects/${wsId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ state_json: stripNonSerializable(merged), expected_version: body.current_version }),
-                }).then(async retryRes => {
-                  if (retryRes.ok) {
-                    const retryBody = await retryRes.json() as { version?: number }
-                    if (retryBody.version !== undefined) versionRef.current = retryBody.version
-                  }
-                }).catch(() => {})
-              }
-            } else if (res.ok) {
-              const body = await res.json() as { version?: number }
-              if (body.version !== undefined) versionRef.current = body.version
+      const stripped = stripNonSerializable(next)
+      pendingStateRef.current = stripped
+      if (writeBackTimeout.current) clearTimeout(writeBackTimeout.current)
+      const expectedVersion = versionRef.current
+      writeBackTimeout.current = setTimeout(() => {
+        writeBackTimeout.current = null
+        pendingStateRef.current = null
+        if (workspaceIdRef.current !== callTimeWorkspaceId) return
+        // Capture rollback snapshot at fire time — after debounce consolidates all queued setState calls
+        const rollbackTo = dbStateRef.current
+        void fetch(`/api/projects/${callTimeWorkspaceId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state_json: stripped, expected_version: expectedVersion }),
+        }).then(async res => {
+          if (workspaceIdRef.current !== callTimeWorkspaceId) return
+          if (res.status === 409) {
+            const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
+            if (workspaceIdRef.current !== callTimeWorkspaceId) return
+            const { merged, hadLocalOnly } = mergeOnConflict(stripped, body.current_state)
+            versionRef.current = body.current_version
+            setDbState(merged)
+            memCache.set(callTimeWorkspaceId, { state: merged, ts: Date.now() })
+            writeLs(callTimeWorkspaceId, merged)
+            toast.info(hadLocalOnly ? 'Sincronizado: cambios fusionados con servidor' : 'Estado actualizado desde otra sesión')
+            if (hadLocalOnly) {
+              void fetch(`/api/projects/${callTimeWorkspaceId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state_json: stripNonSerializable(merged), expected_version: body.current_version }),
+              }).then(async retryRes => {
+                if (workspaceIdRef.current !== callTimeWorkspaceId) return
+                if (retryRes.ok) {
+                  const retryBody = await retryRes.json() as { version?: number }
+                  if (retryBody.version !== undefined) versionRef.current = retryBody.version
+                }
+              }).catch(() => {})
             }
-          }).catch(err => {
-            console.error('[useCrewAgent] persist failed', err)
+          } else if (res.ok) {
+            const body = await res.json() as { version?: number }
+            if (body.version !== undefined) versionRef.current = body.version
+          } else {
+            setDbState(rollbackTo)
+            memCache.set(callTimeWorkspaceId, { state: rollbackTo, ts: Date.now() })
+            writeLs(callTimeWorkspaceId, rollbackTo)
             const now = Date.now()
             if (now - lastToastAt.current > 30_000) {
               lastToastAt.current = now
-              toast.error('Cambios no guardados en servidor', { description: 'Reintenta o recarga la página.' })
+              toast.error('Cambios no guardados — UI revertida', { description: 'Recarga para sincronizar' })
             }
-          })
-        }, 500)
-      }
+          }
+        }).catch(err => {
+          if (workspaceIdRef.current !== callTimeWorkspaceId) return
+          setDbState(rollbackTo)
+          memCache.set(callTimeWorkspaceId, { state: rollbackTo, ts: Date.now() })
+          writeLs(callTimeWorkspaceId, rollbackTo)
+          console.error('[useCrewAgent] persist failed', err)
+          const now = Date.now()
+          if (now - lastToastAt.current > 30_000) {
+            lastToastAt.current = now
+            toast.error('Cambios no guardados — UI revertida', { description: 'Recarga para sincronizar' })
+          }
+        })
+      }, 500)
     },
-    [agent, dbState, workspaceId],
+    [agent, dbState],
   )
 
   const bumpVersion = (v: number) => { versionRef.current = v }

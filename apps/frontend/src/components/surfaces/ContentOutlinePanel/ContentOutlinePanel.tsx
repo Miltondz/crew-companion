@@ -17,7 +17,11 @@ const statusConfig: Record<SectionStatus, { label: string; className: string; do
 }
 
 export default function ContentOutlinePanel({ payload }: SurfaceProps<ContentOutlinePayload>) {
-  const [sections, setSections] = useState(payload.sections)
+  const [sections, setSections] = useState(Array.isArray(payload?.sections) ? payload.sections : [])
+
+  if (sections.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const cycleStatus = (id: string) => {
     setSections(prev => prev.map(s => {
@@ -35,10 +39,10 @@ export default function ContentOutlinePanel({ payload }: SurfaceProps<ContentOut
       <CardHeader className="bg-gradient-to-r from-teal-600 to-emerald-600 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <span>✍️</span>
-          <span>{payload.title}</span>
+          <span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
         </CardTitle>
         <div className="flex gap-3 mt-1 text-[11px] text-teal-100">
-          {payload.contentType && <span>{payload.contentType}</span>}
+          {payload?.contentType && <span>{payload.contentType}</span>}
           <span>{complete}/{sections.length} secciones</span>
           {totalWords > 0 && <span>~{totalWords.toLocaleString()} palabras</span>}
         </div>
@@ -81,7 +85,7 @@ export default function ContentOutlinePanel({ payload }: SurfaceProps<ContentOut
             )
           })}
         </div>
-        {payload.deadline && (
+        {payload?.deadline && (
           <div className="px-4 py-2 bg-teal-50 border-t border-teal-100">
             <p className="text-[10px] text-teal-600">📅 Deadline: {payload.deadline}</p>
           </div>

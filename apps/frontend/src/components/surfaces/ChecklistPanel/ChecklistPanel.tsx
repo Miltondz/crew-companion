@@ -18,7 +18,7 @@ interface ChecklistItem {
 }
 
 export default function ChecklistPanel({ payload }: SurfaceProps<ChecklistPayload>) {
-  const [items, setItems] = useState<ChecklistItem[]>(payload.items)
+  const [items, setItems] = useState<ChecklistItem[]>(Array.isArray(payload?.items) ? payload.items : [])
 
   const toggleItem = (id: string) => {
     setItems(prev => prev.map(item =>
@@ -49,7 +49,7 @@ export default function ChecklistPanel({ payload }: SurfaceProps<ChecklistPayloa
         <div className="space-y-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <span>✅</span>
-            <span>{payload.title}</span>
+            <span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
           </CardTitle>
           <div className="space-y-1.5">
             <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -97,7 +97,7 @@ export default function ChecklistPanel({ payload }: SurfaceProps<ChecklistPayloa
         </div>
       </CardContent>
 
-      {isAllDone && payload.completionMessage && (
+      {isAllDone && payload?.completionMessage && (
         <CardFooter className="bg-green-50 p-3 border-t">
           <p className="text-xs text-green-700 font-bold flex items-center gap-2 w-full justify-center">
             <span>🎉</span>

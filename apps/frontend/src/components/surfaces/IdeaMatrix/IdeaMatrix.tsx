@@ -19,8 +19,14 @@ function toSvgY(wow: number) {
 }
 
 export default function IdeaMatrix({ payload }: SurfaceProps<IdeaMatrixPayload>) {
-  const { ideas, xLabel = 'Viabilidad', yLabel = 'Impacto WOW' } = payload
+  const ideas = Array.isArray(payload?.ideas) ? payload.ideas : []
+  const xLabel = typeof payload?.xLabel === 'string' ? payload.xLabel : 'Viabilidad'
+  const yLabel = typeof payload?.yLabel === 'string' ? payload.yLabel : 'Impacto WOW'
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  if (ideas.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
   const selected = ideas.find(i => i.id === selectedId)
 
   return (

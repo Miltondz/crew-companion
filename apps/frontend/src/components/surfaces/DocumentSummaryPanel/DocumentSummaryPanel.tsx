@@ -14,8 +14,16 @@ function resolveFormat(payload: DocumentSummaryPayload): FormatFileProps {
 }
 
 export default function DocumentSummaryPanel({ payload }: SurfaceProps<DocumentSummaryPayload>) {
-  const { documentTitle, summary, keyPoints, relevantSection, quote } = payload
-  const format = resolveFormat(payload)
+  const documentTitle = typeof payload?.documentTitle === 'string' ? payload.documentTitle : 'Sin título'
+  const summary = typeof payload?.summary === 'string' ? payload.summary : ''
+  const keyPoints = Array.isArray(payload?.keyPoints) ? payload.keyPoints : []
+  const relevantSection = payload?.relevantSection
+  const quote = payload?.quote
+  const format = resolveFormat(payload ?? ({} as DocumentSummaryPayload))
+
+  if (!summary && keyPoints.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   return (
     <Card className="w-full max-w-md shadow-lg border border-slate-200 dark:border-slate-700/60 overflow-hidden">

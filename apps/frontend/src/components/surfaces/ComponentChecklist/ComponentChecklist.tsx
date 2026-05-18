@@ -19,7 +19,11 @@ const statusConfig: Record<Status, { label: string; dot: string; className: stri
 }
 
 export default function ComponentChecklist({ payload }: SurfaceProps<ComponentChecklistPayload>) {
-  const [components, setComponents] = useState(payload.components)
+  const [components, setComponents] = useState(Array.isArray(payload?.components) ? payload.components : [])
+
+  if (components.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const cycleStatus = (id: string) => {
     setComponents(prev => prev.map(c => {
@@ -35,7 +39,7 @@ export default function ComponentChecklist({ payload }: SurfaceProps<ComponentCh
     <Card className="w-full max-w-md border-pink-200 shadow-md overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-pink-500 to-rose-500 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
-          <span className="flex items-center gap-2"><span>🧩</span>{payload.title}</span>
+          <span className="flex items-center gap-2"><span>🧩</span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
           <span className="text-xs font-normal text-pink-100">{done}/{components.length}</span>
         </CardTitle>
       </CardHeader>

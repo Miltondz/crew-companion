@@ -14,7 +14,16 @@ const riskConfig = {
 }
 
 export default function TeamVelocityPanel({ payload }: SurfaceProps<TeamVelocityPayload>) {
-  const rCfg = riskConfig[payload.riskLevel]
+  const riskLevel = (payload?.riskLevel && payload.riskLevel in riskConfig) ? payload.riskLevel : 'low' as const
+  const members = Array.isArray(payload?.members) ? payload.members : []
+  const overallProgress = typeof payload?.overallProgress === 'number' ? payload.overallProgress : 0
+  const milestone = typeof payload?.milestone === 'string' ? payload.milestone : ''
+
+  if (members.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
+  const rCfg = riskConfig[riskLevel]
 
   return (
     <Card className="w-full max-w-md border-blue-200 shadow-md overflow-hidden">
@@ -25,7 +34,7 @@ export default function TeamVelocityPanel({ payload }: SurfaceProps<TeamVelocity
             {rCfg.label}
           </Badge>
         </CardTitle>
-        <p className="text-xs text-blue-100 mt-0.5">{payload.milestone}</p>
+        <p className="text-xs text-blue-100 mt-0.5">{milestone}</p>
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
@@ -33,15 +42,15 @@ export default function TeamVelocityPanel({ payload }: SurfaceProps<TeamVelocity
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs">
             <span className="font-semibold text-zinc-700">Progreso general</span>
-            <span className="font-bold text-blue-600">{payload.overallProgress}%</span>
+            <span className="font-bold text-blue-600">{overallProgress}%</span>
           </div>
-          <Progress value={payload.overallProgress} className="h-2" />
+          <Progress value={overallProgress} className="h-2" />
         </div>
 
         {/* Per-member breakdown */}
         <div className="space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Por miembro</p>
-          {payload.members.map((m, i) => {
+          {members.map((m, i) => {
             const memberProgress = m.totalTasks > 0 ? (m.doneTasks / m.totalTasks) * 100 : 0
             return (
               <div key={i} className="space-y-1.5">
@@ -66,7 +75,7 @@ export default function TeamVelocityPanel({ payload }: SurfaceProps<TeamVelocity
           })}
         </div>
 
-        {payload.recommendation && (
+        {payload?.recommendation && (
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
             <p className="text-xs text-blue-700">💡 {payload.recommendation}</p>
           </div>

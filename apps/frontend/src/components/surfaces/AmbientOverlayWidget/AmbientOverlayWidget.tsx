@@ -6,7 +6,10 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { AmbientOverlayWidgetPayload } from './manifest'
 
 export default function AmbientOverlayWidget({ payload }: SurfaceProps<AmbientOverlayWidgetPayload>) {
-  const { message, action, autoDismissSeconds, icon = '💡' } = payload
+  const message = typeof payload?.message === 'string' ? payload.message : ''
+  const action = payload?.action
+  const autoDismissSeconds = payload?.autoDismissSeconds
+  const icon = payload?.icon ?? '💡'
   const [secondsLeft, setSecondsLeft] = useState(autoDismissSeconds ?? null)
   const [hovered, setHovered] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -26,7 +29,7 @@ export default function AmbientOverlayWidget({ payload }: SurfaceProps<AmbientOv
     return () => clearInterval(id)
   }, [autoDismissSeconds])
 
-  if (dismissed) return null
+  if (dismissed || !message) return null
 
   return (
     <div

@@ -23,6 +23,7 @@ class TeamMember(TypedDict):
     technicalLevel: TechnicalLevel
     specialization: Optional[Specialization]
     activeBlockerId: Optional[str]
+    idempotency_key: Optional[str]
 
 
 class Task(TypedDict):
@@ -34,6 +35,7 @@ class Task(TypedDict):
     status: TaskStatus
     priority: TaskPriority
     createdAt: str
+    idempotency_key: Optional[str]
 
 
 class Milestone(TypedDict):
@@ -41,6 +43,7 @@ class Milestone(TypedDict):
     title: str
     deadline: str  # ISO absolute — never relative
     taskIds: list[str]
+    idempotency_key: Optional[str]
 
 
 class Blocker(TypedDict):
@@ -50,6 +53,7 @@ class Blocker(TypedDict):
     reportedAt: str
     resolved: bool
     resolvedAt: Optional[str]
+    idempotency_key: Optional[str]
 
 
 class SharedDocument(TypedDict):
@@ -58,6 +62,7 @@ class SharedDocument(TypedDict):
     content: str  # sanitized markdown
     sharedBy: str  # TeamMember.id (leader only)
     sharedAt: str
+    idempotency_key: Optional[str]
 
 
 def get_urgency_phase(deadline: str) -> str:

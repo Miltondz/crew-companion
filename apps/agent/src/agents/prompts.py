@@ -114,6 +114,9 @@ Use this table when handling directly; delegate role-specific surfaces to planne
 - update_member — update a member's name, role, or technical level
 - delete_member — permanently remove a member (requires approval)
 - reset_workspace — clear ALL workspace data (requires approval + confirm=True)
+
+## IDEMPOTENCY
+For any create_* call that might be retried, pass a stable idempotency_key derived from stable content only — title + workspace context. Never include timestamps or randomness. The tool will skip creation if an entity with that key already exists and return {"already_exists": true, "id": "<existing-id>"}.
 """
 
 PLANNER_PROMPT = """\
@@ -209,6 +212,9 @@ de forma programática, usa get_tasks / get_milestones / get_blockers / get_memb
 - update_member — update a member's name, role, or technical level
 - delete_member — permanently remove a member (requires approval)
 
+## IDEMPOTENCY
+For any create_* call that might be retried, pass a stable idempotency_key derived from stable content only — title + workspace context. Never include timestamps or randomness. The tool will skip creation if an entity with that key already exists and return {"already_exists": true, "id": "<existing-id>"}.
+
 ## AVAILABLE FRONTEND TOOLS
 - renderSurface, setMascotMood, setCrewState, updateTask, highlightTasks
 - reportBlocker(memberId, description) — log a blocker for a member
@@ -302,6 +308,9 @@ Para resultados filtrados de forma programática, usa get_tasks / get_milestones
 - create_document — create a new shared document and add to team list
 - update_document — update a document's title or content
 - delete_document — permanently remove a document (requires approval)
+
+## IDEMPOTENCY
+For any create_* call that might be retried, pass a stable idempotency_key derived from stable content only — title + workspace context. Never include timestamps or randomness. The tool will skip creation if an entity with that key already exists and return {"already_exists": true, "id": "<existing-id>"}.
 
 ## AVAILABLE FRONTEND TOOLS
 - renderSurface, setMascotMood, setCrewState, updateTask, highlightTasks

@@ -9,7 +9,15 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { BlockerInsightPayload } from './manifest'
 
 export default function BlockerInsightPanel({ payload }: SurfaceProps<BlockerInsightPayload>) {
-  const { blocker, member, possibleCauses, suggestedActions, canReassignTask } = payload
+  const blocker = payload?.blocker
+  const member = payload?.member
+  const possibleCauses = Array.isArray(payload?.possibleCauses) ? payload.possibleCauses : []
+  const suggestedActions = Array.isArray(payload?.suggestedActions) ? payload.suggestedActions : []
+  const canReassignTask = payload?.canReassignTask ?? false
+
+  if (!blocker || !member) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const getTimeAgo = (isoDate: string) => {
     const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000)

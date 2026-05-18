@@ -34,7 +34,14 @@ function nodePos(index: number) {
 }
 
 export default function ForceGraph({ payload }: SurfaceProps<ForceGraphPayload>) {
-  const { nodes, edges, title } = payload
+  const nodes = Array.isArray(payload?.nodes) ? payload.nodes : []
+  const edges = Array.isArray(payload?.edges) ? payload.edges : []
+  const title = typeof payload?.title === 'string' ? payload.title : ''
+
+  if (nodes.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
   const rows = Math.ceil(nodes.length / COLS)
   const svgH = PAD * 2 + rows * ROW_H
   const svgW = PAD * 2 + COLS * COL_W
@@ -48,7 +55,7 @@ export default function ForceGraph({ payload }: SurfaceProps<ForceGraphPayload>)
           <CardTitle className="text-sm font-bold">Grafo de dependencias</CardTitle>
           {title && <span className="text-xs text-slate-500">{title}</span>}
           <Badge variant="outline" className="ml-auto text-[10px]">{nodes.length} nodos</Badge>
-          <Badge variant="outline" className="text-[10px]">{edges.length} enlaces</Badge>
+          <Badge variant="outline" className="text-[10px]">{edges.length} enlace{edges.length !== 1 ? 's' : ''}</Badge>
         </div>
       </CardHeader>
       <CardContent className="p-4">

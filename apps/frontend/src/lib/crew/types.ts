@@ -14,6 +14,7 @@ export interface TeamMember {
   technicalLevel: TechnicalLevel
   specialization?: Specialization
   activeBlockerId?: string
+  idempotency_key?: string
 }
 
 export interface Task {
@@ -25,6 +26,7 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   createdAt: string
+  idempotency_key?: string
 }
 
 export interface Milestone {
@@ -32,6 +34,7 @@ export interface Milestone {
   title: string
   deadline: string
   taskIds: string[]
+  idempotency_key?: string
 }
 
 export interface Blocker {
@@ -41,6 +44,7 @@ export interface Blocker {
   reportedAt: string
   resolved: boolean
   resolvedAt?: string
+  idempotency_key?: string
 }
 
 export interface SharedDocument {
@@ -49,6 +53,7 @@ export interface SharedDocument {
   content: string
   sharedBy: string
   sharedAt: string
+  idempotency_key?: string
 }
 
 export interface ProjectConfig {

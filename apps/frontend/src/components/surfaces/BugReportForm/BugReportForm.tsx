@@ -16,21 +16,30 @@ const severityConfig = {
 
 export default function BugReportForm({ payload }: SurfaceProps<BugReportPayload>) {
   const [copied, setCopied] = useState(false)
-  const cfg = severityConfig[payload.severity]
+  const severity = (payload?.severity && payload.severity in severityConfig) ? payload.severity : 'low' as const
+  const cfg = severityConfig[severity]
+  const steps = Array.isArray(payload?.steps) ? payload.steps : []
+  const title = typeof payload?.title === 'string' ? payload.title : 'Sin título'
+  const expectedBehavior = typeof payload?.expectedBehavior === 'string' ? payload.expectedBehavior : ''
+  const actualBehavior = typeof payload?.actualBehavior === 'string' ? payload.actualBehavior : ''
+
+  if (!payload?.title && steps.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const copyReport = () => {
     const text = [
-      `# Bug: ${payload.title}`,
+      `# Bug: ${title}`,
       `Severidad: ${cfg.label}`,
-      payload.environment ? `Entorno: ${payload.environment}` : '',
+      payload?.environment ? `Entorno: ${payload.environment}` : '',
       '',
       '## Pasos para reproducir',
-      payload.steps.map((s, i) => `${i + 1}. ${s}`).join('\n'),
+      steps.map((s, i) => `${i + 1}. ${s}`).join('\n'),
       '',
-      `## Comportamiento esperado\n${payload.expectedBehavior}`,
+      `## Comportamiento esperado\n${expectedBehavior}`,
       '',
-      `## Comportamiento actual\n${payload.actualBehavior}`,
-      payload.reportedBy ? `\nReportado por: ${payload.reportedBy}` : '',
+      `## Comportamiento actual\n${actualBehavior}`,
+      payload?.reportedBy ? `\nReportado por: ${payload.reportedBy}` : '',
     ].filter(Boolean).join('\n')
 
     navigator.clipboard.writeText(text).then(() => {
@@ -44,13 +53,13 @@ export default function BugReportForm({ payload }: SurfaceProps<BugReportPayload
       <CardHeader className="bg-red-600 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <span>🐛</span>
-          <span className="truncate">{payload.title}</span>
+          <span className="truncate">{title}</span>
         </CardTitle>
         <div className="flex items-center gap-2 mt-1">
           <Badge variant="outline" className={cn('text-[9px] border-none font-bold', cfg.className)}>
             Severidad: {cfg.label}
           </Badge>
-          {payload.reportedBy && (
+          {payload?.reportedBy && (
             <span className="text-[10px] text-red-200">por {payload.reportedBy}</span>
           )}
         </div>
@@ -61,7 +70,7 @@ export default function BugReportForm({ payload }: SurfaceProps<BugReportPayload
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Pasos para reproducir</p>
           <div className="space-y-1.5">
-            {payload.steps.map((step, i) => (
+            {steps.map((step, i) => (
               <div key={i} className="flex items-start gap-2">
                 <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
@@ -76,15 +85,15 @@ export default function BugReportForm({ payload }: SurfaceProps<BugReportPayload
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-1">Esperado</p>
-            <p className="text-xs text-emerald-800">{payload.expectedBehavior}</p>
+            <p className="text-xs text-emerald-800">{expectedBehavior}</p>
           </div>
           <div className="rounded-lg bg-red-50 border border-red-200 p-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-1">Actual</p>
-            <p className="text-xs text-red-800">{payload.actualBehavior}</p>
+            <p className="text-xs text-red-800">{actualBehavior}</p>
           </div>
         </div>
 
-        {payload.environment && (
+        {payload?.environment && (
           <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Entorno</p>
             <code className="text-xs text-zinc-700 font-mono">{payload.environment}</code>

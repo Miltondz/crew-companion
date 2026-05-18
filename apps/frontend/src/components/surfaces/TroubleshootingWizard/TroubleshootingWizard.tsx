@@ -14,8 +14,15 @@ export default function TroubleshootingWizard({ payload }: SurfaceProps<Troubles
   const [lastAction, setLastAction] = useState<string | null>(null)
   const [isFinished, setIsFinished] = useState(false)
 
-  const currentStep = payload.steps[currentStepIndex]
-  const isLastStep = currentStepIndex === payload.steps.length - 1
+  const steps = Array.isArray(payload?.steps) ? payload.steps : []
+  const problem = typeof payload?.problem === 'string' ? payload.problem : ''
+
+  if (steps.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
+  const currentStep = steps[currentStepIndex]
+  const isLastStep = currentStepIndex === steps.length - 1
 
   const handleYes = () => {
     setLastAction(currentStep.yesAction)
@@ -49,10 +56,10 @@ export default function TroubleshootingWizard({ payload }: SurfaceProps<Troubles
           <div className="space-y-2">
             <h3 className="text-lg font-bold text-green-800">¡Solucionado!</h3>
             <p className="text-sm text-green-700 leading-relaxed">
-              {payload.resolution || 'Hemos completado todos los pasos de la guía.'}
+              {payload?.resolution || 'Hemos completado todos los pasos de la guía.'}
             </p>
           </div>
-          {payload.escalateTo && (
+          {payload?.escalateTo && (
             <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-11 mt-4">
               💬 Hablar con {payload.escalateTo}
             </Button>
@@ -71,7 +78,7 @@ export default function TroubleshootingWizard({ payload }: SurfaceProps<Troubles
             <span>Vamos a resolver esto juntos</span>
           </CardTitle>
           <blockquote className="border-l-2 border-orange-300 pl-3 py-1">
-            <p className="text-xs text-orange-800 italic">"{payload.problem}"</p>
+            <p className="text-xs text-orange-800 italic">"{problem}"</p>
           </blockquote>
         </div>
       </CardHeader>
@@ -79,7 +86,7 @@ export default function TroubleshootingWizard({ payload }: SurfaceProps<Troubles
       <CardContent className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Paso {currentStepIndex + 1} de {payload.steps.length}
+            Paso {currentStepIndex + 1} de {steps.length}
           </span>
           {showResult && (
             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-none text-[9px] font-bold">

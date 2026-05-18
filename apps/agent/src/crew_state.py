@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+
+_log = logging.getLogger(__name__)
 
 from langchain.agents.middleware import AgentMiddleware
 from langgraph.graph.message import add_messages
@@ -130,32 +133,36 @@ def save_workspace_state(workspace_id: str, state: dict[str, Any]) -> None:
     try:
         import psycopg  # type: ignore[import-not-found]
         with psycopg.connect(dsn, connect_timeout=2) as conn:
-            with conn.cursor() as cur:
-                cur.execute("BEGIN")
-                cur.execute(
-                    "SELECT state_json FROM workspace_state "
-                    "WHERE workspace_id = %s FOR UPDATE",
-                    (workspace_id,),
-                )
-                row = cur.fetchone()
-                current: dict[str, Any] = (
-                    (row[0] if isinstance(row[0], dict) else json.loads(row[0]))
-                    if row
-                    else {}
-                )
-                # Agent keys win; DB keys not touched by agent are preserved
-                merged = {**current, **state}
-                cur.execute(
-                    "UPDATE workspace_state SET state_json = %s::jsonb, version = version + 1, updated_at = NOW() "
-                    "WHERE workspace_id = %s",
-                    (json.dumps(merged), workspace_id),
-                )
-            conn.commit()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("BEGIN")
+                    cur.execute(
+                        "SELECT state_json FROM workspace_state "
+                        "WHERE workspace_id = %s FOR UPDATE",
+                        (workspace_id,),
+                    )
+                    row = cur.fetchone()
+                    current: dict[str, Any] = (
+                        (row[0] if isinstance(row[0], dict) else json.loads(row[0]))
+                        if row
+                        else {}
+                    )
+                    # Agent keys win; DB keys not touched by agent are preserved
+                    merged = {**current, **state}
+                    cur.execute(
+                        "UPDATE workspace_state SET state_json = %s::jsonb, version = version + 1, updated_at = NOW() "
+                        "WHERE workspace_id = %s",
+                        (json.dumps(merged), workspace_id),
+                    )
+                conn.commit()
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                raise
     except Exception as e:  # noqa: BLE001
-        print(
-            f"[crew_state] WARN save failed: {type(e).__name__}: {e}",
-            flush=True,
-        )
+        _log.warning("[crew_state] save failed: %s: %s", type(e).__name__, e)
 
 
 class CrewStateMiddleware(AgentMiddleware):

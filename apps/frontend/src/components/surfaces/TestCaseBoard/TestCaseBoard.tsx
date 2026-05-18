@@ -26,7 +26,11 @@ const priorityConfig = {
 }
 
 export default function TestCaseBoard({ payload }: SurfaceProps<TestCaseBoardPayload>) {
-  const [cases, setCases] = useState(payload.cases)
+  const [cases, setCases] = useState(Array.isArray(payload?.cases) ? payload.cases : [])
+
+  if (cases.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const cycleStatus = (id: string) => {
     setCases(prev => prev.map(c => {
@@ -45,9 +49,9 @@ export default function TestCaseBoard({ payload }: SurfaceProps<TestCaseBoardPay
       <CardHeader className="bg-gradient-to-r from-amber-500 to-yellow-500 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <span>🧪</span>
-          <span>{payload.title}</span>
+          <span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
         </CardTitle>
-        {payload.feature && <p className="text-xs text-amber-100 mt-0.5">Feature: {payload.feature}</p>}
+        {payload?.feature && <p className="text-xs text-amber-100 mt-0.5">Feature: {payload.feature}</p>}
         <div className="flex gap-3 mt-2 text-[11px] font-semibold text-white">
           <span>✅ {passed} OK</span>
           <span>❌ {failed} fallas</span>

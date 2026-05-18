@@ -388,22 +388,39 @@ function FullLayout({ payload, countdown, isWarning, showBlockers, showFeatures 
 // ─── main export ─────────────────────────────────────────────────────────────
 
 export default function CountdownCritical({ payload }: SurfaceProps<CountdownCriticalPayload>) {
-  const [countdown, setCountdown] = useState(() => computeCountdown(payload.deadline))
+  const deadline = typeof payload?.deadline === 'string' ? payload.deadline : new Date(Date.now() + 3600000).toISOString()
+  const criticalBlockers = Array.isArray(payload?.criticalBlockers) ? payload.criticalBlockers : []
+  const isEmpty = !payload?.deadline
+
+  const safePayload: CountdownCriticalPayload = {
+    ...payload,
+    deadline,
+    criticalBlockers,
+    title: typeof payload?.title === 'string' ? payload.title : 'Sin título',
+    viabilityScore: typeof payload?.viabilityScore === 'number' ? payload.viabilityScore : 0,
+    variant: payload?.variant ?? 'compact',
+  }
+
+  const [countdown, setCountdown] = useState(() => computeCountdown(deadline))
 
   useEffect(() => {
-    const id = setInterval(() => setCountdown(computeCountdown(payload.deadline)), 1000)
+    const id = setInterval(() => setCountdown(computeCountdown(deadline)), 1000)
     return () => clearInterval(id)
-  }, [payload.deadline])
+  }, [deadline])
 
-  const minsLeft = minutesRemaining(payload.deadline)
+  if (isEmpty) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
+  const minsLeft = minutesRemaining(deadline)
   const isWarning = minsLeft < 10
 
-  const showBlockers = payload.showBlockers !== false && payload.criticalBlockers.length > 0
-  const showFeatures = payload.showFeatures !== false && (payload.featuresToCut?.length ?? 0) > 0
+  const showBlockers = safePayload.showBlockers !== false && criticalBlockers.length > 0
+  const showFeatures = safePayload.showFeatures !== false && (safePayload.featuresToCut?.length ?? 0) > 0
 
-  const props = { payload, countdown, isWarning, showBlockers, showFeatures }
+  const props = { payload: safePayload, countdown, isWarning, showBlockers, showFeatures }
 
-  return payload.variant === 'full'
+  return safePayload.variant === 'full'
     ? <FullLayout {...props} />
     : <CompactLayout {...props} />
 }

@@ -35,7 +35,12 @@ function Initials({ name }: { name: string }) {
 }
 
 export default function FocusedTaskPanel({ payload }: SurfaceProps<FocusedTaskPayload>) {
-  const { title, description, priority, status, assignedTo, coachNote } = payload
+  const title = typeof payload?.title === 'string' ? payload.title : 'Sin título'
+  const description = typeof payload?.description === 'string' ? payload.description : ''
+  const priority: Priority = (payload?.priority && payload.priority in PRIORITY_CONFIG) ? payload.priority : 'medium'
+  const status: Status = (payload?.status && payload.status in STATUS_CONFIG) ? payload.status : 'todo'
+  const assignedTo = typeof payload?.assignedTo === 'string' ? payload.assignedTo : '—'
+  const coachNote = payload?.coachNote
   const cardRef = useRef<HTMLDivElement>(null)
   const { base } = PRIORITY_CONFIG[priority]
   const priorityCfg = PRIORITY_CONFIG[priority]

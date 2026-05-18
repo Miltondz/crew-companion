@@ -14,6 +14,13 @@ const priorityStyles = {
 }
 
 export default function TaskSuggestionPanel({ payload }: SurfaceProps<TaskSuggestionPayload>) {
+  const context = typeof payload?.context === 'string' ? payload.context : ''
+  const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : []
+
+  if (suggestions.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
+
   return (
     <Card className="w-full max-w-md shadow-lg border-2 border-slate-100 overflow-hidden">
       <CardHeader className="bg-slate-50 border-b py-3 px-4">
@@ -23,14 +30,14 @@ export default function TaskSuggestionPanel({ payload }: SurfaceProps<TaskSugges
             <span>Sugerencias de tareas</span>
           </CardTitle>
           <p className="text-[11px] text-slate-500 font-medium leading-tight">
-            {payload.context}
+            {context}
           </p>
         </div>
       </CardHeader>
 
       <CardContent className="p-0">
         <div className="flex flex-col">
-          {payload.suggestions.map((suggestion, index) => (
+          {suggestions.map((suggestion, index) => (
             <div key={index}>
               <div
                 className={cn(
@@ -71,7 +78,7 @@ export default function TaskSuggestionPanel({ payload }: SurfaceProps<TaskSugges
                   </div>
                 </div>
               </div>
-              {index < payload.suggestions.length - 1 && <Separator />}
+              {index < suggestions.length - 1 && <Separator />}
             </div>
           ))}
         </div>

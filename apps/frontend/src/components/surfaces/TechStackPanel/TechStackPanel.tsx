@@ -8,7 +8,13 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { TechStackPayload } from './manifest'
 
 export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayload>) {
+  const projectName = typeof payload?.projectName === 'string' ? payload.projectName : 'Sin título'
+  const stack = Array.isArray(payload?.stack) ? payload.stack : []
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null)
+
+  if (stack.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const copyCommand = (cmd: string) => {
     navigator.clipboard.writeText(cmd).then(() => {
@@ -22,7 +28,7 @@ export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayloa
       <CardHeader className="bg-zinc-900 py-3 px-4">
         <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
           <span>🛠️</span>
-          <span>{payload.projectName} — Stack técnico</span>
+          <span>{projectName} — Stack técnico</span>
         </CardTitle>
       </CardHeader>
 
@@ -31,7 +37,7 @@ export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayloa
         <div className="p-4 space-y-2 border-b border-zinc-100">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Tecnologías</p>
           <div className="flex flex-wrap gap-2">
-            {payload.stack.map((tech, i) => (
+            {stack.map((tech, i) => (
               <div key={i} className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1.5">
                 <span className="text-xs font-semibold text-zinc-800">{tech.name}</span>
                 {tech.version && <span className="text-[10px] text-zinc-400">v{tech.version}</span>}
@@ -44,7 +50,7 @@ export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayloa
         </div>
 
         {/* Commands */}
-        {payload.commands && payload.commands.length > 0 && (
+        {payload?.commands && payload.commands.length > 0 && (
           <div className="p-4 space-y-2 border-b border-zinc-100">
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Comandos</p>
             <div className="space-y-1.5">
@@ -72,7 +78,7 @@ export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayloa
         )}
 
         {/* Ports */}
-        {payload.ports && payload.ports.length > 0 && (
+        {payload?.ports && payload.ports.length > 0 && (
           <div className="p-4 space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Puertos</p>
             <div className="flex flex-wrap gap-2">
@@ -86,7 +92,7 @@ export default function TechStackPanel({ payload }: SurfaceProps<TechStackPayloa
           </div>
         )}
 
-        {payload.notes && (
+        {payload?.notes && (
           <div className="px-4 pb-4">
             <p className="text-xs text-zinc-500 italic">{payload.notes}</p>
           </div>

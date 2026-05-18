@@ -6,7 +6,19 @@ import {
   createCopilotRuntimeHandler,
 } from "@copilotkit/runtime/v2";
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
+import pg from "pg";
 import { FullEnvelopeSchema } from "./envelope-schema.js";
+
+const { Pool } = pg;
+
+let _pool: pg.Pool | null = null;
+
+function getPool(): pg.Pool {
+  if (!_pool) {
+    _pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  }
+  return _pool;
+}
 
 const intelligence =
   process.env.INTELLIGENCE_API_URL && process.env.INTELLIGENCE_API_KEY
@@ -35,6 +47,41 @@ const coachAgent   = makeAgent("coach");
 // In-memory agent health cache — avoids a ping on every warm request
 let agentLastOk = 0
 const AGENT_HEALTH_TTL_MS = 5 * 60 * 1000
+
+interface OwnershipEntry { allowed: boolean; expiry: number }
+const ownershipCache = new Map<string, OwnershipEntry>()
+const OWNERSHIP_TTL_MS = 60_000
+const OWNERSHIP_CACHE_MAX = 1000
+
+async function checkWorkspaceOwnership(userId: string, workspaceId: string): Promise<boolean> {
+  const cacheKey = `${userId}:${workspaceId}`
+  const cached = ownershipCache.get(cacheKey)
+  if (cached && cached.expiry > Date.now()) return cached.allowed
+
+  let allowed = false
+  if (process.env.DATABASE_URL) {
+    try {
+      const result = await getPool().query(
+        "SELECT 1 FROM user_projects WHERE user_id = $1 AND workspace_id = $2 LIMIT 1",
+        [userId, workspaceId]
+      )
+      allowed = (result.rowCount ?? 0) > 0
+    } catch {
+      // DB unavailable — fail open to avoid blocking legitimate traffic during cold start
+      return true
+    }
+  } else {
+    // No DB configured (dev without DB) — skip ownership enforcement
+    return true
+  }
+
+  if (ownershipCache.size >= OWNERSHIP_CACHE_MAX) {
+    const oldest = ownershipCache.keys().next().value
+    if (oldest !== undefined) ownershipCache.delete(oldest)
+  }
+  ownershipCache.set(cacheKey, { allowed, expiry: Date.now() + OWNERSHIP_TTL_MS })
+  return allowed
+}
 
 async function ensureAgentAlive(lgUrl: string): Promise<{ ok: boolean }> {
   if (Date.now() - agentLastOk < AGENT_HEALTH_TTL_MS) return { ok: true }
@@ -240,6 +287,33 @@ app.post("/api/approvals/:envelopeId/reject", async (c) => {
 
 // CopilotKit — preflight checks agent is alive, then delegates
 app.all("/api/copilotkit/*", async (c) => {
+  if (c.req.method === "OPTIONS") {
+    return copilotHandler(c.req.raw);
+  }
+
+  const path = new URL(c.req.url).pathname;
+  const isMutating = ["POST", "PATCH", "PUT"].includes(c.req.method);
+  const isMessageSend = isMutating && (
+    path.endsWith("/chat/completions") ||
+    path.endsWith("/actions/execute") ||
+    path === "/api/copilotkit"
+  );
+
+  if (isMessageSend) {
+    const workspaceId = c.req.header("x-workspace-id");
+    const userId = c.req.header("x-user-id");
+    if (!workspaceId) {
+      return c.json({ error: "Missing x-workspace-id header" }, 401);
+    }
+    if (!userId) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    const owned = await checkWorkspaceOwnership(userId, workspaceId);
+    if (!owned) {
+      return c.json({ error: "Forbidden: workspace not owned by caller" }, 403);
+    }
+  }
+
   const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123";
   const health = await ensureAgentAlive(lgUrl);
   if (!health.ok) {

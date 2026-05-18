@@ -7,8 +7,12 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { DebugSessionPayload } from './manifest'
 
 export default function DebugSession({ payload }: SurfaceProps<DebugSessionPayload>) {
-  const [steps, setSteps] = useState(payload.steps)
+  const [steps, setSteps] = useState(Array.isArray(payload?.steps) ? payload.steps : [])
   const [activeStep, setActiveStep] = useState(0)
+
+  if (steps.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const toggleStep = (id: string) => {
     setSteps(prev => prev.map(s => s.id === id ? { ...s, resolved: !s.resolved } : s))
@@ -21,10 +25,10 @@ export default function DebugSession({ payload }: SurfaceProps<DebugSessionPaylo
       <CardHeader className="bg-gradient-to-r from-orange-600 to-red-600 py-3 px-4">
         <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
           <span>🔍</span>
-          <span>{payload.title}</span>
+          <span>{typeof payload?.title === 'string' ? payload.title : 'Sin título'}</span>
         </CardTitle>
-        {payload.problem && (
-          <p className="text-xs text-orange-100 mt-1">"{payload.problem}"</p>
+        {payload?.problem && (
+          <p className="text-xs text-orange-100 mt-1">"{payload?.problem}"</p>
         )}
       </CardHeader>
 
@@ -41,7 +45,7 @@ export default function DebugSession({ payload }: SurfaceProps<DebugSessionPaylo
         </div>
 
         {/* Hypothesis */}
-        {payload.hypothesis && payload.hypothesis.length > 0 && (
+        {payload?.hypothesis && payload.hypothesis.length > 0 && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Hipótesis</p>
             {payload.hypothesis.map((h, i) => (
@@ -89,7 +93,7 @@ export default function DebugSession({ payload }: SurfaceProps<DebugSessionPaylo
           ))}
         </div>
 
-        {payload.resolution && resolvedCount === steps.length && (
+        {payload?.resolution && resolvedCount === steps.length && (
           <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
             <p className="text-xs font-semibold text-emerald-700">✅ {payload.resolution}</p>
           </div>

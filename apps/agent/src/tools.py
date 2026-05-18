@@ -25,8 +25,14 @@ def create_task(
     priority: TaskPriority,
     state: Annotated[dict, InjectedState],
     milestone_id: str = "",
-) -> Command:
-    """Create a new task and add it to the team's task list."""
+    idempotency_key: Optional[str] = None,
+) -> Command | dict:
+    """Create a new task and add it to the team's task list. Pass idempotency_key to prevent duplicate creation on retry."""
+    tasks = state.get("tasks", [])
+    if idempotency_key:
+        existing = next((t for t in tasks if t.get("idempotency_key") == idempotency_key), None)
+        if existing:
+            return {"already_exists": True, "id": existing.get("id"), "entity_type": "task"}
     task = {
         "id": str(uuid4()),
         "title": title,
@@ -36,8 +42,9 @@ def create_task(
         "milestoneId": milestone_id or None,
         "status": "todo",
         "createdAt": datetime.now(timezone.utc).isoformat(),
+        "idempotency_key": idempotency_key,
     }
-    return Command(update={"tasks": [*state.get("tasks", []), task]})
+    return Command(update={"tasks": [*tasks, task]})
 
 
 @guarded_tool(
@@ -66,15 +73,22 @@ def create_milestone(
     deadline_iso: str,
     task_ids: list[str],
     state: Annotated[dict, InjectedState],
-) -> Command:
-    """Create a milestone with an absolute ISO deadline."""
+    idempotency_key: Optional[str] = None,
+) -> Command | dict:
+    """Create a milestone with an absolute ISO deadline. Pass idempotency_key to prevent duplicate creation on retry."""
+    milestones = state.get("milestones", [])
+    if idempotency_key:
+        existing = next((m for m in milestones if m.get("idempotency_key") == idempotency_key), None)
+        if existing:
+            return {"already_exists": True, "id": existing.get("id"), "entity_type": "milestone"}
     milestone = {
         "id": str(uuid4()),
         "title": title,
         "deadline": deadline_iso,
         "taskIds": task_ids,
+        "idempotency_key": idempotency_key,
     }
-    milestones = [*state.get("milestones", []), milestone]
+    milestones = [*milestones, milestone]
     return Command(update={"milestones": milestones, "activeMilestoneId": milestone["id"]})
 
 
@@ -177,8 +191,14 @@ def create_blocker(
     member_id: str,
     description: str,
     state: Annotated[dict, InjectedState],
-) -> Command:
-    """Report a new blocker for a team member."""
+    idempotency_key: Optional[str] = None,
+) -> Command | dict:
+    """Report a new blocker for a team member. Pass idempotency_key to prevent duplicate creation on retry."""
+    blockers = state.get("blockers", [])
+    if idempotency_key:
+        existing = next((b for b in blockers if b.get("idempotency_key") == idempotency_key), None)
+        if existing:
+            return {"already_exists": True, "id": existing.get("id"), "entity_type": "blocker"}
     blocker = {
         "id": str(uuid4()),
         "memberId": member_id,
@@ -186,8 +206,9 @@ def create_blocker(
         "reportedAt": datetime.now(timezone.utc).isoformat(),
         "resolved": False,
         "resolvedAt": None,
+        "idempotency_key": idempotency_key,
     }
-    return Command(update={"blockers": [*state.get("blockers", []), blocker]})
+    return Command(update={"blockers": [*blockers, blocker]})
 
 
 @guarded_tool(
@@ -199,16 +220,23 @@ def add_member(
     role: str,
     state: Annotated[dict, InjectedState],
     technical_level: str = "low-tech",
-) -> Command:
-    """Add a new team member to the workspace."""
+    idempotency_key: Optional[str] = None,
+) -> Command | dict:
+    """Add a new team member to the workspace. Pass idempotency_key to prevent duplicate creation on retry."""
+    members = state.get("members", [])
+    if idempotency_key:
+        existing = next((m for m in members if m.get("idempotency_key") == idempotency_key), None)
+        if existing:
+            return {"already_exists": True, "id": existing.get("id"), "entity_type": "member"}
     member = {
         "id": str(uuid4()),
         "name": name,
         "role": role,
         "technicalLevel": technical_level,
         "activeBlockerId": None,
+        "idempotency_key": idempotency_key,
     }
-    return Command(update={"members": [*state.get("members", []), member]})
+    return Command(update={"members": [*members, member]})
 
 
 @guarded_tool(
@@ -406,16 +434,23 @@ def create_document(
     content: str,
     owner_id: str,
     state: Annotated[dict, InjectedState],
-) -> Command:
-    """Create a new shared document and add it to the team's document list."""
+    idempotency_key: Optional[str] = None,
+) -> Command | dict:
+    """Create a new shared document and add it to the team's document list. Pass idempotency_key to prevent duplicate creation on retry."""
+    docs = state.get("sharedDocuments", [])
+    if idempotency_key:
+        existing = next((d for d in docs if d.get("idempotency_key") == idempotency_key), None)
+        if existing:
+            return {"already_exists": True, "id": existing.get("id"), "entity_type": "document"}
     doc = {
         "id": str(uuid4()),
         "title": title,
         "content": content,
         "sharedBy": owner_id,
         "sharedAt": datetime.now(timezone.utc).isoformat(),
+        "idempotency_key": idempotency_key,
     }
-    return Command(update={"sharedDocuments": [*state.get("sharedDocuments", []), doc]})
+    return Command(update={"sharedDocuments": [*docs, doc]})
 
 
 @guarded_tool(

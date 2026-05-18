@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 import { getPool } from '@/lib/db'
 
 const BFF_URL = process.env.BFF_URL ?? 'http://localhost:4000'
@@ -47,6 +48,13 @@ async function proxy(req: NextRequest): Promise<Response> {
   headers.delete('host')
   headers.delete('x-forwarded-host')
   headers.delete('x-forwarded-for')
+
+  // Attach server-verified user id so BFF can trust it without calling back to frontend
+  headers.delete('x-user-id')
+  const session = await auth()
+  if (session?.user?.id) {
+    headers.set('x-user-id', session.user.id)
+  }
 
   if (req.method === 'POST') {
     const workspaceId = req.headers.get('x-workspace-id')

@@ -16,8 +16,13 @@ const verdictStyles: Record<Verdict, { label: string; bg: string }> = {
 }
 
 export default function TriageWarRoom({ payload }: SurfaceProps<TriageWarRoomPayload>) {
-  const { decisions, title } = payload
+  const decisions = Array.isArray(payload?.decisions) ? payload.decisions : []
+  const title = payload?.title
   const [index, setIndex] = useState(0)
+
+  if (decisions.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({})
 
   const pending = decisions.length - Object.keys(verdicts).length

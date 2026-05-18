@@ -7,7 +7,13 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { BeginnerGuidePayload } from './manifest'
 
 export default function BeginnerGuidePanel({ payload }: SurfaceProps<BeginnerGuidePayload>) {
-  const { topic, steps, estimatedMinutes } = payload
+  const topic = typeof payload?.topic === 'string' ? payload.topic : 'Sin título'
+  const steps = Array.isArray(payload?.steps) ? payload.steps : []
+  const estimatedMinutes = typeof payload?.estimatedMinutes === 'number' ? payload.estimatedMinutes : 0
+
+  if (steps.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   return (
     <Card className="w-full max-w-md shadow-lg border-2 border-blue-100 overflow-hidden">

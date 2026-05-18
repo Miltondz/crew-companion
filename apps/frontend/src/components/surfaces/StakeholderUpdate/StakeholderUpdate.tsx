@@ -15,15 +15,24 @@ const highlightConfig = {
 
 export default function StakeholderUpdate({ payload }: SurfaceProps<StakeholderUpdatePayload>) {
   const [copied, setCopied] = useState(false)
+  const updateText = typeof payload?.updateText === 'string' ? payload.updateText : ''
+  const highlights = Array.isArray(payload?.highlights) ? payload.highlights : []
+  const nextSteps = Array.isArray(payload?.nextSteps) ? payload.nextSteps : []
+  const projectName = typeof payload?.projectName === 'string' ? payload.projectName : 'Sin título'
+  const generatedAt = typeof payload?.generatedAt === 'string' ? payload.generatedAt : ''
+
+  if (!updateText && highlights.length === 0 && nextSteps.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const fullText = [
-    payload.updateText,
+    updateText,
     '',
     'Highlights:',
-    ...payload.highlights.map(h => `• ${h.text}`),
+    ...highlights.map(h => `• ${h.text}`),
     '',
     'Próximos pasos:',
-    ...payload.nextSteps.map((s, i) => `${i + 1}. ${s}`),
+    ...nextSteps.map((s, i) => `${i + 1}. ${s}`),
   ].join('\n')
 
   const copyUpdate = () => {
@@ -40,20 +49,20 @@ export default function StakeholderUpdate({ payload }: SurfaceProps<StakeholderU
           <span>📢</span>
           <span>Update para stakeholders</span>
         </CardTitle>
-        <p className="text-xs text-indigo-200 mt-0.5">{payload.projectName} · {payload.generatedAt}</p>
+        <p className="text-xs text-indigo-200 mt-0.5">{projectName} · {generatedAt}</p>
       </CardHeader>
 
       <CardContent className="p-4 space-y-3">
         {/* Main text */}
         <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3">
-          <p className="text-xs text-zinc-700 leading-relaxed whitespace-pre-line">{payload.updateText}</p>
+          <p className="text-xs text-zinc-700 leading-relaxed whitespace-pre-line">{updateText}</p>
         </div>
 
         {/* Highlights */}
-        {payload.highlights.length > 0 && (
+        {highlights.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Highlights</p>
-            {payload.highlights.map((h, i) => {
+            {highlights.map((h, i) => {
               const cfg = highlightConfig[h.type]
               return (
                 <div key={i} className={cn('rounded-lg border px-3 py-2 flex items-start gap-2', cfg.className)}>
@@ -68,7 +77,7 @@ export default function StakeholderUpdate({ payload }: SurfaceProps<StakeholderU
         {/* Next steps */}
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Próximos pasos</p>
-          {payload.nextSteps.map((step, i) => (
+          {nextSteps.map((step, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-bold flex items-center justify-center shrink-0">
                 {i + 1}

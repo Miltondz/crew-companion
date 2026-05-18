@@ -8,7 +8,17 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { MilestoneSummaryPayload } from './manifest'
 
 export default function MilestoneSummaryPanel({ payload }: SurfaceProps<MilestoneSummaryPayload>) {
-  const { phase, minutesLeft, completedTasks, pendingTasks, atRiskTasks, recommendation, milestone } = payload
+  const phase = payload?.phase ?? 'normal'
+  const minutesLeft = typeof payload?.minutesLeft === 'number' ? payload.minutesLeft : 0
+  const completedTasks = Array.isArray(payload?.completedTasks) ? payload.completedTasks : []
+  const pendingTasks = Array.isArray(payload?.pendingTasks) ? payload.pendingTasks : []
+  const atRiskTasks = Array.isArray(payload?.atRiskTasks) ? payload.atRiskTasks : []
+  const recommendation = typeof payload?.recommendation === 'string' ? payload.recommendation : ''
+  const milestone = payload?.milestone
+
+  if (!milestone) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const totalTasks = completedTasks.length + pendingTasks.length
   const progressPercent = totalTasks > 0 ? (completedTasks.length / totalTasks) * 100 : 0

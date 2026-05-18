@@ -8,7 +8,13 @@ import type { SurfaceProps } from '@/runtime/surface-registry/types'
 import type { MemberActionPayload } from './manifest'
 
 export default function MemberActionPanel({ payload }: SurfaceProps<MemberActionPayload>) {
-  const { urgencyPhase, actions, message } = payload
+  const urgencyPhase = payload?.urgencyPhase ?? 'normal'
+  const actions = Array.isArray(payload?.actions) ? payload.actions : []
+  const message = typeof payload?.message === 'string' ? payload.message : ''
+
+  if (actions.length === 0) {
+    return <div className="p-4 text-center text-[var(--text-muted)] text-xs">Sin datos para mostrar</div>
+  }
 
   const phaseStyles = {
     urgent: 'bg-orange-100 border-orange-300 text-orange-900',
