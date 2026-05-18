@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { layoutEngine } from './layout-engine'
-import { pinningStore, type PinnedEntry } from './pinning'
+import { getPinningStore, type PinnedEntry } from './pinning'
 import type { SurfaceMount } from './types'
 
-export function usePinning() {
+export function usePinning(workspaceId: string | undefined) {
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
@@ -12,20 +12,24 @@ export function usePinning() {
 
   const pin = useCallback((mount: SurfaceMount) => {
     layoutEngine.pin(mount.mountId)
-    pinningStore.add({
-      manifestId: mount.manifestId,
-      envelope: mount.envelope,
-      regionId: mount.regionId,
-      pinnedAt: Date.now(),
-    })
-  }, [])
+    if (workspaceId) {
+      getPinningStore(workspaceId).add({
+        manifestId: mount.manifestId,
+        envelope: mount.envelope,
+        regionId: mount.regionId,
+        pinnedAt: Date.now(),
+      })
+    }
+  }, [workspaceId])
 
   const unpin = useCallback((mount: SurfaceMount) => {
     layoutEngine.unpin(mount.mountId)
-    pinningStore.remove(mount.manifestId)
-  }, [])
+    if (workspaceId) {
+      getPinningStore(workspaceId).remove(mount.manifestId)
+    }
+  }, [workspaceId])
 
-  const list: PinnedEntry[] = pinningStore.list()
+  const list: PinnedEntry[] = workspaceId ? getPinningStore(workspaceId).list() : []
   void version
   return { pinned: list, pin, unpin }
 }

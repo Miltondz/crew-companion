@@ -1,6 +1,6 @@
 export { WorkspaceShell } from './WorkspaceShell'
 export { layoutEngine, LayoutEngine } from './layout-engine'
-export { pinningStore } from './pinning'
+export { getPinningStore } from './pinning'
 export { useLayoutEngine } from './useLayoutEngine'
 export { usePinning } from './usePinning'
 export { usePhaseSync } from './usePhaseSync'

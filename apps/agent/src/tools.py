@@ -73,7 +73,6 @@ def create_milestone(
         "title": title,
         "deadline": deadline_iso,
         "taskIds": task_ids,
-        "phase": "normal",
     }
     milestones = [*state.get("milestones", []), milestone]
     return Command(update={"milestones": milestones, "activeMilestoneId": milestone["id"]})

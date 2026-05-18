@@ -128,7 +128,7 @@ function MarkdownContent({ content }: { content: string }) {
 
 function DocsCanvas() {
   const { data: session } = useSession()
-  const { state, setState } = useCrewAgent()
+  const { state, setState, workspaceId } = useCrewAgent()
   const { events: activityEvents, push: pushActivity } = useActivityStream()
 
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
@@ -315,6 +315,7 @@ function DocsCanvas() {
     <>
       <WorkspaceShell
         phase={state.urgencyPhase}
+        workspaceId={workspaceId ?? undefined}
         agentRail={<CopilotChat className="h-full" />}
         webNav={<WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />}
         user={{ name: currentMember?.name ?? 'Usuario', role: currentMember?.role === 'leader' ? 'Team Lead' : 'Miembro' }}

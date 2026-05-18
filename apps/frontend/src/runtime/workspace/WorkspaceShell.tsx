@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useLayoutEngine } from './useLayoutEngine'
 import { usePhaseSync } from './usePhaseSync'
-import { pinningStore } from './pinning'
+import { getPinningStore } from './pinning'
 import { CommandSurfaceRegion } from './regions/CommandSurfaceRegion'
 import { AgentRailRegion } from './regions/AgentRailRegion'
 import { ActivityStreamRegion } from './regions/ActivityStreamRegion'
@@ -28,6 +28,7 @@ interface Props {
   phase: UrgencyPhase
   agentRail: ReactNode
   children: ReactNode
+  workspaceId?: string
   onNewChat?: () => void
   user?: { name: string; role: string; avatar?: string }
   mascotProps?: Omit<HabitatComponentProps, 'sidebar'>
@@ -36,20 +37,24 @@ interface Props {
   webNav?: ReactNode
 }
 
-export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, mascotProps, commandSurface, activityEvents, webNav }: Props) {
+export function WorkspaceShell({ phase, agentRail, children, workspaceId, onNewChat, user, mascotProps, commandSurface, activityEvents, webNav }: Props) {
   const layout = useLayoutEngine()
   usePhaseSync(phase)
 
   const isResizing = useRef(false)
 
   useEffect(() => {
-    pinningStore.hydrateIntoEngine()
-  }, [])
+    if (workspaceId) {
+      getPinningStore(workspaceId).hydrateIntoEngine()
+    }
+  }, [workspaceId])
+
+  const sbKey = workspaceId ? `sb-width:${workspaceId}` : 'sb-width'
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('sb-width') : null
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(sbKey) : null
     if (saved) document.documentElement.style.setProperty('--sb-width', saved)
-  }, [])
+  }, [sbKey])
 
   function startResize(e: React.PointerEvent) {
     isResizing.current = true
@@ -66,7 +71,7 @@ export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, ma
     if (!isResizing.current) return
     isResizing.current = false
     const w = getComputedStyle(document.documentElement).getPropertyValue('--sb-width').trim()
-    try { localStorage.setItem('sb-width', w) } catch {}
+    try { localStorage.setItem(sbKey, w) } catch {}
   }
 
   return (

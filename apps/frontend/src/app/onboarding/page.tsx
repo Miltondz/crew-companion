@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronRight, ChevronLeft, Plus, X, Check, Link, FileText, Users, Rocket, ArrowLeft, Zap, Clock, Brain } from 'lucide-react'
 import NextLink from 'next/link'
@@ -409,6 +410,8 @@ function Intro({ onStart }: { onStart: () => void }) {
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { status } = useSession()
+  const [authChecked, setAuthChecked] = useState(false)
   const [started, setStarted] = useState(false)
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
@@ -476,6 +479,34 @@ export default function OnboardingPage() {
       setError('Error al guardar. Intentá de nuevo.')
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setAuthChecked(true)
+      router.replace('/auth/signin')
+      return
+    }
+    if (status === 'authenticated') {
+      fetch('/api/me/identity')
+        .then(r => r.json())
+        .then(d => {
+          if (d.workspaceId) {
+            router.replace('/dashboard')
+          } else {
+            setAuthChecked(true)
+          }
+        })
+        .catch(() => setAuthChecked(true))
+    }
+  }, [status, router])
+
+  if (status === 'loading' || !authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="h-6 w-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      </div>
+    )
   }
 
   return (

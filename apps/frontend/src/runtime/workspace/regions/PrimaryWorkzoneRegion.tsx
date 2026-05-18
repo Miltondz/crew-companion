@@ -70,10 +70,11 @@ const PRIORITY_RANK: Record<string, number> = {
 interface Props {
   mounts: SurfaceMount[]
   phase?: UrgencyPhase
+  workspaceId?: string
 }
 
-export function PrimaryWorkzoneRegion({ mounts, phase }: Props) {
-  const { pin, unpin } = usePinning()
+export function PrimaryWorkzoneRegion({ mounts, phase, workspaceId }: Props) {
+  const { pin, unpin } = usePinning(workspaceId)
 
   const sorted = useMemo(() => {
     if (mounts.length === 0) return []

@@ -37,11 +37,12 @@ import { fireCelebration } from '@/lib/confetti'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
 import type { CrewState, UrgencyPhase, TaskStatus } from '@/lib/crew/types'
+import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 
 
 function MemberCanvas({ memberId }: { memberId: string }) {
   const router = useRouter()
-  const { state, setState } = useCrewAgent()
+  const { state, setState, workspaceId } = useCrewAgent()
 
   const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
@@ -199,7 +200,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       if (!args.envelope) return null
       const fullEnvelope = isLegacyEnvelope(args.envelope)
         ? adaptLegacyEnvelope(args.envelope, runtimeContext)
-        : (args.envelope as import('@/runtime/surface-registry/types').SurfaceEnvelope)
+        : (args.envelope as SurfaceEnvelope)
       const result = layoutEngine.mount(fullEnvelope, runtimeContext)
       if (!result.ok) {
         return <SurfaceHost envelope={fullEnvelope} context={runtimeContext} />
@@ -274,6 +275,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     <>
       <WorkspaceShell
         phase={urgencyPhase}
+        workspaceId={workspaceId ?? undefined}
         agentRail={<CopilotChat className="h-full" />}
         commandSurface={{ agentStatus: <AgentStatusPill /> }}
         mascotProps={{
@@ -350,7 +352,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
-          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} workspaceId={workspaceId ?? undefined} />
           {/* Active task + countdown row */}
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">

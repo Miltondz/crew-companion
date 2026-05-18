@@ -187,7 +187,7 @@ function PostMortemPanel({ milestoneTitle }: { milestoneTitle: string }) {
 function LeaderCanvas() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { state, setState } = useCrewAgent()
+  const { state, setState, workspaceId } = useCrewAgent()
 
   const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
@@ -691,6 +691,7 @@ function LeaderCanvas() {
     <>
       <WorkspaceShell
         phase={urgencyPhase}
+        workspaceId={workspaceId ?? undefined}
         agentRail={<CopilotChat className="h-full" />}
         webNav={<WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />}
         user={{ name: state.members.find(m => m.id === state.currentMemberId)?.name ?? 'Leader', role: 'Team Lead' }}
@@ -729,7 +730,7 @@ function LeaderCanvas() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
         >
-          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} />
+          <PrimaryWorkzoneRegion mounts={layout['primary-workzone'].mounts} phase={urgencyPhase} workspaceId={workspaceId ?? undefined} />
 
           {/* Bento grid — sortable sections + minimized tray share one DndContext so ribbon-drop-zone is a valid target */}
           <DndContext
