@@ -22,7 +22,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'motion/react'
 import { TaskCard } from '@/components/shared/TaskCard'
-import { EmptyState } from '@/components/shared/EmptyState'
 import type { TaskStatus, TaskPriority } from '@/lib/crew/types'
 
 function getEventCoords(event: Event): { x: number; y: number } | null {
@@ -251,10 +250,7 @@ function DroppableColumn({
             )}
           </AnimatePresence>
           {hasRealTasks && columnTasks.length === 0 && (
-            <EmptyState
-              icon={status === 'done' ? '✅' : status === 'in-progress' ? '🔄' : '📋'}
-              title="Sin tareas"
-            />
+            <div className="text-xs text-[var(--text-muted)] py-3 text-center">Sin tareas</div>
           )}
         </div>
       </SortableContext>

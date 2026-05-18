@@ -412,25 +412,52 @@ export default function OnboardingPage() {
   const router = useRouter()
   const { status } = useSession()
   const [authChecked, setAuthChecked] = useState(false)
-  const [started, setStarted] = useState(false)
+  const [started, setStarted] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try { return !!localStorage.getItem('crew-onboarding-wizard-v1') } catch { return false }
+  })
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const [state, setState] = useState<WizardState>({
-    projectType: null,
-    isDevProject: true,
-    projectName: '',
-    deadline: '',
-    contextMode: 'skip',
-    contextUrl: '',
-    contextText: '',
-    members: [{ id: crypto.randomUUID(), name: '', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' }],
+  const [state, setState] = useState<WizardState>(() => {
+    if (typeof window === 'undefined') {
+      return {
+        projectType: null, isDevProject: true, projectName: '', deadline: '',
+        contextMode: 'skip', contextUrl: '', contextText: '',
+        members: [{ id: crypto.randomUUID(), name: '', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' }],
+      }
+    }
+    try {
+      const saved = localStorage.getItem('crew-onboarding-wizard-v1')
+      if (saved) return { ...JSON.parse(saved) } as WizardState
+    } catch { /* ignore */ }
+    return {
+      projectType: null, isDevProject: true, projectName: '', deadline: '',
+      contextMode: 'skip', contextUrl: '', contextText: '',
+      members: [{ id: crypto.randomUUID(), name: '', role: 'leader', technicalLevel: 'high-tech', specialization: 'manager' }],
+    }
   })
 
   const update = (k: keyof WizardState, v: unknown) =>
     setState(prev => ({ ...prev, [k]: v }))
+
+  useEffect(() => {
+    if (!started) return
+    try {
+      localStorage.setItem('crew-onboarding-wizard-v1', JSON.stringify({
+        projectType: state.projectType,
+        isDevProject: state.isDevProject,
+        projectName: state.projectName,
+        deadline: state.deadline,
+        contextMode: state.contextMode,
+        contextUrl: state.contextUrl,
+        contextText: state.contextText,
+        members: state.members,
+      }))
+    } catch { /* ignore */ }
+  }, [started, state])
 
   const canAdvance = () => {
     if (step === 0) return state.projectType !== null
@@ -474,6 +501,7 @@ export default function OnboardingPage() {
         }),
       })
       if (!res.ok) throw new Error('Error al guardar')
+      try { localStorage.removeItem('crew-onboarding-wizard-v1') } catch { /* ignore */ }
       router.push('/dashboard')
     } catch {
       setError('Error al guardar. Intentá de nuevo.')
@@ -570,7 +598,14 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-between mt-8">
             <button
               type="button"
-              onClick={() => step === 0 ? setStarted(false) : go(step - 1)}
+              onClick={() => {
+                if (step === 0) {
+                  try { localStorage.removeItem('crew-onboarding-wizard-v1') } catch { /* ignore */ }
+                  setStarted(false)
+                } else {
+                  go(step - 1)
+                }
+              }}
               className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-all"
             >
               <ChevronLeft className="w-4 h-4" />

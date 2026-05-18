@@ -46,11 +46,12 @@ function FolderCard({
   onDelete: () => void
 }) {
   return (
-    <motion.div
+    <motion.button
+      type="button"
       layout
       whileHover={{ y: -2 }}
       onClick={onSelect}
-      className={`group relative shrink-0 w-[180px] h-[140px] flex rounded-lg overflow-hidden cursor-pointer transition-all ${
+      className={`group relative shrink-0 w-[180px] h-[140px] flex rounded-lg overflow-hidden cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--phase-glow,#8b5cf6)] ${
         isSelected
           ? 'bg-[var(--bg-surface)] ring-2 ring-violet-500/60 shadow-lg'
           : 'bg-[var(--bg-surface)]/60 ring-1 ring-white/10 hover:ring-white/20'
@@ -103,7 +104,7 @@ function FolderCard({
           </button>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   )
 }
 
@@ -162,10 +163,6 @@ function DocsCanvas() {
   const handleCreate = () => {
     const title = createForm.title.trim()
     const content = createForm.content.trim()
-    if (!title) {
-      toast.error('Falta el título')
-      return
-    }
     const doc: SharedDocument = {
       id: crypto.randomUUID(),
       title,

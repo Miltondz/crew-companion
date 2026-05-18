@@ -5,7 +5,7 @@
   --bg-base: #f5f3ef;
   --bg-surface: #ffffff;
   --text-primary: #1a1814;
-  --text-muted: #6b6560;
+  --text-muted: #54504c;
   --sb-width: 300px;
 
   --background: #f5f3ef;
@@ -17,7 +17,7 @@
   --secondary: #e8e4de;
   --secondary-foreground: #1a1814;
   --muted: #f0ece4;
-  --muted-foreground: #6b6560;
+  --muted-foreground: #54504c;
   --accent: #e8e4de;
   --accent-foreground: #1a1814;
   --destructive: #dc2626;
@@ -46,7 +46,7 @@
   --bg-surface: #1f1d16;
   --bg-card: #252218;
   --text-primary: #f0ece4;
-  --text-muted: #8a8070;
+  --text-muted: #a89f8e;
 
   --background: #18160f;
   --foreground: #f0ece4;
@@ -57,7 +57,7 @@
   --secondary: #2e2b22;
   --secondary-foreground: #f0ece4;
   --muted: #1f1d16;
-  --muted-foreground: #8a8070;
+  --muted-foreground: #a89f8e;
   --accent: #2e2b22;
   --accent-foreground: #f0ece4;
   --destructive: #ef4444;

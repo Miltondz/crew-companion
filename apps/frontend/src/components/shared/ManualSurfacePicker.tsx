@@ -1,18 +1,53 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { X, Search, Pin } from 'lucide-react'
+import { Search, Pin } from 'lucide-react'
 import { surfaceRegistry } from '@/runtime/surface-registry/registry'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
 import { getPinningStore } from '@/runtime/workspace/pinning'
 import type { RuntimeContext, RegionId, SurfaceEnvelope } from '@/runtime/surface-registry/types'
 import type { SurfaceManifest } from '@/runtime/surface-registry/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface Props {
   open: boolean
   onClose: () => void
   context: RuntimeContext
   workspaceId: string
+}
+
+const ROLE_CAPABILITY_GRANTS: Record<string, Set<string>> = {
+  leader: new Set([
+    'state.read', 'state.write',
+    'tasks.read', 'tasks.write', 'tasks.delete',
+    'blockers.read', 'blockers.write', 'blockers.resolve',
+    'milestones.read', 'milestones.write',
+    'members.read', 'members.invite',
+    'docs.read', 'docs.write',
+    'ui.render_surface', 'ui.set_mascot', 'ui.highlight',
+  ]),
+  member: new Set([
+    'state.read', 'state.write',
+    'tasks.read', 'tasks.write',
+    'blockers.read', 'blockers.write', 'blockers.resolve',
+    'milestones.read',
+    'members.read',
+    'docs.read', 'docs.write',
+    'ui.render_surface', 'ui.set_mascot', 'ui.highlight',
+  ]),
+  viewer: new Set([
+    'state.read',
+    'tasks.read',
+    'blockers.read',
+    'milestones.read',
+    'members.read',
+    'docs.read',
+  ]),
 }
 
 const REGION_TABS: Array<{ id: RegionId | 'all'; label: string }> = [
@@ -109,6 +144,10 @@ export function ManualSurfacePicker({ open, onClose, context, workspaceId }: Pro
       (!context.specialization || !manifest.visibleToSpecializations.includes(context.specialization))
     ) return false
     if (manifest.forbiddenInPhases && manifest.forbiddenInPhases.includes(context.phase)) return false
+    if (manifest.requiredCapabilities && manifest.requiredCapabilities.length > 0) {
+      const granted = ROLE_CAPABILITY_GRANTS[context.role] ?? new Set()
+      if (!manifest.requiredCapabilities.every(c => granted.has(c))) return false
+    }
     return true
   }
 
@@ -128,22 +167,16 @@ export function ManualSurfacePicker({ open, onClose, context, workspaceId }: Pro
     }
   }
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg mx-4 rounded-xl border border-white/10 bg-zinc-900 shadow-2xl flex flex-col max-h-[80vh]">
+    <Dialog open={open} onOpenChange={isOpen => { if (!isOpen) onClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="p-0 border-white/10 bg-zinc-900 w-full max-w-lg flex flex-col max-h-[80vh] overflow-hidden gap-0"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
-          <h2 className="text-sm font-bold text-zinc-100">Add surface manually</h2>
-          <button
-            onClick={onClose}
-            className="h-6 w-6 flex items-center justify-center rounded text-zinc-500 hover:bg-white/10 hover:text-zinc-300 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <DialogHeader className="flex-row items-center justify-between px-5 py-4 border-b border-white/10 shrink-0 gap-0">
+          <DialogTitle className="text-sm font-bold text-zinc-100">Add surface manually</DialogTitle>
+        </DialogHeader>
 
         {/* Search */}
         <div className="px-5 py-3 border-b border-white/5 shrink-0">
@@ -209,7 +242,7 @@ export function ManualSurfacePicker({ open, onClose, context, workspaceId }: Pro
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
