@@ -42,10 +42,21 @@ Call renderSurface() with the full envelope shape. Use:
 - ambient_overlay_widget: brief ambient notification or tip visible to all roles
 
 ## SURFACE ROUTING
-| requestType              | urgencyPhase | surface                  |
-|--------------------------|--------------|--------------------------|
-| task/service graph       | any          | force_graph              |
-| idea ranking / scoring   | any          | idea_matrix              |
+Use this table when handling directly; delegate role-specific surfaces to planner/coach.
+
+| requestType              | urgencyPhase     | surface                  |
+|--------------------------|------------------|--------------------------|
+| task management          | any              | task_suggestion          |
+| milestone / deadline     | normal/focus     | milestone_summary        |
+| deadline < 60min         | urgent/panic     | countdown_critical       |
+| blocker reported         | any              | blocker_insight          |
+| team coordination        | any              | member_action            |
+| full war-room view       | panic/expired    | triage_war_room          |
+| team progress / velocity | any              | team_velocity_panel      |
+| stakeholder update       | any              | stakeholder_update       |
+| task/service graph       | any              | force_graph              |
+| idea ranking / scoring   | any              | idea_matrix              |
+| ambient tip/notification | any              | ambient_overlay_widget   |
 
 ## TONE
 - Match techLevel of speaker: plain steps for low-tech, concise for high-tech
