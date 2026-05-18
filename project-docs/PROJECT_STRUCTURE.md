@@ -49,6 +49,9 @@ apps/agent/
 ├── langgraph.json           LangGraph deployment manifest (graph ID, Python path)
 ├── pyproject.toml           Python dependencies managed by uv
 │
+├── migrations/
+│   └── 016_workspace_state_version.sql  Adds version column to workspace_state for optimistic-lock PATCH
+│
 ├── src/
 │   ├── __init__.py          Package marker
 │   ├── types.py             Python TypedDicts: TeamMember, Task, Milestone, Blocker, SharedDocument
@@ -128,8 +131,31 @@ apps/frontend/
     │   │   ├── page.tsx     About page (hackathon kit info)
     │   │   └── toc.tsx      Table of contents component
     │   │
-    │   └── showcase/
-    │       └── page.tsx     Feature showcase / component gallery
+    │   ├── showcase/
+    │   │   └── page.tsx     Feature showcase / component gallery
+    │   │
+    │   ├── admin/                          Admin-only pages (leader role required)
+    │   │   ├── layout.tsx                  Admin layout with session + leader role guard
+    │   │   └── audit/
+    │   │       └── page.tsx                Audit log browser: filter by tool/decision/hours, paginated table
+    │   │
+    │   ├── dev/                            Developer tooling pages (dev-mode only)
+    │   │   ├── page.tsx                    Dev tools hub — links to sub-tools
+    │   │   ├── DevToolsResync.tsx          Manual state resync button with conflict resolution UI
+    │   │   └── scenarios/
+    │   │       ├── page.tsx                Scenario runner shell (Suspense wrapper)
+    │   │       └── ScenariosInner.tsx      Scenario harness UI — select + run + diff state before/after
+    │   │
+    │   └── api/
+    │       ├── copilotkit/[[...path]]/
+    │       │   └── route.ts                CopilotKit proxy → BFF :4000; chat_usage 200/day/workspace gate
+    │       ├── warm/
+    │       │   └── route.ts                Agent warmup endpoint — POST to wake LangGraph server
+    │       └── debug/                      Debug endpoints (leader role required)
+    │           ├── audit/
+    │           │   └── route.ts            Returns audit_log rows filtered by tool/decision/hours
+    │           └── sync-metrics/
+    │               └── route.ts            Returns in-memory sync-metrics snapshot
     │
     ├── components/
     │   │
@@ -160,8 +186,10 @@ apps/frontend/
     │   │   │                                   (task_suggestion → TaskSuggestionPanel, etc.)
     │   │   ├── TaskCard.tsx                   Kanban card: priority badge, title, description,
     │   │   │                                   assignee avatar, clickable status cycle
-    │   │   └── UrgencyBanner.tsx              Full-width phase banner (hidden on normal),
-    │   │                                        phase icon + time hint + animate-pulse on panic
+    │   │   ├── UrgencyBanner.tsx              Full-width phase banner (hidden on normal),
+    │   │   │                                    phase icon + time hint + animate-pulse on panic
+    │   │   ├── AgentStatusPill.tsx            Live agent connection status indicator (idle/thinking/error)
+    │   │   └── ManualSurfacePicker.tsx        Modal surface picker: browsable surface registry, mount on demand
     │   │
     │   ├── surfaces/                          AI-rendered generative surfaces (T01-T08)
     │   │   ├── TaskSuggestionPanel.tsx        T01 — Leader: suggested tasks with priority/assignee
@@ -209,6 +237,9 @@ apps/frontend/
     │
     └── lib/
         ├── utils.ts               Tailwind class merge (cn helper)
+        ├── agent-warmup.ts        Fires POST /api/warm on mount to pre-warm LangGraph server
+        ├── scenario-harness.ts    Scenario definitions + runner: applies state patches, captures diffs
+        ├── sync-metrics.ts        In-process counters for state-sync events (syncs, conflicts, errors)
         │
         └── crew/
             ├── types.ts           TypeScript interfaces: TeamMember, Task, Milestone,

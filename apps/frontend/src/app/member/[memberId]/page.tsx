@@ -45,7 +45,7 @@ import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 function MemberCanvas({ memberId }: { memberId: string }) {
   const router = useRouter()
   const { status: sessionStatus } = useSession()
-  const { state, setState, workspaceId } = useCrewAgent()
+  const { state, setState, workspaceId, identity } = useCrewAgent()
 
   const layout = useLayoutEngine()
   const activeMilestoneDeadlineInitial = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
@@ -60,15 +60,11 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       return
     }
     if (sessionStatus !== 'authenticated') return
-    fetch('/api/me/identity')
-      .then(r => r.json())
-      .then(d => {
-        if (d.role === 'leader') { router.replace('/leader'); return }
-        if (d.memberId && d.memberId !== memberId) { router.replace(`/member/${d.memberId}`); return }
-        setState(prev => ({ ...prev, actorRole: 'member', currentMemberId: memberId }))
-      })
-      .catch(() => {})
-  }, [memberId, router, sessionStatus])
+    if (identity.role === null) return
+    if (identity.role === 'leader') { router.replace('/leader'); return }
+    if (identity.memberId && identity.memberId !== memberId) { router.replace(`/member/${identity.memberId}`); return }
+    setState(prev => ({ ...prev, actorRole: 'member', currentMemberId: memberId }))
+  }, [memberId, router, sessionStatus, identity.role, identity.memberId])
 
   const activeMilestoneDeadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
 

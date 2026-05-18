@@ -188,7 +188,7 @@ function PostMortemPanel({ milestoneTitle }: { milestoneTitle: string }) {
 function LeaderCanvas() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { state, setState, workspaceId } = useCrewAgent()
+  const { state, setState, workspaceId, identity } = useCrewAgent()
 
   const layout = useLayoutEngine()
   const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(() => {
@@ -286,17 +286,13 @@ function LeaderCanvas() {
   })
 
   useEffect(() => {
-    fetch('/api/me/identity')
-      .then(r => r.json())
-      .then(d => {
-        if (d.memberId && d.role !== 'leader') {
-          router.replace(`/member/${d.memberId}`)
-          return
-        }
-        setState(prev => ({ ...prev, actorRole: 'leader' }))
-      })
-      .catch(() => {})
-  }, [router])
+    if (identity.role === null) return
+    if (identity.memberId && identity.role !== 'leader') {
+      router.replace(`/member/${identity.memberId}`)
+      return
+    }
+    setState(prev => ({ ...prev, actorRole: 'leader' }))
+  }, [router, identity.role, identity.memberId])
 
   const activeMilestoneDeadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
 

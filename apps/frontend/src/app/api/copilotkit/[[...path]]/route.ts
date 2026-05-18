@@ -3,6 +3,23 @@ import { getPool } from '@/lib/db'
 
 const BFF_URL = process.env.BFF_URL ?? 'http://localhost:4000'
 const CHAT_DAILY_LIMIT = 200
+const CHAT_GLOBAL_LIMIT = 2000
+
+async function checkGlobalUsage(): Promise<{ allowed: boolean; current: number }> {
+  const today = new Date().toISOString().split('T')[0]
+  try {
+    const { rows } = await getPool().query(
+      `SELECT COALESCE(SUM(count), 0)::int AS global_count
+       FROM chat_usage
+       WHERE date = $1`,
+      [today]
+    )
+    const current = rows[0]?.global_count ?? 0
+    return { allowed: current < CHAT_GLOBAL_LIMIT, current }
+  } catch {
+    return { allowed: true, current: 0 }
+  }
+}
 
 async function checkAndIncrementUsage(workspaceId: string): Promise<boolean> {
   const today = new Date().toISOString().split('T')[0]
@@ -34,6 +51,13 @@ async function proxy(req: NextRequest): Promise<Response> {
   if (req.method === 'POST') {
     const workspaceId = req.headers.get('x-workspace-id')
     if (workspaceId && process.env.DATABASE_URL) {
+      const globalCheck = await checkGlobalUsage()
+      if (!globalCheck.allowed) {
+        return NextResponse.json(
+          { error: 'global_daily_limit', limit: CHAT_GLOBAL_LIMIT, current: globalCheck.current },
+          { status: 429 }
+        )
+      }
       const allowed = await checkAndIncrementUsage(workspaceId)
       if (!allowed) {
         return NextResponse.json(

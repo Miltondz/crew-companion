@@ -129,10 +129,29 @@ function mergeOnConflict(local: Partial<CrewState>, server: Partial<CrewState>):
   }
 }
 
+export interface CrewIdentity {
+  userId: string | null
+  workspaceId: string | null
+  memberId: string | null
+  name: string | null
+  email: string | null
+  role: 'leader' | 'member' | null
+}
+
+const NULL_IDENTITY: CrewIdentity = {
+  userId: null,
+  workspaceId: null,
+  memberId: null,
+  name: null,
+  email: null,
+  role: null,
+}
+
 export function useCrewAgent() {
   const { agent } = useAgent({ agentId: 'crew_agent' })
 
   const [workspaceId, setWorkspaceId] = useState<string | null>(null)
+  const [identity, setIdentity] = useState<CrewIdentity>(NULL_IDENTITY)
   const [dbState, setDbState] = useState<Partial<CrewState>>({})
   const [hydrated, setHydrated] = useState(false)
   const writeBackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -150,6 +169,14 @@ export function useCrewAgent() {
       if (cancelled) return
       setWorkspaceId(currentWsId)
       workspaceIdRef.current = currentWsId
+      setIdentity({
+        userId: identityRes?.userId ?? null,
+        workspaceId: currentWsId,
+        memberId: identityRes?.memberId ?? null,
+        name: identityRes?.name ?? null,
+        email: identityRes?.email ?? null,
+        role: identityRes?.role ?? null,
+      })
 
       // 1. Try in-memory cache for this workspace — only if fresh (within TTL)
       const cached = (currentWsId ? memCache.get(currentWsId) : undefined) ?? null
@@ -350,5 +377,5 @@ export function useCrewAgent() {
   const bumpVersion = (v: number) => { versionRef.current = v }
   const getVersion = () => versionRef.current
 
-  return { agent, state, setState, hydrated, workspaceId, bumpVersion, getVersion }
+  return { agent, state, setState, hydrated, workspaceId, identity, bumpVersion, getVersion }
 }
