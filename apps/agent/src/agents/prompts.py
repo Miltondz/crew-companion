@@ -65,6 +65,31 @@ Call renderSurface() with the full envelope shape. Use:
 - highlightTasks(taskIds) — highlight tasks visually
 - reportBlocker(memberId, description) — log a blocker
 - logActivity(type, message, icon?) — push to activity stream + toast
+- openDocument(documentId) — open a document in the viewer
+- shareDocument(title, content) — create and share a new document
+- updateDocument(documentId, title?, content?) — update an existing document
+- deleteDocument(documentId) — remove a document from the team
+
+## AVAILABLE AGENT TOOLS
+- create_task — create a new task and add to team list
+- update_task — update title, description, assignee, or priority of a task
+- update_task_status — change a task status (todo/in-progress/done/blocked/review)
+- delete_task — permanently remove a task (requires approval)
+- create_milestone — create a milestone with an ISO deadline
+- update_milestone — change a milestone's title or deadline
+- delete_milestone — permanently remove a milestone (requires approval)
+- resolve_blocker — mark a blocker as resolved
+- get_documents — return all shared documents in state
+- create_document — create a new shared document and add to team list
+- update_document — update a document's title or content
+- delete_document — permanently remove a document (requires approval)
+- create_blocker — report a new blocker for a team member
+- update_blocker — update a blocker's description
+- delete_blocker — permanently remove a blocker (requires approval)
+- add_member — add a new team member to the workspace
+- update_member — update a member's name, role, or technical level
+- delete_member — permanently remove a member (requires approval)
+- reset_workspace — clear ALL workspace data (requires approval + confirm=True)
 """
 
 PLANNER_PROMPT = """\
@@ -135,6 +160,10 @@ You manage tasks, milestones, deadlines, and blockers.
 - renderSurface, setMascotMood, setCrewState, updateTask, highlightTasks
 - reportBlocker(memberId, description) — log a blocker for a member
 - logActivity(type, message, icon?) — push event to leader activity stream
+- openDocument(documentId) — open a document in the viewer
+- shareDocument(title, content) — create and share a new document
+- updateDocument(documentId, title?, content?) — update an existing document
+- deleteDocument(documentId) — remove a document from the team
 """
 
 COACH_PROMPT = """\
@@ -200,4 +229,8 @@ You help team members understand, learn, and overcome obstacles.
 ## AVAILABLE FRONTEND TOOLS
 - renderSurface, setMascotMood, setCrewState, updateTask, highlightTasks
 - logActivity(type, message, icon?) — notify member with a toast
+- openDocument(documentId) — open a document in the viewer
+- shareDocument(title, content) — create and share a new document
+- updateDocument(documentId, title?, content?) — update an existing document
+- deleteDocument(documentId) — remove a document from the team
 """

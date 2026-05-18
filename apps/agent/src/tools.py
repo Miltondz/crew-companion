@@ -333,6 +333,65 @@ def delete_member(
     return Command(update={"members": members, "blockers": blockers})
 
 
+@guarded_tool(
+    capabilities=[Capability.DOCS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def create_document(
+    title: str,
+    content: str,
+    owner_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Create a new shared document and add it to the team's document list."""
+    doc = {
+        "id": str(uuid4()),
+        "title": title,
+        "content": content,
+        "sharedBy": owner_id,
+        "sharedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    return Command(update={"sharedDocuments": [*state.get("sharedDocuments", []), doc]})
+
+
+@guarded_tool(
+    capabilities=[Capability.DOCS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.MEDIUM,
+)
+def update_document(
+    document_id: str,
+    state: Annotated[dict, InjectedState],
+    title: Optional[str] = None,
+    content: Optional[str] = None,
+) -> Command:
+    """Update a document's title or content. Pass only fields to change."""
+    def patch(d: dict) -> dict:
+        if d["id"] != document_id:
+            return d
+        updates: dict = {}
+        if title is not None:
+            updates["title"] = title
+        if content is not None:
+            updates["content"] = content
+        return {**d, **updates}
+    return Command(update={"sharedDocuments": [patch(d) for d in state.get("sharedDocuments", [])]})
+
+
+@guarded_tool(
+    capabilities=[Capability.DOCS_WRITE, Capability.STATE_WRITE],
+    risk_level=RiskLevel.HIGH,
+    requires_approval=True,
+)
+def delete_document(
+    document_id: str,
+    state: Annotated[dict, InjectedState],
+) -> Command:
+    """Permanently remove a document and clear it from openDocumentIds."""
+    docs = [d for d in state.get("sharedDocuments", []) if d["id"] != document_id]
+    open_ids = [i for i in state.get("openDocumentIds", []) if i != document_id]
+    return Command(update={"sharedDocuments": docs, "openDocumentIds": open_ids})
+
+
 CREW_TOOLS = [
     create_task, update_task, update_task_status, delete_task,
     create_milestone, update_milestone, delete_milestone,
@@ -340,6 +399,7 @@ CREW_TOOLS = [
     create_blocker, update_blocker, delete_blocker,
     add_member, update_member, delete_member,
     reset_workspace,
+    create_document, update_document, delete_document,
 ]
 
 # Boot-time assertion: every tool must have a registered capability declaration.

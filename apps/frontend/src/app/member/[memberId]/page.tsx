@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { z } from 'zod'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
@@ -42,6 +43,7 @@ import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 
 function MemberCanvas({ memberId }: { memberId: string }) {
   const router = useRouter()
+  const { status: sessionStatus } = useSession()
   const { state, setState, workspaceId } = useCrewAgent()
 
   const layout = useLayoutEngine()
@@ -50,6 +52,11 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   const [showBlockerForm, setShowBlockerForm] = useState(false)
 
   useEffect(() => {
+    if (sessionStatus === 'unauthenticated') {
+      router.replace('/auth/signin')
+      return
+    }
+    if (sessionStatus !== 'authenticated') return
     fetch('/api/me/identity')
       .then(r => r.json())
       .then(d => {
@@ -58,7 +65,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         setState(prev => ({ ...prev, actorRole: 'member', currentMemberId: memberId }))
       })
       .catch(() => {})
-  }, [memberId, router])
+  }, [memberId, router, sessionStatus])
 
   const activeMilestoneDeadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
 
@@ -269,6 +276,14 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     toast.warning('Blocker reportado al líder')
     setBlockerText('')
     setShowBlockerForm(false)
+  }
+
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--bg-base)]">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      </div>
+    )
   }
 
   return (

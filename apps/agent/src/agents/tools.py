@@ -20,9 +20,12 @@ from ..tools import (
     update_member,
     delete_member,
     reset_workspace,
+    create_document,
+    update_document,
+    delete_document,
 )
 
-# Planner: full operational control — tasks, milestones, blockers, team
+# Planner: full operational control — tasks, milestones, blockers, team, documents
 PLANNER_TOOLS = [
     create_task,
     update_task,
@@ -38,6 +41,9 @@ PLANNER_TOOLS = [
     add_member,
     update_member,
     delete_member,
+    create_document,
+    update_document,
+    delete_document,
 ]
 
 # Coach: read-only + blocker creation — guidance, docs, surfacing stuck state
@@ -65,4 +71,7 @@ ORCHESTRATOR_TOOLS = [
     update_member,
     delete_member,
     reset_workspace,
+    create_document,
+    update_document,
+    delete_document,
 ]

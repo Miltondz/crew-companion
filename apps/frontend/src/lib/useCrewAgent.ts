@@ -19,7 +19,14 @@ export function mergeCrewState(raw: unknown): CrewState {
 
 const LS_PREFIX = 'crew-state-v2:'
 const LEGACY_KEY = 'crew-state-v1'
-const memCache: Map<string, Partial<CrewState>> = new Map()
+const CACHE_TTL_MS = 30_000
+
+interface CacheEntry {
+  state: Partial<CrewState>
+  ts: number
+}
+
+const memCache: Map<string, CacheEntry> = new Map()
 
 function getLsKey(workspaceId: string | null): string | null {
   return workspaceId ? `${LS_PREFIX}${workspaceId}` : null
@@ -56,21 +63,19 @@ export function useCrewAgent() {
       if (cancelled) return
       setWorkspaceId(currentWsId)
 
-      // 1. Try in-memory cache for this workspace
-      const cached = currentWsId ? memCache.get(currentWsId) : null
-      if (cached) {
-        setDbState(cached)
+      // 1. Try in-memory cache for this workspace — only if fresh (within TTL)
+      const cached = (currentWsId ? memCache.get(currentWsId) : undefined) ?? null
+      if (cached !== null && Date.now() - cached.ts < CACHE_TTL_MS) {
+        setDbState(cached.state)
         setHydrated(true)
         return
       }
 
-      // 2. Try workspace-specific localStorage
+      // 2. Try workspace-specific localStorage (stale cache — use as placeholder, still fetch)
       const fromLs = readLs(currentWsId)
       if (fromLs) {
-        setDbState(fromLs)
-        if (currentWsId) memCache.set(currentWsId, fromLs)
-        setHydrated(true)
-        // Continue to refresh from DB in background
+        if (currentWsId) memCache.set(currentWsId, { state: fromLs, ts: 0 })
+        // Do NOT setDbState here — we'll replace it after the server fetch below
       }
 
       // 3. Fetch fresh from server (always, to stay in sync)
@@ -85,10 +90,19 @@ export function useCrewAgent() {
         if (stateJson && typeof stateJson === 'object') {
           const partial = stateJson as Partial<CrewState>
           setDbState(partial)
-          if (currentWsId) memCache.set(currentWsId, partial)
+          if (currentWsId) memCache.set(currentWsId, { state: partial, ts: Date.now() })
           writeLs(currentWsId, partial)
+        } else if (fromLs) {
+          setDbState(fromLs)
+          if (currentWsId) memCache.set(currentWsId, { state: fromLs, ts: Date.now() })
         }
-      } catch {}
+      } catch {
+        if (cancelled) return
+        if (fromLs) {
+          setDbState(fromLs)
+          if (currentWsId) memCache.set(currentWsId, { state: fromLs, ts: Date.now() })
+        }
+      }
 
       // 4. One-time migration: drop legacy single-key state
       if (typeof window !== 'undefined') {
@@ -109,7 +123,7 @@ export function useCrewAgent() {
       const current = mergeCrewState({ ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) })
       const next = updater(current)
       setDbState(next)
-      if (workspaceId) memCache.set(workspaceId, next)
+      if (workspaceId) memCache.set(workspaceId, { state: next, ts: Date.now() })
       writeLs(workspaceId, next)
       agent?.setState(next)
     },
