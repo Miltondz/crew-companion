@@ -51,6 +51,11 @@ export interface SharedDocument {
   sharedAt: string
 }
 
+export interface ProjectConfig {
+  name?: string
+  [key: string]: unknown
+}
+
 export interface CrewState {
   members: TeamMember[]
   currentMemberId: string
@@ -65,4 +70,6 @@ export interface CrewState {
   highlightedTaskIds: string[]
   activeMilestoneId?: string
   actorRole?: string
+  projectConfig?: ProjectConfig
+  onboarded?: boolean
 }

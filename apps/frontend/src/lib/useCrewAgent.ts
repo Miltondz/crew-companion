@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAgent } from '@copilotkit/react-core/v2'
 import { makeSeedState } from '@/lib/crew/seed'
 import type { CrewState } from '@/lib/crew/types'
@@ -48,12 +48,58 @@ function writeLs(workspaceId: string | null, state: Partial<CrewState>) {
   try { localStorage.setItem(key, JSON.stringify(state)) } catch {}
 }
 
+const PERSISTABLE_KEYS: ReadonlyArray<keyof CrewState> = [
+  'members',
+  'currentMemberId',
+  'tasks',
+  'milestones',
+  'blockers',
+  'sharedDocuments',
+  'openDocumentIds',
+  // urgencyPhase is always derived from milestone deadline — never stored (invariant 3)
+  'mascotMood',
+  'mascotMode',
+  'activeMilestoneId',
+  'actorRole',
+  'highlightedTaskIds',
+  'projectConfig',
+  'onboarded',
+]
+
+function stripNonSerializable(state: Partial<CrewState>): Partial<CrewState> {
+  const out: Partial<CrewState> = {}
+  for (const key of PERSISTABLE_KEYS) {
+    if (key in state) {
+      // Cast required because TypeScript can't narrow Partial<CrewState>[key] from keyof
+      (out as Record<string, unknown>)[key] = (state as Record<string, unknown>)[key]
+    }
+  }
+  return out
+}
+
+const ENTITY_COLLECTIONS = ['members', 'tasks', 'milestones', 'blockers', 'documents'] as const
+type EntityCollection = typeof ENTITY_COLLECTIONS[number]
+
+function countEntities(s: Partial<CrewState>): Record<EntityCollection, number> {
+  return {
+    members: (s.members ?? []).length,
+    tasks: (s.tasks ?? []).length,
+    milestones: (s.milestones ?? []).length,
+    blockers: (s.blockers ?? []).length,
+    documents: (s.sharedDocuments ?? []).length,
+  }
+}
+
 export function useCrewAgent() {
   const { agent } = useAgent({ agentId: 'crew_agent' })
 
   const [workspaceId, setWorkspaceId] = useState<string | null>(null)
   const [dbState, setDbState] = useState<Partial<CrewState>>({})
   const [hydrated, setHydrated] = useState(false)
+  const writeBackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasSyncedInitial = useRef(false)
+  const workspaceIdRef = useRef<string | null>(null)
+  const pendingStateRef = useRef<Partial<CrewState> | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -62,6 +108,7 @@ export function useCrewAgent() {
       const currentWsId = identityRes?.workspaceId ?? null
       if (cancelled) return
       setWorkspaceId(currentWsId)
+      workspaceIdRef.current = currentWsId
 
       // 1. Try in-memory cache for this workspace — only if fresh (within TTL)
       const cached = (currentWsId ? memCache.get(currentWsId) : undefined) ?? null
@@ -88,13 +135,38 @@ export function useCrewAgent() {
           : projects[0]
         const stateJson = proj?.state_json
         if (stateJson && typeof stateJson === 'object') {
-          const partial = stateJson as Partial<CrewState>
-          setDbState(partial)
-          if (currentWsId) memCache.set(currentWsId, { state: partial, ts: Date.now() })
-          writeLs(currentWsId, partial)
+          const serverPartial = stateJson as Partial<CrewState>
+          setDbState(serverPartial)
+          if (currentWsId) memCache.set(currentWsId, { state: serverPartial, ts: Date.now() })
+          writeLs(currentWsId, serverPartial)
+
+          // 3a. Initial catch-up: if local has more entities than server, push local up
+          if (!hasSyncedInitial.current && fromLs && currentWsId) {
+            hasSyncedInitial.current = true
+            const localCounts = countEntities(fromLs)
+            const serverCounts = countEntities(serverPartial)
+            const deltas: Partial<Record<EntityCollection, { local: number; server: number }>> = {}
+            let needsSync = false
+            for (const col of ENTITY_COLLECTIONS) {
+              if (localCounts[col] > serverCounts[col]) {
+                deltas[col] = { local: localCounts[col], server: serverCounts[col] }
+                needsSync = true
+              }
+            }
+            if (needsSync) {
+              console.info('[useCrewAgent] initial state mismatch, pushing local to server', { workspaceId: currentWsId, deltas })
+              void fetch(`/api/projects/${currentWsId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state_json: stripNonSerializable(fromLs) }),
+                keepalive: true,
+              }).catch(err => console.error('[useCrewAgent] initial sync failed', err))
+            }
+          }
         } else if (fromLs) {
           setDbState(fromLs)
           if (currentWsId) memCache.set(currentWsId, { state: fromLs, ts: Date.now() })
+          if (!hasSyncedInitial.current) hasSyncedInitial.current = true
         }
       } catch {
         if (cancelled) return
@@ -102,6 +174,7 @@ export function useCrewAgent() {
           setDbState(fromLs)
           if (currentWsId) memCache.set(currentWsId, { state: fromLs, ts: Date.now() })
         }
+        if (!hasSyncedInitial.current) hasSyncedInitial.current = true
       }
 
       // 4. One-time migration: drop legacy single-key state
@@ -115,6 +188,26 @@ export function useCrewAgent() {
     return () => { cancelled = true }
   }, [])
 
+  useEffect(() => {
+    return () => {
+      // Flush pending debounced PATCH immediately on unmount so last edit isn't lost
+      if (writeBackTimeout.current) {
+        clearTimeout(writeBackTimeout.current)
+        writeBackTimeout.current = null
+        const wsId = workspaceIdRef.current
+        const pending = pendingStateRef.current
+        if (wsId && pending) {
+          void fetch(`/api/projects/${wsId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state_json: stripNonSerializable(pending) }),
+            keepalive: true,
+          })
+        }
+      }
+    }
+  }, [])
+
   const merged = { ...dbState, ...((agent?.state ?? {}) as Partial<CrewState>) }
   const state = mergeCrewState(merged)
 
@@ -126,6 +219,21 @@ export function useCrewAgent() {
       if (workspaceId) memCache.set(workspaceId, { state: next, ts: Date.now() })
       writeLs(workspaceId, next)
       agent?.setState(next)
+      if (workspaceId) {
+        const stripped = stripNonSerializable(next)
+        pendingStateRef.current = stripped
+        workspaceIdRef.current = workspaceId
+        if (writeBackTimeout.current) clearTimeout(writeBackTimeout.current)
+        writeBackTimeout.current = setTimeout(() => {
+          writeBackTimeout.current = null
+          pendingStateRef.current = null
+          void fetch(`/api/projects/${workspaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state_json: stripped }),
+          }).catch(err => console.error('[useCrewAgent] persist failed', err))
+        }, 500)
+      }
     },
     [agent, dbState, workspaceId],
   )
