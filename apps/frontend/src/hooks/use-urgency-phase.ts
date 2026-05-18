@@ -1,17 +1,3 @@
-import { useEffect } from 'react'
-import { useCrewStore } from '@/lib/crew/store'
-import { getUrgencyPhase } from '@/lib/crew/derive'
-
-export function useUrgencyPhaseSync() {
-  const { milestones, activeMilestoneId, setUrgencyPhase } = useCrewStore()
-
-  useEffect(() => {
-    const sync = () => {
-      const active = milestones.find((m) => m.id === activeMilestoneId)
-      if (active) setUrgencyPhase(getUrgencyPhase(active.deadline))
-    }
-    sync()
-    const interval = setInterval(sync, 30_000)
-    return () => clearInterval(interval)
-  }, [milestones, activeMilestoneId, setUrgencyPhase])
-}
+// Phase is always derived from milestone deadline — never stored in the store.
+// This hook is intentionally empty; callers should use getUrgencyPhase(deadline) directly.
+export function useUrgencyPhaseSync(): void {}

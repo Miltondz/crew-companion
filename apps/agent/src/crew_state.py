@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -20,7 +21,6 @@ from .types import (
     SharedDocument,
     Task,
     TeamMember,
-    UrgencyPhase,
 )
 
 
@@ -33,7 +33,6 @@ class CrewCanvasState(TypedDict):
     blockers: list[Blocker]
     sharedDocuments: list[SharedDocument]
     openDocumentIds: list[str]
-    urgencyPhase: UrgencyPhase
     mascotMood: MascotMood
     mascotMode: MascotMode
     highlightedTaskIds: list[str]
@@ -184,7 +183,7 @@ class CrewStateMiddleware(AgentMiddleware):
     async def abefore_agent(
         self, state: CrewCanvasState, runtime: Runtime[Any]
     ) -> dict[str, Any] | None:
-        return self.before_agent(state, runtime)
+        return await asyncio.to_thread(self.before_agent, state, runtime)
 
     def after_agent(
         self, state: CrewCanvasState, runtime: Runtime[Any]
@@ -196,4 +195,4 @@ class CrewStateMiddleware(AgentMiddleware):
     async def aafter_agent(
         self, state: CrewCanvasState, runtime: Runtime[Any]
     ) -> dict[str, Any] | None:
-        return self.after_agent(state, runtime)
+        return await asyncio.to_thread(self.after_agent, state, runtime)

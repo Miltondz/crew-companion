@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { motion } from 'motion/react'
 import { Eye, Users, AlertTriangle, CheckSquare, RefreshCw, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getUrgencyPhase } from '@/lib/crew/derive'
 
 const PHASE_CONFIG: Record<string, { label: string; bg: string; border: string; text: string }> = {
   normal:  { label: 'Normal',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   text: 'text-blue-300' },
@@ -43,7 +44,6 @@ interface State {
   tasks?: { id?: string; status?: string; title?: string; priority?: string }[]
   members?: { id?: string; name?: string; role?: string }[]
   blockers?: { id?: string; resolved?: boolean; description?: string }[]
-  urgencyPhase?: string
   projectConfig?: { type?: string; isDevProject?: boolean }
   observerConfig?: { showTasks?: boolean; showTeamNames?: boolean; showBlockerCount?: boolean; customMessage?: string }
 }
@@ -85,7 +85,7 @@ export default function SharePage() {
   const activeMilestoneId = state?.activeMilestoneId
   const milestone = effectiveMilestones.find(m => m.id === activeMilestoneId) ?? effectiveMilestones[0]
   const countdown = useCountdown(milestone?.deadline)
-  const phase = state?.urgencyPhase ?? 'normal'
+  const phase = getUrgencyPhase(milestone?.deadline ?? '')
   const phaseConf = PHASE_CONFIG[phase] ?? PHASE_CONFIG.normal
   const totalTasks = (milestone?.taskIds?.filter(id => !SEED_TASK_IDS.has(id)) ?? []).length
   const doneTasks = effectiveTasks.filter(t => t.status === 'done').length

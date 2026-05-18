@@ -1,5 +1,8 @@
 """Python TypedDicts matching the TypeScript crew domain model."""
 
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from typing import Optional
 from typing_extensions import TypedDict, Literal
 
@@ -55,3 +58,26 @@ class SharedDocument(TypedDict):
     content: str  # sanitized markdown
     sharedBy: str  # TeamMember.id (leader only)
     sharedAt: str
+
+
+def get_urgency_phase(deadline: str) -> str:
+    """Derive urgency phase from ISO deadline string. Mirrors TS getUrgencyPhase."""
+    if not deadline:
+        return "normal"
+    try:
+        dl = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+    except ValueError:
+        return "normal"
+    now = datetime.now(timezone.utc)
+    if dl.tzinfo is None:
+        dl = dl.replace(tzinfo=timezone.utc)
+    diff_minutes = (dl - now).total_seconds() / 60
+    if diff_minutes <= 0:
+        return "expired"
+    if diff_minutes <= 30:
+        return "panic"
+    if diff_minutes <= 120:
+        return "urgent"
+    if diff_minutes <= 480:
+        return "focus"
+    return "normal"

@@ -191,7 +191,10 @@ function LeaderCanvas() {
   const { state, setState, workspaceId } = useCrewAgent()
 
   const layout = useLayoutEngine()
-  const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
+  const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(() => {
+    const deadline = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
+    return getUrgencyPhase(deadline)
+  })
   const [showAddTask, setShowAddTask] = useState(false)
   const [showMilestoneEdit, setShowMilestoneEdit] = useState(false)
   const [milestoneEditForm, setMilestoneEditForm] = useState({ title: '', deadline: '' })

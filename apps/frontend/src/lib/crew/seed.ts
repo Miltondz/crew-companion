@@ -1,6 +1,6 @@
 import type { CrewState } from './types'
 
-type SeedState = Omit<CrewState, 'urgencyPhase' | 'mascotMood' | 'mascotMode' | 'highlightedTaskIds'>
+type SeedState = Omit<CrewState, 'mascotMood' | 'mascotMode' | 'highlightedTaskIds'>
 
 const DEADLINE_KEY = 'crew_demo_deadline'
 

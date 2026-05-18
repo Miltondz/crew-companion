@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { WebNav } from '@/components/shared/WebNav'
 import { WebFooter } from '@/components/shared/WebFooter'
 import { warmAgentFireAndForget } from '@/lib/agent-warmup'
+import { getUrgencyPhase } from '@/lib/crew/derive'
 
 
 const PROJECT_TYPE_EMOJI: Record<string, string> = {
@@ -33,7 +34,6 @@ interface Project {
     tasks?: { id?: string; status?: string }[]
     members?: unknown[]
     blockers?: { resolved?: boolean }[]
-    urgencyPhase?: string
     projectConfig?: { type?: string; name?: string }
     archived?: boolean
   }
@@ -83,7 +83,7 @@ function ProjectFolderCard({
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
   const memberCount = s.members?.length ?? 0
   const blockerCount = s.blockers?.filter(b => !b.resolved).length ?? 0
-  const phase = s.urgencyPhase ?? 'normal'
+  const phase = getUrgencyPhase(milestone?.deadline ?? '')
   const phaseConf = PHASE_CONFIG[phase] ?? PHASE_CONFIG.normal
   const projectType = s.projectConfig?.type ?? 'other'
   const projectName = s.projectConfig?.name || milestone?.title || 'Proyecto sin nombre'

@@ -11,8 +11,16 @@ from langchain_core.tools import tool as lc_tool
 from .capabilities import Capability, RiskLevel
 from .policy import PolicyEngine, ExecutionContext, Allow, Deny, PendingApproval
 from .audit import AuditLogger
+from ..types import get_urgency_phase
 
 _TOOL_REGISTRY: dict[str, "ToolMeta"] = {}
+
+
+def _derive_urgency_phase(state: dict) -> str:
+    milestones = state.get("milestones") or []
+    active_id = state.get("activeMilestoneId")
+    milestone = next((m for m in milestones if m.get("id") == active_id), None) or (milestones[0] if milestones else None)
+    return get_urgency_phase(milestone.get("deadline", "") if milestone else "")
 
 
 @dataclass(frozen=True)
@@ -61,7 +69,7 @@ def guarded_tool(
             context = ExecutionContext(
                 agent_id=configurable.get("agent_id", "orchestrator"),
                 workspace_id=configurable.get("workspace_id") or state.get("workspaceId", ""),
-                urgency_phase=state.get("urgencyPhase", "normal"),
+                urgency_phase=_derive_urgency_phase(state),
                 role=configurable.get("actor_role") or state.get("actorRole", "member"),
                 approval_token=configurable.get("approval_token"),
                 approved_tool_call_id=configurable.get("approved_tool_call_id"),

@@ -79,7 +79,6 @@ export async function POST(req: Request) {
       ? [{ id: crypto.randomUUID(), title: 'Referencia del proyecto', content: contextUrl, sharedBy: leaderId, sharedAt: new Date().toISOString() }]
       : [],
     openDocumentIds: [],
-    urgencyPhase: 'normal',
     mascotMood: 'calm',
     mascotMode: 'idle',
     highlightedTaskIds: [],

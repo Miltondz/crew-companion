@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAgent } from '@copilotkit/react-core/v2'
+import { toast } from 'sonner'
 import { makeSeedState } from '@/lib/crew/seed'
 import type { CrewState } from '@/lib/crew/types'
 
 export function mergeCrewState(raw: unknown): CrewState {
   const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
   return {
-    urgencyPhase: 'normal',
     mascotMood: 'calm',
     mascotMode: 'idle',
     highlightedTaskIds: [],
@@ -100,6 +100,7 @@ export function useCrewAgent() {
   const hasSyncedInitial = useRef(false)
   const workspaceIdRef = useRef<string | null>(null)
   const pendingStateRef = useRef<Partial<CrewState> | null>(null)
+  const lastToastAt = useRef<number>(0)
 
   useEffect(() => {
     let cancelled = false
@@ -160,7 +161,14 @@ export function useCrewAgent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ state_json: stripNonSerializable(fromLs) }),
                 keepalive: true,
-              }).catch(err => console.error('[useCrewAgent] initial sync failed', err))
+              }).catch(err => {
+              console.error('[useCrewAgent] initial sync failed', err)
+              const now = Date.now()
+              if (now - lastToastAt.current > 30_000) {
+                lastToastAt.current = now
+                toast.error('Cambios no guardados en servidor', { description: 'Reintenta o recarga la página.' })
+              }
+            })
             }
           }
         } else if (fromLs) {
@@ -231,7 +239,14 @@ export function useCrewAgent() {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ state_json: stripped }),
-          }).catch(err => console.error('[useCrewAgent] persist failed', err))
+          }).catch(err => {
+            console.error('[useCrewAgent] persist failed', err)
+            const now = Date.now()
+            if (now - lastToastAt.current > 30_000) {
+              lastToastAt.current = now
+              toast.error('Cambios no guardados en servidor', { description: 'Reintenta o recarga la página.' })
+            }
+          })
         }, 500)
       }
     },

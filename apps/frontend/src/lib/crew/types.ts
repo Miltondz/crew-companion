@@ -64,7 +64,6 @@ export interface CrewState {
   blockers: Blocker[]
   sharedDocuments: SharedDocument[]
   openDocumentIds: string[]
-  urgencyPhase: UrgencyPhase
   mascotMood: MascotMood
   mascotMode: MascotMode
   highlightedTaskIds: string[]

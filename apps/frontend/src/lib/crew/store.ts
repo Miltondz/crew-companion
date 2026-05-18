@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CrewState, Task, Blocker, MascotMood, MascotMode, UrgencyPhase } from './types'
+import type { CrewState, Task, Blocker, MascotMood, MascotMode } from './types'
 import { getUrgencyPhase, getMascotMood } from './derive'
 import { SEED_STATE } from './seed'
 
@@ -14,13 +14,11 @@ interface CrewStore extends CrewState {
   resolveBlocker: (blockerId: string) => void
   setMascotState: (mood: MascotMood, mode: MascotMode) => void
   setHighlightedTasks: (taskIds: string[]) => void
-  setUrgencyPhase: (phase: UrgencyPhase) => void
   simulateUrgency: (minutesLeft: number) => void
 }
 
 export const useCrewStore = create<CrewStore>((set, get) => ({
   ...SEED_STATE,
-  urgencyPhase: initialPhase,
   mascotMood: initialMood,
   mascotMode: 'idle',
   highlightedTaskIds: [],
@@ -48,11 +46,6 @@ export const useCrewStore = create<CrewStore>((set, get) => ({
 
   setHighlightedTasks: (taskIds) => set({ highlightedTaskIds: taskIds }),
 
-  setUrgencyPhase: (phase) => {
-    const hasBlocker = get().blockers.some((b) => !b.resolved)
-    set({ urgencyPhase: phase, mascotMood: getMascotMood(phase, hasBlocker) })
-  },
-
   simulateUrgency: (minutesLeft) => {
     const newDeadline = new Date(Date.now() + minutesLeft * 60 * 1000).toISOString()
     const milestones = get().milestones.map((m) =>
@@ -60,6 +53,6 @@ export const useCrewStore = create<CrewStore>((set, get) => ({
     )
     const phase = getUrgencyPhase(newDeadline)
     const hasBlocker = get().blockers.some((b) => !b.resolved)
-    set({ milestones, urgencyPhase: phase, mascotMood: getMascotMood(phase, hasBlocker) })
+    set({ milestones, mascotMood: getMascotMood(phase, hasBlocker) })
   },
 }))
