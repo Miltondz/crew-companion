@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { WebNav } from '@/components/shared/WebNav'
 import { WebFooter } from '@/components/shared/WebFooter'
+import { warmAgentFireAndForget } from '@/lib/agent-warmup'
 
 
 const PROJECT_TYPE_EMOJI: Record<string, string> = {
@@ -103,6 +104,7 @@ function ProjectFolderCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -2 }}
+      onMouseEnter={warmAgentFireAndForget}
       className={cn(
         'group relative flex rounded-xl overflow-hidden ring-1 transition-all',
         isArchived
@@ -293,6 +295,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'active' | 'archived'>('active')
 
+  useEffect(() => { warmAgentFireAndForget() }, [])
+
   useEffect(() => {
     fetch('/api/projects')
       .then(r => r.json())
@@ -306,6 +310,7 @@ export default function DashboardPage() {
   }, [router])
 
   const openProject = async (p: Project) => {
+    warmAgentFireAndForget()
     await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

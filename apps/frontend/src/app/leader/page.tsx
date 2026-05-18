@@ -51,6 +51,7 @@ import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { WebNav } from '@/components/shared/WebNav'
+import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { snapCenterToCursor } from '@/lib/dnd/modifiers'
 import { layoutEngine } from '@/runtime/workspace/layout-engine'
@@ -704,6 +705,7 @@ function LeaderCanvas() {
         }}
         commandSurface={{
           phaseChip: <PhaseChip phase={urgencyPhase} />,
+          agentStatus: <AgentStatusPill />,
           milestoneTitle: effectiveMilestone?.title,
           blockerBadge: activeBlockers.length > 0 ? <BlockerBadge count={activeBlockers.length} /> : undefined,
           docBadge: state.sharedDocuments.length > 0 ? <DocBadge count={state.sharedDocuments.length} onClick={() => router.push('/docs')} /> : undefined,

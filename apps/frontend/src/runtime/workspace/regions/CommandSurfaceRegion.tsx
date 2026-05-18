@@ -13,6 +13,7 @@ interface Props {
   blockerBadge?: ReactNode
   memberAvatars?: ReactNode
   docBadge?: ReactNode
+  agentStatus?: ReactNode
   onCommandPalette?: () => void
   onResetLayout?: () => void
 }
@@ -25,6 +26,7 @@ export function CommandSurfaceRegion({
   blockerBadge,
   memberAvatars,
   docBadge,
+  agentStatus,
   onCommandPalette,
   onResetLayout,
 }: Props) {
@@ -33,6 +35,8 @@ export function CommandSurfaceRegion({
       {mounts.map(m => <SurfaceHost key={m.mountId} envelope={m.envelope} context={m.envelope.context} />)}
 
       {phaseChip}
+
+      {agentStatus && <div className="shrink-0">{agentStatus}</div>}
 
       {milestoneTitle && (
         <span className="text-[11px] font-semibold text-[var(--text-primary)] truncate max-w-[180px]">

@@ -177,6 +177,21 @@ app.use("*", async (c, next) => {
   }
 });
 
+app.get("/api/ping", (c) => c.json({ ok: true, ts: Date.now() }))
+
+app.get("/api/warm", async (c) => {
+  const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123"
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 8000)
+  let agentOk = false
+  try {
+    const res = await fetch(`${lgUrl}/info`, { signal: ctrl.signal })
+    agentOk = res.ok
+  } catch {}
+  clearTimeout(timer)
+  return c.json({ bff: true, agent: agentOk, ts: Date.now() })
+})
+
 app.get("/api/health", async (c) => {
   const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123";
   const t0 = Date.now();

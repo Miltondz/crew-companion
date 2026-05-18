@@ -19,6 +19,7 @@ interface CommandSurfaceSlots {
   blockerBadge?: ReactNode
   memberAvatars?: ReactNode
   docBadge?: ReactNode
+  agentStatus?: ReactNode
   onCommandPalette?: () => void
   onResetLayout?: () => void
 }
@@ -98,6 +99,7 @@ export function WorkspaceShell({ phase, agentRail, children, onNewChat, user, ma
           blockerBadge={commandSurface?.blockerBadge}
           memberAvatars={commandSurface?.memberAvatars}
           docBadge={commandSurface?.docBadge}
+          agentStatus={commandSurface?.agentStatus}
           onCommandPalette={commandSurface?.onCommandPalette}
           onResetLayout={commandSurface?.onResetLayout}
         />

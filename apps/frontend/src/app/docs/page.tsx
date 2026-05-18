@@ -21,6 +21,7 @@ import { useActivityStream } from '@/lib/useActivityStream'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { WebNav } from '@/components/shared/WebNav'
 import { MemberAvatars } from '@/components/shared/MemberAvatars'
+import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
 import type { CrewState, SharedDocument } from '@/lib/crew/types'
 
 const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
@@ -320,6 +321,7 @@ function DocsCanvas() {
         activityEvents={activityEvents}
         commandSurface={{
           milestoneTitle: 'Documentos del equipo',
+          agentStatus: <AgentStatusPill />,
           memberAvatars: <MemberAvatars members={effectiveMembers} blockers={state.blockers} />,
           onCommandPalette: () => {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })

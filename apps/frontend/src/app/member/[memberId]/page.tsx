@@ -35,6 +35,7 @@ import { useCrewAgent } from '@/lib/useCrewAgent'
 import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
 import type { CrewState, UrgencyPhase, TaskStatus } from '@/lib/crew/types'
 
 
@@ -274,6 +275,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       <WorkspaceShell
         phase={urgencyPhase}
         agentRail={<CopilotChat className="h-full" />}
+        commandSurface={{ agentStatus: <AgentStatusPill /> }}
         mascotProps={{
           phase: urgencyPhase,
           techLevel: currentMember?.technicalLevel ?? 'low-tech',
