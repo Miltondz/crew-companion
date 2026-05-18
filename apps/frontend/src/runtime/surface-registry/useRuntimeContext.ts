@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import type { RuntimeContext } from './types'
 import type { Role, TechnicalLevel, Specialization, UrgencyPhase } from '@/lib/crew/types'
 
@@ -11,6 +9,7 @@ interface UseRuntimeContextOptions {
   specialization?: Specialization
   phase: UrgencyPhase
   hasActiveBlocker: boolean
+  workspaceId?: string
 }
 
 export function useRuntimeContext(opts: UseRuntimeContextOptions): RuntimeContext {
@@ -20,6 +19,6 @@ export function useRuntimeContext(opts: UseRuntimeContextOptions): RuntimeContex
     specialization: opts.specialization,
     phase: opts.phase,
     hasActiveBlocker: opts.hasActiveBlocker,
-    workspaceId: 'default',
+    workspaceId: opts.workspaceId ?? '',
   }
 }

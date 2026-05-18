@@ -16,12 +16,15 @@ import {
 import { ToolFallbackCard } from '@/components/copilot/ToolFallbackCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { ManualSurfacePicker } from '@/components/shared/ManualSurfacePicker'
 import { useCrewAgent } from '@/lib/useCrewAgent'
 import { useActivityStream } from '@/lib/useActivityStream'
 import { WorkspaceShell } from '@/runtime/workspace/WorkspaceShell'
 import { WebNav } from '@/components/shared/WebNav'
 import { MemberAvatars } from '@/components/shared/MemberAvatars'
 import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
+import { useRuntimeContext } from '@/runtime/surface-registry/useRuntimeContext'
+import { getUrgencyPhase } from '@/lib/crew/derive'
 import type { CrewState, SharedDocument } from '@/lib/crew/types'
 
 const SEED_MEMBER_IDS = new Set(['m1', 'm2', 'm3'])
@@ -131,6 +134,7 @@ function DocsCanvas() {
   const { state, setState, workspaceId } = useCrewAgent()
   const { events: activityEvents, push: pushActivity } = useActivityStream()
 
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
   const [compareDocId, setCompareDocId] = useState<string | null>(null)
   const [compareMode, setCompareMode] = useState(false)
@@ -143,6 +147,17 @@ function DocsCanvas() {
   const compareDoc = state.sharedDocuments.find(d => d.id === compareDocId)
   const currentMember = state.members.find(m => m.id === state.currentMemberId)
   const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
+  const docsPhase = getUrgencyPhase(
+    state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
+  )
+  const runtimeContext = useRuntimeContext({
+    role: currentMember?.role ?? 'member',
+    techLevel: currentMember?.technicalLevel,
+    specialization: currentMember?.specialization,
+    phase: docsPhase,
+    hasActiveBlocker: state.blockers.some(b => !b.resolved),
+    workspaceId: workspaceId ?? '',
+  })
 
   const handleCreate = () => {
     const title = createForm.title.trim()
@@ -314,7 +329,7 @@ function DocsCanvas() {
   return (
     <>
       <WorkspaceShell
-        phase={state.urgencyPhase}
+        phase={docsPhase}
         workspaceId={workspaceId ?? undefined}
         agentRail={<CopilotChat className="h-full" />}
         webNav={<WebNav user={session?.user ? { name: session.user.name, email: session.user.email } : undefined} />}
@@ -328,6 +343,7 @@ function DocsCanvas() {
             const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
             window.dispatchEvent(event)
           },
+          onAddSurface: () => setPickerOpen(true),
         }}
       >
         <div className="flex flex-1 flex-col overflow-hidden bg-[var(--bg-base)]">
@@ -619,6 +635,12 @@ function DocsCanvas() {
       </WorkspaceShell>
 
       <MobileChatDrawer accentClass="from-violet-600 to-purple-600" label="AI Doc Assistant" />
+      <ManualSurfacePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        context={runtimeContext}
+        workspaceId={workspaceId ?? ''}
+      />
     </>
   )
 }

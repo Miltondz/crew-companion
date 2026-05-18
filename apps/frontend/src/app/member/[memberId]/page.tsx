@@ -37,6 +37,7 @@ import { getUrgencyPhase } from '@/lib/crew/derive'
 import { fireCelebration } from '@/lib/confetti'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
 import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
+import { ManualSurfacePicker } from '@/components/shared/ManualSurfacePicker'
 import type { CrewState, UrgencyPhase, TaskStatus } from '@/lib/crew/types'
 import type { SurfaceEnvelope } from '@/runtime/surface-registry/types'
 
@@ -47,7 +48,9 @@ function MemberCanvas({ memberId }: { memberId: string }) {
   const { state, setState, workspaceId } = useCrewAgent()
 
   const layout = useLayoutEngine()
-  const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(state.urgencyPhase)
+  const activeMilestoneDeadlineInitial = state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
+  const [urgencyPhase, setUrgencyPhase] = useState<UrgencyPhase>(() => getUrgencyPhase(activeMilestoneDeadlineInitial))
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [blockerText, setBlockerText] = useState('')
   const [showBlockerForm, setShowBlockerForm] = useState(false)
 
@@ -187,6 +190,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     specialization: currentMember?.specialization,
     phase: urgencyPhase,
     hasActiveBlocker: !!myBlocker,
+    workspaceId: workspaceId ?? '',
   })
 
   const initialSurfacesMounted = useRef(false)
@@ -292,7 +296,7 @@ function MemberCanvas({ memberId }: { memberId: string }) {
         phase={urgencyPhase}
         workspaceId={workspaceId ?? undefined}
         agentRail={<CopilotChat className="h-full" />}
-        commandSurface={{ agentStatus: <AgentStatusPill /> }}
+        commandSurface={{ agentStatus: <AgentStatusPill />, onAddSurface: () => setPickerOpen(true) }}
         mascotProps={{
           phase: urgencyPhase,
           techLevel: currentMember?.technicalLevel ?? 'low-tech',
@@ -483,6 +487,12 @@ function MemberCanvas({ memberId }: { memberId: string }) {
       </WorkspaceShell>
 
       <MobileChatDrawer accentClass="from-emerald-600 to-teal-600" label="Asistente Personal" />
+      <ManualSurfacePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        context={runtimeContext}
+        workspaceId={workspaceId ?? ''}
+      />
     </>
   )
 }

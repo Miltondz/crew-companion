@@ -50,6 +50,7 @@ import { getUrgencyPhase, computeCountdown } from '@/lib/crew/derive'
 import { fireCelebration, fireMilestoneConfetti } from '@/lib/confetti'
 import { CommandPalette } from '@/components/shared/CommandPalette'
 import { MobileChatDrawer } from '@/components/shared/MobileChatDrawer'
+import { ManualSurfacePicker } from '@/components/shared/ManualSurfacePicker'
 import { WebNav } from '@/components/shared/WebNav'
 import { AgentStatusPill } from '@/components/shared/AgentStatusPill'
 import { useActivityStream } from '@/lib/useActivityStream'
@@ -197,6 +198,7 @@ function LeaderCanvas() {
   const [showCreateMilestone, setShowCreateMilestone] = useState(false)
   const [createMilestoneForm, setCreateMilestoneForm] = useState({ title: '', deadline: '' })
 
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [milestoneAgentShape, setMilestoneAgentShape] = useState<GridShape | undefined>(undefined)
   const [taskBoardAgentShape, setTaskBoardAgentShape] = useState<GridShape | undefined>(undefined)
   const [activityAgentShape, setActivityAgentShape] = useState<GridShape | undefined>(undefined)
@@ -460,6 +462,7 @@ function LeaderCanvas() {
     specialization: currentLeader?.specialization,
     phase: urgencyPhase,
     hasActiveBlocker: state.blockers.some(b => !b.resolved),
+    workspaceId: workspaceId ?? '',
   })
 
   const initialSurfacesMounted = useRef(false)
@@ -716,6 +719,7 @@ function LeaderCanvas() {
             window.dispatchEvent(event)
           },
           onResetLayout: handleResetLayout,
+          onAddSurface: () => setPickerOpen(true),
         }}
         activityEvents={activityEvents}
       >
@@ -1058,6 +1062,12 @@ function LeaderCanvas() {
 
       <MobileChatDrawer accentClass="from-indigo-600 to-violet-600" label="AI Leader Assistant" />
       <CommandPalette state={state} />
+      <ManualSurfacePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        context={runtimeContext}
+        workspaceId={workspaceId ?? ''}
+      />
     </>
   )
 }

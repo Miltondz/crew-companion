@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { RotateCcw, Command } from 'lucide-react'
+import { RotateCcw, Command, Plus } from 'lucide-react'
 import { SurfaceHost } from '@/runtime/surface-registry/SurfaceHost'
 import type { SurfaceMount } from '../types'
 
@@ -16,6 +16,7 @@ interface Props {
   agentStatus?: ReactNode
   onCommandPalette?: () => void
   onResetLayout?: () => void
+  onAddSurface?: () => void
 }
 
 export function CommandSurfaceRegion({
@@ -29,6 +30,7 @@ export function CommandSurfaceRegion({
   agentStatus,
   onCommandPalette,
   onResetLayout,
+  onAddSurface,
 }: Props) {
   return (
     <header className="h-[34px] flex items-center gap-2 px-3 border-b border-white/10 bg-[var(--bg-surface)]/80 backdrop-blur-sm shrink-0 z-10 overflow-hidden">
@@ -53,6 +55,16 @@ export function CommandSurfaceRegion({
       {docBadge && <div className="shrink-0">{docBadge}</div>}
 
       {memberAvatars && <div className="shrink-0">{memberAvatars}</div>}
+
+      {onAddSurface && (
+        <button
+          onClick={onAddSurface}
+          className="h-6 w-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors shrink-0"
+          title="Add surface manually"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      )}
 
       {onCommandPalette && (
         <button

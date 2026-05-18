@@ -22,6 +22,7 @@ interface CommandSurfaceSlots {
   agentStatus?: ReactNode
   onCommandPalette?: () => void
   onResetLayout?: () => void
+  onAddSurface?: () => void
 }
 
 interface Props {
@@ -107,6 +108,7 @@ export function WorkspaceShell({ phase, agentRail, children, workspaceId, onNewC
           agentStatus={commandSurface?.agentStatus}
           onCommandPalette={commandSurface?.onCommandPalette}
           onResetLayout={commandSurface?.onResetLayout}
+          onAddSurface={commandSurface?.onAddSurface}
         />
 
         <div className="flex flex-1 overflow-hidden">
