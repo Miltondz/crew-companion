@@ -2,9 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAgent } from '@copilotkit/react-core/v2'
+import { signOut } from 'next-auth/react'
 import { toast } from 'sonner'
 import { makeSeedState } from '@/lib/crew/seed'
 import type { CrewState } from '@/lib/crew/types'
+
+let sessionExpiredHandled = false
+function handleSessionExpired(): void {
+  if (sessionExpiredHandled) return
+  sessionExpiredHandled = true
+  toast.error('Sesión expirada — redirigiendo a inicio de sesión')
+  void signOut({ callbackUrl: '/auth/signin?reason=expired' })
+}
 
 export function mergeCrewState(raw: unknown): CrewState {
   const partial = raw && typeof raw === 'object' ? (raw as Partial<CrewState>) : {}
@@ -233,6 +242,7 @@ export function useCrewAgent() {
               }).then(async res => {
                 if (cancelled) return
                 if (workspaceIdRef.current !== currentWsId) return
+                if (res.status === 401) { handleSessionExpired(); return }
                 if (res.status === 409) {
                   const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
                   if (cancelled) return
@@ -351,6 +361,7 @@ export function useCrewAgent() {
           body: JSON.stringify({ state_json: stripped, expected_version: expectedVersion }),
         }).then(async res => {
           if (workspaceIdRef.current !== callTimeWorkspaceId) return
+          if (res.status === 401) { handleSessionExpired(); return }
           if (res.status === 409) {
             const body = await res.json() as { current_version: number; current_state: Partial<CrewState> }
             if (workspaceIdRef.current !== callTimeWorkspaceId) return

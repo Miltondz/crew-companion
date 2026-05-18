@@ -20,7 +20,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
   const { code } = await params
   try {
     const { rows } = await getPool().query(
-      `SELECT workspace_id, state_json FROM workspace_state WHERE invite_code = $1`,
+      `SELECT workspace_id, state_json FROM workspace_state
+       WHERE invite_code = $1
+         AND NOT COALESCE(invite_code_revoked, FALSE)
+         AND (invite_code_expires_at IS NULL OR invite_code_expires_at > NOW())`,
       [code]
     )
     if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -63,7 +66,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
 
   try {
     const { rows } = await getPool().query(
-      `SELECT workspace_id, state_json FROM workspace_state WHERE invite_code = $1`,
+      `SELECT workspace_id, state_json FROM workspace_state
+       WHERE invite_code = $1
+         AND NOT COALESCE(invite_code_revoked, FALSE)
+         AND (invite_code_expires_at IS NULL OR invite_code_expires_at > NOW())`,
       [code]
     )
     if (!rows[0]) return NextResponse.json({ error: 'Invalid invite' }, { status: 404 })

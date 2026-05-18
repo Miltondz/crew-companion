@@ -229,7 +229,7 @@ app.get("/api/ping", (c) => c.json({ ok: true, ts: Date.now() }))
 app.get("/api/warm", async (c) => {
   const lgUrl = process.env.LANGGRAPH_DEPLOYMENT_URL ?? "http://localhost:8123"
   const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 8000)
+  const timer = setTimeout(() => ctrl.abort(), 60000)
   let agentOk = false
   try {
     const res = await fetch(`${lgUrl}/info`, { signal: ctrl.signal })

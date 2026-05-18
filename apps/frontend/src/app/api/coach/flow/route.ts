@@ -101,7 +101,8 @@ function parseAndValidate(rawText: string): FlowResponse {
   return flowResponseSchema.parse(parsed)
 }
 
-// Simple in-memory rate limiter: 10 requests / 60s per identifier
+// In-memory rate limiter: 10 requests / 60s per identifier.
+// Single-instance only — multi-instance deployments should replace with Upstash Redis.
 const _rateMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 10
 const RATE_WINDOW = 60_000

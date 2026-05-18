@@ -12,7 +12,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   try {
     const { rows } = await getPool().query(
       `SELECT workspace_id, state_json, updated_at
-       FROM workspace_state WHERE observer_token = $1`,
+       FROM workspace_state
+       WHERE observer_token = $1
+         AND NOT COALESCE(observer_token_revoked, FALSE)
+         AND (observer_token_expires_at IS NULL OR observer_token_expires_at > NOW())`,
       [token]
     )
     if (!rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })

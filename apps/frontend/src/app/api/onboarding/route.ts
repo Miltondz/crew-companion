@@ -87,22 +87,27 @@ export async function POST(req: Request) {
     observerConfig: { showTasks: true, showTeamNames: true, showBlockerCount: true, customMessage: '' },
   }
 
+  const client = await getPool().connect()
   try {
-    await getPool().query(
+    await client.query('BEGIN')
+    await client.query(
       `INSERT INTO workspace_state (workspace_id, state_json, thread_id, observer_token, invite_code, created_at)
        VALUES ($1, $2::jsonb, $3, $4, $5, NOW())
        ON CONFLICT (workspace_id) DO UPDATE
          SET state_json = $2::jsonb, observer_token = $4, invite_code = $5`,
       [workspaceId, JSON.stringify(state), `thread-${workspaceId}`, observerToken, inviteCode]
     )
-
-    await getPool().query(
+    await client.query(
       `INSERT INTO user_projects (user_id, workspace_id, role) VALUES ($1, $2, 'leader') ON CONFLICT DO NOTHING`,
       [session.user.id, workspaceId]
     )
+    await client.query('COMMIT')
   } catch (err) {
+    await client.query('ROLLBACK')
     console.error('[onboarding] DB error:', err instanceof Error ? err.message : String(err))
     return NextResponse.json({ error: 'Error al guardar, intentá de nuevo' }, { status: 500 })
+  } finally {
+    client.release()
   }
 
   const cookieStore = await cookies()

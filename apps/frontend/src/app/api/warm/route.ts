@@ -8,7 +8,7 @@ const BFF_URL = process.env.BFF_URL ?? 'http://localhost:4000'
 export async function GET(): Promise<Response> {
   try {
     const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 10000)
+    const timer = setTimeout(() => ctrl.abort(), 75000)
     let res: Response
     try {
       res = await fetch(`${BFF_URL}/api/warm`, { signal: ctrl.signal })

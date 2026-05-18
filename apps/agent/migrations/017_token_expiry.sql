@@ -1,0 +1,4 @@
+ALTER TABLE workspace_state ADD COLUMN IF NOT EXISTS observer_token_expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '90 days';
+ALTER TABLE workspace_state ADD COLUMN IF NOT EXISTS invite_code_expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '90 days';
+ALTER TABLE workspace_state ADD COLUMN IF NOT EXISTS observer_token_revoked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE workspace_state ADD COLUMN IF NOT EXISTS invite_code_revoked BOOLEAN NOT NULL DEFAULT FALSE;
