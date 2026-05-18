@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { z } from 'zod'
@@ -274,9 +274,9 @@ function LeaderCanvas() {
       return next
     })
   }
-  const hasRealTasks = state.tasks.some(t => !SEED_TASK_IDS.has(t.id))
-  const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
-  const effectiveTasks = state.tasks.filter(t => !SEED_TASK_IDS.has(t.id))
+  const hasRealTasks = useMemo(() => state.tasks.some(t => !SEED_TASK_IDS.has(t.id)), [state.tasks])
+  const effectiveMembers = useMemo(() => state.members.filter(m => !SEED_MEMBER_IDS.has(m.id)), [state.members])
+  const effectiveTasks = useMemo(() => state.tasks.filter(t => !SEED_TASK_IDS.has(t.id)), [state.tasks])
   const { events: activityEvents, push: pushActivity } = useActivityStream()
   const [taskForm, setTaskForm] = useState<AddTaskForm>({
     title: '',
