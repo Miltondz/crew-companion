@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -75,11 +75,11 @@ function MemberCanvas({ memberId }: { memberId: string }) {
     return () => clearInterval(id)
   }, [activeMilestoneDeadline])
 
-  const currentMember = state.members.find(m => m.id === memberId)
-  const myTasks = state.tasks.filter(t => t.assignedTo === memberId)
-  const activeTask = myTasks.find(t => t.status === 'in-progress') ?? myTasks.find(t => t.status === 'todo')
-  const myBlocker = state.blockers.find(b => b.memberId === memberId && !b.resolved)
-  const activeMilestone = state.milestones.find(m => m.id === state.activeMilestoneId)
+  const currentMember = useMemo(() => state.members.find(m => m.id === memberId), [state.members, memberId])
+  const myTasks = useMemo(() => state.tasks.filter(t => t.assignedTo === memberId), [state.tasks, memberId])
+  const activeTask = useMemo(() => myTasks.find(t => t.status === 'in-progress') ?? myTasks.find(t => t.status === 'todo'), [myTasks])
+  const myBlocker = useMemo(() => state.blockers.find(b => b.memberId === memberId && !b.resolved), [state.blockers, memberId])
+  const activeMilestone = useMemo(() => state.milestones.find(m => m.id === state.activeMilestoneId), [state.milestones, state.activeMilestoneId])
 
   useConfigureSuggestions({
     available: 'before-first-message',

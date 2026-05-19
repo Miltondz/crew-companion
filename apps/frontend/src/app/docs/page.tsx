@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'motion/react'
@@ -147,7 +147,7 @@ function DocsCanvas() {
   const selectedDoc = state.sharedDocuments.find(d => d.id === selectedDocId)
   const compareDoc = state.sharedDocuments.find(d => d.id === compareDocId)
   const currentMember = state.members.find(m => m.id === state.currentMemberId)
-  const effectiveMembers = state.members.filter(m => !SEED_MEMBER_IDS.has(m.id))
+  const effectiveMembers = useMemo(() => state.members.filter(m => !SEED_MEMBER_IDS.has(m.id)), [state.members])
   const docsPhase = getUrgencyPhase(
     state.milestones.find(m => m.id === state.activeMilestoneId)?.deadline ?? ''
   )

@@ -189,6 +189,10 @@ export async function POST(req: Request) {
   let lastError: unknown = null
   while (attempts < 2) {
     attempts++
+    if (attempts > 1) {
+      const backoffMs = 500 * Math.pow(2, attempts - 2)
+      await new Promise((r) => setTimeout(r, backoffMs))
+    }
     try {
       const rawText = await callGemini(attempts === 2 ? retryPrompt : prompt)
       try {

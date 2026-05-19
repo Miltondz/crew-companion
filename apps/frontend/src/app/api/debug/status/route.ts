@@ -120,16 +120,9 @@ async function getActivityEvents(workspaceId: string) {
 }
 
 function getEnvPresence() {
-  const vars = [
-    'DATABASE_URL', 'REDIS_URL', 'BFF_URL', 'NEXTAUTH_URL', 'AUTH_SECRET',
-    'NEXTAUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'RESEND_API_KEY',
-    'NEON_API_KEY', 'NEON_PROJECT_ID', 'VERCEL_TOKEN', 'VERCEL_PROJECT_ID',
-    'RENDER_API_KEY', 'RENDER_SERVICE_ID_BFF', 'RENDER_SERVICE_ID_AGENT',
-    'LANGSMITH_API_KEY', 'MCP_SERVER_URL', 'COPILOTKIT_LICENSE_TOKEN',
-    'GEMINI_API_KEY', 'GEMINI_MODEL',
-    'VERCEL_URL', 'VERCEL_ENV',
-  ]
-  return Object.fromEntries(vars.map((k) => [k, !!process.env[k]]))
+  const required = ['DATABASE_URL', 'BFF_URL', 'NEXTAUTH_URL', 'AUTH_SECRET']
+  const missing = required.filter((k) => !process.env[k])
+  return { all_required_present: missing.length === 0, missing_required: missing }
 }
 
 async function checkNeon() {

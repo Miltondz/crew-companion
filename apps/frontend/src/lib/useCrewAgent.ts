@@ -51,10 +51,43 @@ function readLs(workspaceId: string | null): Partial<CrewState> | null {
   return null
 }
 
+const MAX_LS_WORKSPACES = 10
+
+function pruneOldestLsWorkspace(): void {
+  if (typeof window === 'undefined') return
+  const keys: Array<{ key: string; ts: number }> = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (!k || !k.startsWith(LS_PREFIX)) continue
+    try {
+      const raw = localStorage.getItem(k)
+      const parsed = raw ? JSON.parse(raw) as { __ts?: number } : null
+      keys.push({ key: k, ts: typeof parsed?.__ts === 'number' ? parsed.__ts : 0 })
+    } catch {
+      keys.push({ key: k, ts: 0 })
+    }
+  }
+  if (keys.length <= MAX_LS_WORKSPACES) return
+  keys.sort((a, b) => a.ts - b.ts)
+  const toRemove = keys.slice(0, keys.length - MAX_LS_WORKSPACES)
+  for (const { key } of toRemove) {
+    try { localStorage.removeItem(key) } catch {}
+  }
+}
+
 function writeLs(workspaceId: string | null, state: Partial<CrewState>) {
   const key = getLsKey(workspaceId)
   if (!key || typeof window === 'undefined') return
-  try { localStorage.setItem(key, JSON.stringify(state)) } catch {}
+  const stamped = { ...state, __ts: Date.now() }
+  try {
+    localStorage.setItem(key, JSON.stringify(stamped))
+  } catch (err) {
+    if (err instanceof DOMException && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      pruneOldestLsWorkspace()
+      try { localStorage.setItem(key, JSON.stringify(stamped)) } catch {}
+    }
+  }
+  pruneOldestLsWorkspace()
 }
 
 const PERSISTABLE_KEYS: ReadonlyArray<keyof CrewState> = [
