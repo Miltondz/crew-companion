@@ -8,6 +8,52 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.14.0] — 2026-05-18 — Bidirectional sync, BFF authz, idempotency, surface hardening, token expiry
+
+### Added
+
+- **Trusted x-user-id proxy header** — Next.js `/api/copilotkit/[[...path]]` extracts `session.user.id` server-side and forwards as `x-user-id` to BFF (strips any client-supplied value). BFF queries `user_projects` directly via `pg` (^8.13.0) with positive+negative 60s cache, FIFO eviction at 1000 entries.
+- **`x-workspace-id` ownership enforcement** in BFF `/api/copilotkit/*` — `isMessageSend` uses `endsWith` + method guard; skips `OPTIONS` preflight. Returns 401 if missing, 403 if not owned. Closes cross-workspace auth bypass.
+- **Idempotency keys** on `create_task`, `create_milestone`, `create_blocker`, `add_member`, `create_document` (Python). On hit returns `{ already_exists: true, id, entity_type }` without spurious `Command(update)`. TS↔Python `idempotency_key` field synced across `Task`, `Milestone`, `Blocker`, `TeamMember`, `SharedDocument`. Prompts updated: derive key from stable content only, no timestamps.
+- **`workspace_state` token expiry + revoke** (`017_token_expiry.sql`):
+  - `observer_token_expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '90 days'`
+  - `observer_token_revoked BOOLEAN NOT NULL DEFAULT FALSE`
+  - Same pair for `invite_code_*`
+  - `/api/share/[token]` + `/api/invite/[code]` filter expired/revoked rows (404)
+  - New `POST /api/projects/[workspaceId]/observer` regenerate + reset expiry; `DELETE` revoke. Same for `/invite`. Leader-only.
+- **Onboarding wizard persistence** — `crew-onboarding-wizard-v1` localStorage key restores wizard state on refresh; cleared on submit / cancel.
+- **Modal a11y** — `ManualSurfacePicker` now uses shadcn `Dialog` (Escape close, focus trap, focus restore via Radix). `requiredCapabilities` filter via `ROLE_CAPABILITY_GRANTS` mirrored from agent `role_grants.json`.
+- **localStorage LRU** — `MAX_LS_WORKSPACES = 10`; `__ts` timestamp on each entry; `QuotaExceededError` triggers prune+retry.
+
+### Fixed
+
+- **24 surface components empty-payload safe** — `ManualSurfacePicker` mounts with `payload: {}` no longer crash any surface. Defensive defaults + empty-state placeholders across `TaskSuggestionPanel`, `ChecklistPanel`, `ForceGraph`, `BlockerInsightPanel`, `MemberActionPanel`, `MilestoneSummaryPanel`, `BeginnerGuidePanel`, `TroubleshootingWizard`, `IdeaMatrix`, `DocumentSummaryPanel`, `FocusedTaskPanel`, `CountdownCritical`, `TechStackPanel`, `DebugSession`, `DesignBriefPanel`, `ComponentChecklist`, `TestCaseBoard`, `BugReportForm`, `TeamVelocityPanel`, `StakeholderUpdate`, `ContentOutlinePanel`, `WritingChecklist`, `TriageWarRoom`, `AmbientOverlayWidget`.
+- **Workspace switch mid-turn** — `useCrewAgent.setState` captures `callTimeWorkspaceId` at top; every side-effect (setDbState, memCache, writeLs, PATCH) gates on `workspaceIdRef.current` still matching. Prevents stale agent response from clobbering new workspace.
+- **Optimistic UI rollback on PATCH 5xx** — `dbStateRef` mirrors current state; rollback snapshot captured at fire time (post-debounce). Toast on non-409 non-ok: "Cambios no guardados — UI revertida".
+- **409 retry workspace guard** — every `.then` in initial-sync retry chain checks `cancelled` + `workspaceId` match.
+- **`save_workspace_state` ROLLBACK** — try/except wraps transaction; `conn.rollback()` on exception. `logging.getLogger(__name__)` at module level replaces inline `print`.
+- **/api/onboarding transactional** — two `INSERT` statements (workspace_state + user_projects) wrapped in BEGIN/COMMIT/ROLLBACK. Closes orphan-workspace risk on second INSERT failure.
+- **/api/coach/flow exponential backoff** — 500ms before retry attempt 2. Was instant retry.
+- **/api/coach/flow DB-backed rate limit** — replaces in-memory per-process counter (multi-instance bypass).
+- **/api/warm timeout 8s→60s in BFF, 10s→75s in Next proxy** — accommodates Render free-tier cold-start (30–60s).
+- **Session expiry handling** — `useCrewAgent` 401 across initial sync + debounced PATCH calls `signOut({ callbackUrl: '/auth/signin?reason=expired' })` with toast. Eliminates hang on stale JWT.
+- **/api/debug/status env presence trimmed** — no longer enumerates every env var name; returns `{ all_required_present, missing_required }`. Closes infra fingerprint leak.
+- **FolderCard (docs) keyboard accessible** — root changed from `motion.div` to `motion.button` with `focus-visible:ring`.
+- **KanbanBoard empty column** — "Sin tareas" placeholder instead of blank zone.
+- **WCAG AA `--text-muted` contrast bump** — light `#6b6560 → #54504c`, dark `#8a8070 → #a89f8e`.
+- **`error.tsx` per-route** — added for `/admin/audit` + `/dev/scenarios`.
+- **BFF `@types/pg` missing** — fixed Render build failure introduced when `pg` runtime dep was added without dev types. Local `tsc` resolved via monorepo hoist; Render builds `apps/bff` in isolation.
+- **Lodash removed** — zero imports across codebase; dropped `lodash` + `@types/lodash` (~70KB dead weight).
+- **`useMemo` for seed filters** — `effectiveMembers`, `effectiveTasks`, `hasRealTasks` in leader; `currentMember`, `myTasks`, `activeTask`, `myBlocker`, `activeMilestone` in member; `effectiveMembers` in docs. Eliminates filter recompute every render.
+
+### Changed
+
+- `migrations/` count: 001–017 (added 017).
+- `apps/bff/package.json` — added `pg ^8.13.0` runtime dep + `@types/pg ^8.11.10` dev dep.
+- `apps/frontend/package.json` — removed `lodash` + `@types/lodash`.
+
+---
+
 ## [0.13.0] — 2026-05-18 — Warmup, scenarios validator, audit dashboard, version locking
 
 ### Added

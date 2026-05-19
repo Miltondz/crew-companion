@@ -605,28 +605,36 @@ The project follows a three-phase execution plan. **Phase A (Kernel)** built the
   ├──────────┤  ├───────────────┤  ├──────────────────┤  ├────────────┤
   │✅ Surface│  │✅ NextAuth    │  │✅ Multi-agent    │  │✅ Services │
   │  Registry│  │   magic-link  │  │   Orchestrator   │  │   live     │
-  │✅ Layout │  │✅ Workspace   │  │   Planner Coach  │  │✅ Error    │
-  │  Engine  │  │   Shell       │  │✅ Companion      │  │   pages    │
-  │✅ Capab. │  │✅ 24 surfaces │  │   Habitat        │  │✅ i18n     │
-  │  Engine  │  │✅ Dashboard   │  │✅ Specialization │  │✅ Token    │
-  │✅ Persist│  │✅ Onboarding  │  │   4-axis model   │  │   caps     │
-  │  (Pgres) │  │✅ Invite flow │  │✅ initial-       │  │✅ Sentry   │
-  │✅ Envel. │  │✅ Observer    │  │   surfaces loader│  │✅ Tests    │
-  │  Protocol│  │   share link  │  │✅ Security fixes │  │🔄 Smoke    │
+  │✅ Layout │  │✅ Workspace   │  │   Planner Coach  │  │✅ Warmup   │
+  │  Engine  │  │   Shell       │  │✅ Companion      │  │   + cron   │
+  │✅ Capab. │  │✅ 24 surfaces │  │   Habitat        │  │✅ Version  │
+  │  Engine  │  │✅ Dashboard   │  │✅ Specialization │  │   locking  │
+  │✅ Persist│  │✅ Onboarding  │  │   4-axis model   │  │✅ Bidir    │
+  │  (Pgres) │  │✅ Invite flow │  │✅ initial-       │  │   sync     │
+  │✅ Envel. │  │✅ Observer    │  │   surfaces loader│  │✅ BFF authz│
+  │  Protocol│  │   share link  │  │✅ Read tools     │  │✅ Audit dash│
   └──────────┘  └───────────────┘  └──────────────────┘  └────────────┘
-     COMPLETE         COMPLETE              COMPLETE        IN PROGRESS
+     COMPLETE         COMPLETE              COMPLETE         COMPLETE
 ```
 
 ### Phase Gate Checklist
 
 **Phase C — Ship Readiness:**
 - [x] Sentry wired (`@sentry/nextjs` v8, DSN set, `global-error.tsx` captures)
-- [x] Error boundaries on all protected routes (dark theme, Spanish)
+- [x] Error boundaries on all protected routes (incl. `/admin/audit`, `/dev/scenarios`)
 - [x] Test coverage: Vitest 7 tests + pytest 31 tests — all green
 - [x] `sync:capabilities` upgraded to full code generator (Python → TS atomic write)
-- [x] Full CRUD on all entities (delete/update for milestone, blocker, member)
+- [x] Full CRUD on all entities (delete/update for milestone, blocker, member, document)
 - [x] BFF_URL env var confirmed in Vercel production
-- [ ] Cold-start smoke test (Render sleep ≤ 45s wake)
+- [x] Warmup system live — `cron-job.org` pings every 14min (BFF `/api/ping` + agent `/info`)
+- [x] Bidirectional state sync — frontend ↔ DB ↔ agent (optimistic version locking, 409 merge)
+- [x] BFF workspace ownership enforced via trusted `x-user-id` header + direct `pg` query
+- [x] Idempotency keys on all create_* agent tools
+- [x] Token expiry + revoke on `observer_token` + `invite_code` (90-day default)
+- [x] Surface payload empty-safety across all 24 surfaces
+- [x] Admin audit dashboard (`/admin/audit`) + sync metrics card on `/status`
+- [x] Dev tools — `/dev/scenarios` validator + `DevToolsResync`
+- [ ] Cold-start smoke test (Render sleep ≤ 45s wake) — partially mitigated by cron warmup
 - [ ] 0 Sentry errors over 24h baseline
 - [ ] Lighthouse ≥ 90 all metrics (config at `.lighthouserc.js`)
 - [ ] 5 test workspaces survive 7 days

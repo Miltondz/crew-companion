@@ -213,9 +213,9 @@ export default function AboutPage() {
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center mx-auto mb-5">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-2xl font-bold mb-3">Open source, en construcción</h2>
+          <h2 className="text-2xl font-bold mb-3">Open source, en producción</h2>
           <p className="text-zinc-400 text-sm max-w-lg mx-auto mb-7">
-            El proyecto está activo. El código es público. Si el problema que resuelve es tuyo también, el demo está disponible ahora mismo.
+            Fases A, B y C completas. Servicios en vivo. El código es público y el demo está disponible ahora mismo.
           </p>
           <div className="flex items-center gap-3 justify-center flex-wrap">
             <Link
